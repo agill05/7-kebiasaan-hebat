@@ -225,7 +225,7 @@
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
-            // 1. Sync Habit Logs (Delete & Upsert)
+            // 1. Sync Habit Logs
             const habitSyncs = pendingQueue.filter(q => q.tableName === 'habitLogs');
             for (let item of habitSyncs) {
                 if (item.action === 'delete') {
@@ -248,7 +248,7 @@
                 }
             }
 
-            // 2. Sync Journals (Delete & Upsert)
+            // 2. Sync Journals
             const journalSyncs = pendingQueue.filter(q => q.tableName === 'journals');
             for (let item of journalSyncs) {
                 if (item.action === 'delete') {
@@ -1186,12 +1186,12 @@
                 e.preventDefault();
                 const targetName = studentFormData.name.trim();
                 const targetUsername = studentFormData.username.trim();
+                const targetNisn = studentFormData.nisn.trim();
                 const currentId = editingStudent ? editingStudent.id : null;
 
-                // VALIDASI DUPLIKASI LOKAL SEBELUM SIMPAN
                 const allExistingUsers = await db.users.toArray();
                 
-                // 1. Cek Username
+                // 1. Cek Duplikasi Username
                 const duplicateUsername = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.username.toLowerCase() === targetUsername.toLowerCase()
@@ -1204,7 +1204,7 @@
                     return;
                 }
 
-                // 2. Cek Kombinasi Nama Lengkap & Username
+                // 2. Cek Duplikasi Nama Lengkap
                 const duplicateName = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.name.toLowerCase() === targetName.toLowerCase()
@@ -1212,9 +1212,24 @@
                 if (duplicateName) {
                     showAlert.warning(
                         'Peringatan Duplikasi!',
-                        `Siswa dengan nama "${targetName}" sudah terdaftar dengan username "@${duplicateName.username}".`
+                        `Siswa dengan nama "${targetName}" sudah terdaftar.`
                     );
                     return;
+                }
+
+                // 3. Cek Duplikasi NISN
+                if (targetNisn !== '' && targetNisn !== '-') {
+                    const duplicateNisn = allExistingUsers.find(u => 
+                        u.id !== currentId && 
+                        String(u.nisn || '').trim() === targetNisn
+                    );
+                    if (duplicateNisn) {
+                        showAlert.warning(
+                            'Peringatan Duplikasi!',
+                            `NISN "${targetNisn}" sudah terdaftar atas nama "${duplicateNisn.name}".`
+                        );
+                        return;
+                    }
                 }
 
                 const selectedClass = classes.find(c => c.id === studentFormData.classId);
@@ -1224,7 +1239,7 @@
                         ...editingStudent,
                         name: targetName,
                         username: targetUsername,
-                        nisn: studentFormData.nisn.trim(),
+                        nisn: targetNisn,
                         gender: studentFormData.gender,
                         classId: studentFormData.classId,
                         className: selectedClass ? selectedClass.name : editingStudent.className,
@@ -1253,7 +1268,7 @@
                         username: targetUsername,
                         password: hashedPassword,
                         name: targetName,
-                        nisn: studentFormData.nisn.trim(),
+                        nisn: targetNisn,
                         classId: studentFormData.classId || '',
                         className: selectedClass ? selectedClass.name : '',
                         mentorId: user.id,
@@ -1668,7 +1683,6 @@
                 const targetClassName = className.trim();
                 const currentId = editingClass ? editingClass.id : null;
 
-                // VALIDASI NAMA KELAS DUPLIKAT
                 const allClasses = await db.classes.toArray();
                 const isDuplicate = allClasses.some(c => 
                     c.id !== currentId && 
@@ -1852,12 +1866,12 @@
                 e.preventDefault();
                 const targetName = formData.name.trim();
                 const targetUsername = formData.username.trim();
+                const targetNip = formData.nip.trim();
                 const currentId = editingTeacher ? editingTeacher.id : null;
 
-                // VALIDASI DUPLIKASI GURU LOKAL
                 const allExistingUsers = await db.users.toArray();
                 
-                // 1. Cek Username
+                // 1. Cek Duplikasi Username
                 const duplicateUsername = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.username.toLowerCase() === targetUsername.toLowerCase()
@@ -1870,7 +1884,7 @@
                     return;
                 }
 
-                // 2. Cek Nama Lengkap
+                // 2. Cek Duplikasi Nama Lengkap
                 const duplicateName = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.name.toLowerCase() === targetName.toLowerCase()
@@ -1878,9 +1892,24 @@
                 if (duplicateName) {
                     showAlert.warning(
                         'Peringatan Duplikasi!',
-                        `Guru dengan nama "${targetName}" sudah terdaftar dengan username "@${duplicateName.username}".`
+                        `Guru dengan nama "${targetName}" sudah terdaftar.`
                     );
                     return;
+                }
+
+                // 3. Cek Duplikasi NIP / NIK
+                if (targetNip !== '' && targetNip !== '-') {
+                    const duplicateNip = allExistingUsers.find(u => 
+                        u.id !== currentId && 
+                        String(u.nip || '').trim() === targetNip
+                    );
+                    if (duplicateNip) {
+                        showAlert.warning(
+                            'Peringatan Duplikasi!',
+                            `NIP/NIK "${targetNip}" sudah terdaftar atas nama "${duplicateNip.name}".`
+                        );
+                        return;
+                    }
                 }
 
                 if (editingTeacher) {
@@ -1889,7 +1918,7 @@
                         name: targetName,
                         username: targetUsername,
                         phone: formData.phone.trim(),
-                        nip: formData.nip.trim(),
+                        nip: targetNip,
                         subject: formData.subject.trim(),
                         homeroomClassId: formData.homeroomClassId || '',
                         updatedAt: new Date()
@@ -1908,7 +1937,7 @@
                         password: hashedPassword,
                         phone: formData.phone.trim(),
                         name: targetName,
-                        nip: formData.nip.trim(),
+                        nip: targetNip,
                         subject: formData.subject.trim(),
                         homeroomClassId: formData.homeroomClassId || '',
                         role: ROLES.GURU,
@@ -2125,12 +2154,12 @@
                 e.preventDefault();
                 const targetName = formData.name.trim();
                 const targetUsername = formData.username.trim();
+                const targetNisn = formData.nisn.trim();
                 const currentId = editingStudent ? editingStudent.id : null;
 
-                // VALIDASI DUPLIKASI SISWA LOKAL
                 const allExistingUsers = await db.users.toArray();
                 
-                // 1. Cek Username
+                // 1. Cek Duplikasi Username
                 const duplicateUsername = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.username.toLowerCase() === targetUsername.toLowerCase()
@@ -2143,7 +2172,7 @@
                     return;
                 }
 
-                // 2. Cek Nama Lengkap
+                // 2. Cek Duplikasi Nama Lengkap
                 const duplicateName = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.name.toLowerCase() === targetName.toLowerCase()
@@ -2151,9 +2180,24 @@
                 if (duplicateName) {
                     showAlert.warning(
                         'Peringatan Duplikasi!',
-                        `Siswa dengan nama "${targetName}" sudah terdaftar dengan username "@${duplicateName.username}".`
+                        `Siswa dengan nama "${targetName}" sudah terdaftar.`
                     );
                     return;
+                }
+
+                // 3. Cek Duplikasi NISN
+                if (targetNisn !== '' && targetNisn !== '-') {
+                    const duplicateNisn = allExistingUsers.find(u => 
+                        u.id !== currentId && 
+                        String(u.nisn || '').trim() === targetNisn
+                    );
+                    if (duplicateNisn) {
+                        showAlert.warning(
+                            'Peringatan Duplikasi!',
+                            `NISN "${targetNisn}" sudah terdaftar atas nama "${duplicateNisn.name}".`
+                        );
+                        return;
+                    }
                 }
 
                 const selectedClass = classes.find(c => c.id === formData.classId);
@@ -2164,7 +2208,7 @@
                         ...editingStudent,
                         username: targetUsername,
                         name: targetName,
-                        nisn: formData.nisn.trim(),
+                        nisn: targetNisn,
                         classId: formData.classId,
                         className: selectedClass ? selectedClass.name : editingStudent.className,
                         mentorId: formData.mentorId || '',
@@ -2187,7 +2231,7 @@
                         username: targetUsername,
                         password: hashedPassword,
                         name: targetName,
-                        nisn: formData.nisn.trim(),
+                        nisn: targetNisn,
                         classId: formData.classId,
                         className: selectedClass ? selectedClass.name : '',
                         mentorId: formData.mentorId || '',
