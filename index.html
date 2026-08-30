@@ -85,7 +85,7 @@
         // ==========================================
         // 2. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsFullCrudDB');
+        const db = new Dexie('SevenHabitsSyncDB');
         db.version(1).stores({
             users: 'id, username, role, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
@@ -186,6 +186,83 @@
             },
         ];
 
+        // ==========================================
+        // 3. AUTO-PULL CLOUD DATA KE INDEXEDDB
+        // ==========================================
+        async function pullAllCloudData() {
+            if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
+            try {
+                const res = await fetch(`${GAS_API_URL}?action=getAllData`);
+                const json = await res.json();
+                
+                if (json.status === 'success') {
+                    // 1. Simpan Master Classes dari Cloud
+                    if (json.classes && Array.isArray(json.classes) && json.classes.length > 0) {
+                        const formattedClasses = json.classes.map(c => ({
+                            id: String(c['Class ID'] || c['id'] || ''),
+                            name: String(c['Nama Kelas'] || c['name'] || ''),
+                            teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || ''),
+                            teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '')
+                        })).filter(c => c.id);
+                        if (formattedClasses.length > 0) {
+                            await db.classes.bulkPut(formattedClasses);
+                        }
+                    }
+
+                    // 2. Simpan Master Users (Admin, Guru, Siswa) dari Cloud
+                    if (json.users && Array.isArray(json.users) && json.users.length > 0) {
+                        const formattedUsers = json.users.map(u => ({
+                            id: String(u['User ID'] || u['id'] || ''),
+                            username: String(u['Username'] || u['username'] || ''),
+                            name: String(u['Nama Lengkap'] || u['name'] || ''),
+                            role: String(u['Role'] || u['role'] || 'siswa').toLowerCase(),
+                            className: String(u['Kelas'] || u['className'] || ''),
+                            classId: String(u['Class ID'] || u['classId'] || ''),
+                            nisn: String(u['NISN'] || u['nisn'] || ''),
+                            nip: String(u['NIP'] || u['nip'] || ''),
+                            subject: String(u['Mata Pelajaran'] || u['subject'] || ''),
+                            homeroomClassId: String(u['Homeroom Class ID'] || u['homeroomClassId'] || ''),
+                            mentorId: String(u['Mentor ID'] || u['mentorId'] || ''),
+                            mentorName: String(u['Mentor Name'] || u['mentorName'] || ''),
+                            createdBy: String(u['Created By'] || u['createdBy'] || 'admin'),
+                            status: String(u['Status'] || u['status'] || 'Aktif'),
+                            avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
+                        })).filter(u => u.id);
+
+                        if (formattedUsers.length > 0) {
+                            await db.users.bulkPut(formattedUsers);
+                        }
+                    }
+
+                    // 3. Simpan Habit Logs dari Cloud
+                    if (json.habitLogs && Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
+                        const formattedLogs = json.habitLogs.map(l => ({
+                            id: String(l['ID Log'] || l['id'] || ''),
+                            userId: String(l['User ID'] || l['userId'] || ''),
+                            studentName: String(l['Nama Siswa'] || l['studentName'] || ''),
+                            className: String(l['Kelas'] || l['className'] || ''),
+                            habitId: String(l['Habit ID'] || l['habitId'] || ''),
+                            habitName: String(l['Nama Kebiasaan'] || l['habitName'] || ''),
+                            date: String(l['Tanggal'] || l['date'] || '').split('T')[0],
+                            completed: String(l['Status Selesai'] || l['completed']) === 'Selesai' || l['completed'] === true,
+                            timeValue: String(l['Jam / Waktu'] || l['timeValue'] || ''),
+                            detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || ''),
+                            syncStatus: 'synced'
+                        })).filter(l => l.id);
+
+                        if (formattedLogs.length > 0) {
+                            await db.habitLogs.bulkPut(formattedLogs);
+                        }
+                    }
+
+                    return true;
+                }
+            } catch (err) {
+                console.warn("Auto-pull cloud notice:", err);
+            }
+            return false;
+        }
+
         async function seedDatabaseClean() {
             try {
                 const habitCount = await db.habits.count();
@@ -193,6 +270,7 @@
                     await db.habits.bulkPut(HABITS_CONFIG);
                 }
 
+                // Selalu pastikan admin default tersedia jika database lokal baru
                 const adminCount = await db.users.where('role').equals(ROLES.ADMIN).count();
                 if (adminCount === 0) {
                     await db.users.put({
@@ -211,7 +289,7 @@
         }
 
         // ==========================================
-        // 3. ENGINE SINKRONISASI CLOUD
+        // 4. ENGINE SINKRONISASI (PUSH & PULL)
         // ==========================================
         function useOnlineSyncEngine() {
             const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -221,7 +299,11 @@
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
                 const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
-                if (pendingQueue.length === 0) return;
+                if (pendingQueue.length === 0) {
+                    // Jika tidak ada antrean kirim, lakukan sinkronisasi tarik data dari Sheets
+                    await pullAllCloudData();
+                    return;
+                }
 
                 setSyncStatus('syncing');
                 try {
@@ -303,10 +385,29 @@
                         await db.syncQueue.update(item.id, { status: 'synced' });
                     }
 
+                    // Setelah push selesai, tarik data terbaru agar selalu sinkron
+                    await pullAllCloudData();
+
                     setSyncStatus('synced');
                     setTimeout(() => setSyncStatus('idle'), 3000);
                 } catch (error) {
                     console.error("Gagal sinkronisasi data:", error);
+                    setSyncStatus('error');
+                    setTimeout(() => setSyncStatus('idle'), 4000);
+                }
+            };
+
+            const triggerManualPull = async () => {
+                if (!navigator.onLine) {
+                    alert("Perangkat sedang offline. Sambungkan internet untuk menarik data cloud.");
+                    return;
+                }
+                setSyncStatus('syncing');
+                const success = await pullAllCloudData();
+                if (success) {
+                    setSyncStatus('synced');
+                    setTimeout(() => setSyncStatus('idle'), 3000);
+                } else {
                     setSyncStatus('error');
                     setTimeout(() => setSyncStatus('idle'), 4000);
                 }
@@ -319,9 +420,10 @@
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
+                // Auto-sync berkala setiap 25 detik
                 const interval = setInterval(() => {
                     if (navigator.onLine) processSyncQueue();
-                }, 30000);
+                }, 25000);
 
                 return () => {
                     window.removeEventListener('online', handleOnline);
@@ -330,11 +432,11 @@
                 };
             }, []);
 
-            return { isOnline, syncStatus, triggerSync: processSyncQueue };
+            return { isOnline, syncStatus, triggerSync: processSyncQueue, triggerManualPull };
         }
 
         // ==========================================
-        // 4. ATOM UI
+        // 5. ATOM UI
         // ==========================================
         const Card = ({ children, className = '' }) => (
             <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
@@ -355,7 +457,7 @@
             );
         };
 
-        const EmptyState = ({ icon = '📂', title = 'Belum Ada Data', description = 'Data akan muncul setelah ditambahkan ke dalam sistem.' }) => (
+        const EmptyState = ({ icon = '📂', title = 'Belum Ada Data', description = 'Data akan muncul setelah ditambahkan atau ditarik dari Google Sheets.' }) => (
             <div className="text-center py-12 px-4 space-y-3">
                 <div className="text-5xl opacity-80 mb-2">{icon}</div>
                 <h4 className="text-base font-extrabold text-gray-700">{title}</h4>
@@ -364,9 +466,9 @@
         );
 
         // ==========================================
-        // 5. LAYOUT UTAMA
+        // 6. LAYOUT UTAMA
         // ==========================================
-        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerSync, children }) => {
+        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerSync, triggerManualPull, children }) => {
             const navItems = {
                 [ROLES.SISWA]: [
                     { path: '/student/habits', label: '7 Kebiasaan', icon: 'fas fa-check-circle' },
@@ -426,14 +528,14 @@
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={triggerSync} title="Sinkronkan Data Manual" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
+                                <button onClick={triggerManualPull} title="Tarik & Perbarui Data dari Google Sheets" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
                                     !isOnline ? 'bg-orange-100 text-orange-600' :
                                     syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
                                     syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
                                     'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}>
-                                    <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud'}`}></i>
-                                    <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Online'}</span>
+                                    <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
+                                    <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
                                 </button>
                                 <button onClick={onLogout} className="md:hidden w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
                                     <i className="fas fa-power-off text-xs"></i>
@@ -463,7 +565,7 @@
         };
 
         // ==========================================
-        // 6. MODUL SISWA
+        // 7. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -867,15 +969,14 @@
         );
 
         // ==========================================
-        // 7. MODUL GURU (CRU: Create, Read, Update Siswa Binaan)
+        // 8. MODUL GURU (CRU: Create, Read, Update Siswa Binaan)
         // ==========================================
-        const TeacherDashboard = ({ user, triggerSync }) => {
+        const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
             const [selectedTab, setSelectedTab] = useState('all');
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [classLogs, setClassLogs] = useState([]);
-            const [isFetchingCloud, setIsFetchingCloud] = useState(false);
             
             // Modal Tambah / Edit Siswa oleh Guru (CRU)
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -1003,65 +1104,13 @@
                 }
 
                 setIsStudentModalOpen(false);
-                loadData();
+                await loadData();
                 triggerSync();
             };
 
-            const fetchCloudData = async () => {
-                if (!navigator.onLine || !GAS_API_URL) {
-                    alert("Perangkat belum terhubung ke internet.");
-                    return;
-                }
-                setIsFetchingCloud(true);
-                try {
-                    const resLogs = await fetch(`${GAS_API_URL}?action=getHabitLogs`);
-                    const jsonLogs = await resLogs.json();
-                    if (jsonLogs.status === 'success' && jsonLogs.data) {
-                        const formatted = jsonLogs.data.map(item => ({
-                            id: item['ID Log'],
-                            userId: item['User ID'],
-                            studentName: item['Nama Siswa'],
-                            className: item['Kelas'],
-                            habitId: item['Habit ID'],
-                            habitName: item['Nama Kebiasaan'],
-                            date: String(item['Tanggal']).split('T')[0],
-                            completed: item['Status Selesai'] === 'Selesai',
-                            timeValue: item['Jam / Waktu'],
-                            detailValue: item['Detail / Keterangan'],
-                            syncStatus: 'synced'
-                        }));
-                        await db.habitLogs.bulkPut(formatted);
-                    }
-
-                    const resUsers = await fetch(`${GAS_API_URL}?action=getUsers`);
-                    const jsonUsers = await resUsers.json();
-                    if (jsonUsers.status === 'success' && jsonUsers.data) {
-                        const formattedUsers = jsonUsers.data.map(u => ({
-                            id: u['User ID'],
-                            username: u['Username'],
-                            name: u['Nama Lengkap'],
-                            role: u['Role'],
-                            className: u['Kelas'],
-                            classId: u['Class ID'],
-                            nisn: u['NISN'],
-                            nip: u['NIP'],
-                            subject: u['Mata Pelajaran'],
-                            homeroomClassId: u['Homeroom Class ID'],
-                            mentorId: u['Mentor ID'],
-                            mentorName: u['Mentor Name'],
-                            status: u['Status'] || 'Aktif'
-                        }));
-                        await db.users.bulkPut(formattedUsers);
-                    }
-
-                    await loadData();
-                    alert("✅ Data siswa dan pembiasaan berhasil diperbarui dari cloud Google Sheets!");
-                } catch (e) {
-                    console.error("Gagal menarik data:", e);
-                    alert("Terjadi kendala saat menghubungkan ke cloud.");
-                } finally {
-                    setIsFetchingCloud(false);
-                }
+            const handleRefreshFromCloud = async () => {
+                await triggerManualPull();
+                await loadData();
             };
 
             return (
@@ -1075,9 +1124,8 @@
                             <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-user-plus"></i> + Tambah Siswa Binaan
                             </Button>
-                            <Button variant="white" onClick={fetchCloudData} disabled={isFetchingCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
-                                <i className={`fas fa-sync-alt ${isFetchingCloud ? 'fa-spin' : ''}`}></i>
-                                <span>Tarik Data Cloud</span>
+                            <Button variant="white" onClick={handleRefreshFromCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
                             </Button>
                             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="p-2 border rounded-xl text-xs font-bold text-brand-red bg-white" />
                         </div>
@@ -1097,7 +1145,7 @@
                     </div>
 
                     {myStudents.length === 0 ? (
-                        <Card><EmptyState icon="👦" title="Belum Ada Siswa Binaan" description="Anda belum memiliki siswa di tab ini. Klik tombol '+ Tambah Siswa Binaan' untuk mendaftarkan siswa Anda." /></Card>
+                        <Card><EmptyState icon="👦" title="Belum Ada Siswa Binaan" description="Anda belum memiliki siswa di tab ini. Klik tombol '+ Tambah Siswa Binaan' atau 'Tarik Cloud' untuk memperbarui data." /></Card>
                     ) : (
                         <div className="space-y-4">
                             {myStudents.map(student => {
@@ -1124,7 +1172,6 @@
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
                                                     {count} / 7 Kebiasaan Terisi
                                                 </span>
-                                                {/* Tombol Edit Siswa untuk Guru (Update Only, No Delete) */}
                                                 <button 
                                                     onClick={() => handleOpenEditModal(student)} 
                                                     className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all"
@@ -1232,24 +1279,37 @@
         );
 
         // ==========================================
-        // 8. MODUL ADMIN: FULL CRUD DATA KELAS, GURU, SISWA
+        // 9. MODUL ADMIN: FULL CRUD DATA KELAS, GURU, SISWA
         // ==========================================
-        const AdminDashboard = () => {
+        const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
 
-            useEffect(() => {
-                async function loadStats() {
-                    const t = await db.users.where('role').equals(ROLES.GURU).count();
-                    const s = await db.users.where('role').equals(ROLES.SISWA).count();
-                    const c = await db.classes.count();
-                    setStats({ teachers: t, students: s, classes: c });
-                }
-                loadStats();
-            }, []);
+            const loadStats = async () => {
+                const t = await db.users.where('role').equals(ROLES.GURU).count();
+                const s = await db.users.where('role').equals(ROLES.SISWA).count();
+                const c = await db.classes.count();
+                setStats({ teachers: t, students: s, classes: c });
+            };
+
+            useEffect(() => { loadStats(); }, []);
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadStats();
+            };
 
             return (
                 <div className="space-y-6">
-                    <h1 className="text-2xl font-black text-brand-dark">Ringkasan Sistem Administrator</h1>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Ringkasan Sistem Administrator</h1>
+                            <p className="text-gray-500 font-medium text-sm">Dashboard master kontrol data {SCHOOL_IDENTITY.name}.</p>
+                        </div>
+                        <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                            <i className="fas fa-sync-alt"></i> Tarik Cloud Sheets
+                        </Button>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card className="text-center">
                             <i className="fas fa-chalkboard-teacher text-3xl text-brand-blue mb-1"></i>
@@ -1272,7 +1332,7 @@
         };
 
         // ADMIN: CRUD DATA KELAS
-        const AdminClassesPage = ({ triggerSync }) => {
+        const AdminClassesPage = ({ triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1308,7 +1368,6 @@
                 const selectedTeacher = teachers.find(t => t.id === teacherId);
 
                 if (editingClass) {
-                    // Update Kelas
                     const updated = {
                         ...editingClass,
                         name: className,
@@ -1319,7 +1378,6 @@
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: editingClass.id, action: 'update', status: 'pending', createdAt: new Date() });
                     alert(`✨ Data kelas "${className}" berhasil diperbarui!`);
                 } else {
-                    // Create Kelas Baru
                     const newId = `c_${Date.now()}`;
                     const created = { 
                         id: newId, 
@@ -1338,7 +1396,7 @@
                 }
 
                 setIsModalOpen(false);
-                loadData();
+                await loadData();
                 triggerSync();
             };
 
@@ -1346,9 +1404,14 @@
                 if (confirm('Apakah Anda yakin ingin menghapus kelas ini?')) {
                     await db.classes.delete(id);
                     await db.syncQueue.put({ id: `sync_cdel_${Date.now()}`, tableName: 'classes', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
-                    loadData();
+                    await loadData();
                     triggerSync();
                 }
+            };
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadData();
             };
 
             return (
@@ -1358,12 +1421,17 @@
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas (CRUD Admin)</h1>
                             <p className="text-gray-500 font-medium text-sm">Kelola rombel dan penugasan wali kelas.</p>
                         </div>
-                        <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
+                        <div className="flex gap-2">
+                            <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
+                        </div>
                     </div>
 
                     <Card>
                         {classes.length === 0 ? (
-                            <EmptyState icon="🏫" title="Belum Ada Kelas" description="Silakan klik tombol '+ Tambah Kelas' untuk menambahkan rombel pertama." />
+                            <EmptyState icon="🏫" title="Belum Ada Kelas" description="Silakan klik tombol '+ Tambah Kelas' untuk menambahkan rombel pertama atau 'Tarik Cloud' jika data sudah ada di Google Sheets." />
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
@@ -1416,7 +1484,7 @@
         };
 
         // ADMIN: CRUD DATA GURU
-        const AdminTeachersPage = ({ triggerSync }) => {
+        const AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
             const [teachers, setTeachers] = useState([]);
             const [classes, setClasses] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1453,7 +1521,6 @@
             const handleSave = async (e) => {
                 e.preventDefault();
                 if (editingTeacher) {
-                    // Update Guru
                     const updated = {
                         ...editingTeacher,
                         name: formData.name,
@@ -1467,7 +1534,6 @@
                     await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: editingTeacher.id, action: 'update', status: 'pending', createdAt: new Date() });
                     alert(`✨ Data guru "${formData.name}" berhasil diperbarui!`);
                 } else {
-                    // Create Guru Baru
                     const newId = `u_guru_${Date.now()}`;
                     const created = {
                         id: newId,
@@ -1487,7 +1553,7 @@
                 }
 
                 setIsModalOpen(false);
-                loadData();
+                await loadData();
                 triggerSync();
             };
 
@@ -1495,9 +1561,14 @@
                 if (confirm('Hapus akun guru ini secara permanen?')) {
                     await db.users.delete(id);
                     await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
-                    loadData();
+                    await loadData();
                     triggerSync();
                 }
+            };
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadData();
             };
 
             return (
@@ -1507,12 +1578,17 @@
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru (CRUD Admin)</h1>
                             <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, dan manajemen akun pengajar.</p>
                         </div>
-                        <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Guru</Button>
+                        <div className="flex gap-2">
+                            <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Guru</Button>
+                        </div>
                     </div>
 
                     <Card>
                         {teachers.length === 0 ? (
-                            <EmptyState icon="👨‍🏫" title="Belum Ada Guru Terdaftar" description="Tambahkan data guru pengajar atau wali kelas." />
+                            <EmptyState icon="👨‍🏫" title="Belum Ada Guru Terdaftar" description="Tambahkan data guru pengajar atau klik 'Tarik Cloud' jika data sudah ada di Google Sheets." />
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
@@ -1574,7 +1650,7 @@
         };
 
         // ADMIN: CRUD DATA SISWA (Create, Read, Update, Delete)
-        const AdminStudentsPage = ({ triggerSync }) => {
+        const AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
             const [students, setStudents] = useState([]);
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
@@ -1618,7 +1694,6 @@
                 const selectedMentor = teachers.find(t => t.id === formData.mentorId);
 
                 if (editingStudent) {
-                    // Update Siswa
                     const updated = {
                         ...editingStudent,
                         username: formData.username,
@@ -1637,7 +1712,6 @@
                     await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: editingStudent.id, action: 'update', status: 'pending', createdAt: new Date() });
                     alert(`✨ Data siswa "${formData.name}" berhasil diperbarui!`);
                 } else {
-                    // Create Siswa Baru
                     const newId = `u_siswa_${Date.now()}`;
                     const created = {
                         id: newId,
@@ -1662,7 +1736,7 @@
                 }
 
                 setIsModalOpen(false);
-                loadData();
+                await loadData();
                 triggerSync();
             };
 
@@ -1670,9 +1744,14 @@
                 if (confirm('Apakah Anda yakin ingin menghapus akun siswa ini secara permanen?')) {
                     await db.users.delete(id);
                     await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
-                    loadData();
+                    await loadData();
                     triggerSync();
                 }
+            };
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadData();
             };
 
             return (
@@ -1682,12 +1761,17 @@
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa (CRUD Admin)</h1>
                             <p className="text-gray-500 font-medium text-sm">Hak akses penuh untuk mengelola dan menghapus siswa.</p>
                         </div>
-                        <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
+                        <div className="flex gap-2">
+                            <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
+                        </div>
                     </div>
 
                     <Card>
                         {students.length === 0 ? (
-                            <EmptyState icon="👦" title="Belum Ada Siswa Terdaftar" description="Tambahkan data siswa agar mereka dapat mencatat 7 kebiasaan hebat." />
+                            <EmptyState icon="👦" title="Belum Ada Siswa Terdaftar" description="Tambahkan data siswa atau klik 'Tarik Cloud' untuk menyelaraskan data dengan Google Sheets." />
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
@@ -1780,7 +1864,7 @@
         };
 
         // ==========================================
-        // 9. LOGIN & LANDING
+        // 10. LOGIN & LANDING (Auto-Sync on Mount)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -1791,18 +1875,33 @@
             </div>
         );
 
-        const LoginPage = ({ onLogin, onBack }) => {
+        const LoginPage = ({ onLogin, onBack, triggerManualPull }) => {
             const [users, setUsers] = useState([]);
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
+            const [isLoadingPull, setIsLoadingPull] = useState(false);
+
+            const loadUsers = async () => {
+                const res = await db.users.where('role').equals(selectedRole).toArray();
+                setUsers(res);
+                if (res.length > 0) setSelectedUserId(res[0].id);
+                else setSelectedUserId('');
+            };
 
             useEffect(() => {
-                db.users.where('role').equals(selectedRole).toArray().then(res => {
-                    setUsers(res);
-                    if (res.length > 0) setSelectedUserId(res[0].id);
-                    else setSelectedUserId('');
-                });
+                loadUsers();
             }, [selectedRole]);
+
+            // Auto-pull saat halaman login dibuka
+            useEffect(() => {
+                async function syncInit() {
+                    setIsLoadingPull(true);
+                    await triggerManualPull();
+                    await loadUsers();
+                    setIsLoadingPull(false);
+                }
+                syncInit();
+            }, []);
 
             const handleSubmit = async () => {
                 if (!selectedUserId) {
@@ -1811,6 +1910,14 @@
                 }
                 const user = await db.users.get(selectedUserId);
                 if (user) onLogin(user);
+            };
+
+            const handleRefreshManual = async () => {
+                setIsLoadingPull(true);
+                await triggerManualPull();
+                await loadUsers();
+                setIsLoadingPull(false);
+                alert("✅ Data akun berhasil diperbarui dari cloud Google Sheets!");
             };
 
             return (
@@ -1834,10 +1941,15 @@
                             ))}
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Akun Terdaftar:</label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-xs font-bold text-gray-600">Pilih Akun Terdaftar:</label>
+                                <button onClick={handleRefreshManual} disabled={isLoadingPull} className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-1">
+                                    <i className={`fas fa-sync-alt ${isLoadingPull ? 'fa-spin' : ''}`}></i> Perbarui Akun
+                                </button>
+                            </div>
                             {users.length === 0 ? (
                                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
-                                    Belum ada akun {selectedRole}. Masuk sebagai <strong>Admin</strong> untuk menambahkan data.
+                                    {isLoadingPull ? "Sedang memuat data dari Google Sheets..." : `Belum ada akun ${selectedRole} di memori lokal. Klik 'Perbarui Akun' atau masuk sebagai Admin.`}
                                 </div>
                             ) : (
                                 <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
@@ -1852,18 +1964,22 @@
         };
 
         // ==========================================
-        // 10. ROOT CONTROLLER
+        // 11. ROOT CONTROLLER
         // ==========================================
         const App = () => {
             const [currentPath, setCurrentPath] = useState('/');
             const [user, setUser] = useState(null);
-            const { isOnline, syncStatus, triggerSync } = useOnlineSyncEngine();
+            const { isOnline, syncStatus, triggerSync, triggerManualPull } = useOnlineSyncEngine();
 
             useEffect(() => {
-                seedDatabaseClean();
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Notice:', err));
+                async function init() {
+                    await seedDatabaseClean();
+                    await pullAllCloudData(); // Auto-pull seluruh data saat aplikasi pertama dibuka
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Notice:', err));
+                    }
                 }
+                init();
             }, []);
 
             const navigate = (path) => { setCurrentPath(path); window.scrollTo(0, 0); };
@@ -1878,7 +1994,7 @@
             const handleLogout = () => { setUser(null); navigate('/'); };
 
             if (currentPath === '/') return <LandingPage onStart={() => navigate('/login')} />;
-            if (currentPath === '/login') return <LoginPage onLogin={handleLogin} onBack={() => navigate('/')} />;
+            if (currentPath === '/login') return <LoginPage onLogin={handleLogin} onBack={() => navigate('/')} triggerManualPull={triggerManualPull} />;
             if (!user) { navigate('/login'); return null; }
 
             let content = null;
@@ -1888,19 +2004,28 @@
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} />; break;
 
-                case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} />; break;
+                case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} />; break;
 
-                case '/admin/dashboard': content = <AdminDashboard />; break;
-                case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} />; break;
-                case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} />; break;
-                case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} />; break;
+                case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
+                case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
 
                 default: content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
             }
 
             return (
-                <AppLayout user={user} currentPath={currentPath} navigate={navigate} onLogout={handleLogout} isOnline={isOnline} syncStatus={syncStatus} triggerSync={triggerSync}>
+                <AppLayout 
+                    user={user} 
+                    currentPath={currentPath} 
+                    navigate={navigate} 
+                    onLogout={handleLogout} 
+                    isOnline={isOnline} 
+                    syncStatus={syncStatus} 
+                    triggerSync={triggerSync}
+                    triggerManualPull={triggerManualPull}
+                >
                     {content}
                 </AppLayout>
             );
