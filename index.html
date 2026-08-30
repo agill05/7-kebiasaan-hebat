@@ -144,7 +144,6 @@
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzD1Um1d0AC60Z39p_WS7u5Dwgs_CjrC7FDTX9GYojRtilomyB0hY9hkSKfqyw_yWpJ/exec";
 
-        // Helper Tanggal & Waktu 24-Jam Zona WITA (Gorontalo / UTC+8)
         const getTodayWitaDateString = () => {
             const formatter = new Intl.DateTimeFormat('en-CA', {
                 timeZone: 'Asia/Makassar',
@@ -152,7 +151,7 @@
                 month: '2-digit',
                 day: '2-digit'
             });
-            return formatter.format(new Date()); // Format YYYY-MM-DD
+            return formatter.format(new Date());
         };
 
         const getNowWitaTimeString = () => {
@@ -218,7 +217,7 @@
         ];
 
         // ==========================================
-        // 4. ENGINE SINKRONISASI (PUSH DULU, LALU REKONSILIASI PULL)
+        // 4. ENGINE SINKRONISASI
         // ==========================================
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
@@ -323,7 +322,6 @@
             }
         }
 
-        // FUNGSI PULL LENGKAP DENGAN AUTO-CLEANUP DATA TERHAPUS
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -337,7 +335,7 @@
                     const pendingLogIds = new Set(pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId));
                     const pendingJournalIds = new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId));
 
-                    // 1. Rekonsiliasi Classes
+                    // Rekonsiliasi Classes
                     if (Array.isArray(json.classes)) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
@@ -356,7 +354,7 @@
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    // 2. Rekonsiliasi Users
+                    // Rekonsiliasi Users
                     if (Array.isArray(json.users)) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || '').trim(),
@@ -388,7 +386,7 @@
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    // 3. Rekonsiliasi Habit Logs
+                    // Rekonsiliasi Habit Logs
                     if (Array.isArray(json.habitLogs)) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
@@ -414,7 +412,7 @@
                         if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
                     }
 
-                    // 4. Rekonsiliasi Journals
+                    // Rekonsiliasi Journals
                     if (Array.isArray(json.journals)) {
                         const formattedJournals = json.journals.map(j => ({
                             id: String(j['ID Jurnal'] || j['id'] || '').trim(),
@@ -1186,13 +1184,46 @@
 
             const handleTeacherSaveStudent = async (e) => {
                 e.preventDefault();
+                const targetName = studentFormData.name.trim();
+                const targetUsername = studentFormData.username.trim();
+                const currentId = editingStudent ? editingStudent.id : null;
+
+                // VALIDASI DUPLIKASI LOKAL SEBELUM SIMPAN
+                const allExistingUsers = await db.users.toArray();
+                
+                // 1. Cek Username
+                const duplicateUsername = allExistingUsers.find(u => 
+                    u.id !== currentId && 
+                    u.username.toLowerCase() === targetUsername.toLowerCase()
+                );
+                if (duplicateUsername) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Username "@${targetUsername}" sudah digunakan oleh "${duplicateUsername.name}". Silakan gunakan username yang berbeda.`
+                    );
+                    return;
+                }
+
+                // 2. Cek Kombinasi Nama Lengkap & Username
+                const duplicateName = allExistingUsers.find(u => 
+                    u.id !== currentId && 
+                    u.name.toLowerCase() === targetName.toLowerCase()
+                );
+                if (duplicateName) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Siswa dengan nama "${targetName}" sudah terdaftar dengan username "@${duplicateName.username}".`
+                    );
+                    return;
+                }
+
                 const selectedClass = classes.find(c => c.id === studentFormData.classId);
 
                 if (editingStudent) {
                     const updatedStudent = {
                         ...editingStudent,
-                        name: studentFormData.name.trim(),
-                        username: studentFormData.username.trim(),
+                        name: targetName,
+                        username: targetUsername,
                         nisn: studentFormData.nisn.trim(),
                         gender: studentFormData.gender,
                         classId: studentFormData.classId,
@@ -1211,7 +1242,7 @@
                         createdAt: new Date()
                     });
 
-                    showAlert.success('Berhasil Diperbarui', `Data siswa "${studentFormData.name}" berhasil diperbarui.`);
+                    showAlert.success('Berhasil Diperbarui', `Data siswa "${targetName}" berhasil diperbarui.`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
                     const defaultPass = studentFormData.password.trim() || 'siswa123';
@@ -1219,9 +1250,9 @@
 
                     const createdStudent = {
                         id: newId,
-                        username: studentFormData.username.trim(),
+                        username: targetUsername,
                         password: hashedPassword,
-                        name: studentFormData.name.trim(),
+                        name: targetName,
                         nisn: studentFormData.nisn.trim(),
                         classId: studentFormData.classId || '',
                         className: selectedClass ? selectedClass.name : '',
@@ -1245,7 +1276,7 @@
                         createdAt: new Date()
                     });
 
-                    showAlert.success('Siswa Ditambahkan', `Siswa "${studentFormData.name}" berhasil didaftarkan dengan password awal: ${defaultPass}`);
+                    showAlert.success('Siswa Ditambahkan', `Siswa "${targetName}" berhasil didaftarkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsStudentModalOpen(false);
@@ -1548,7 +1579,7 @@
         };
 
         // ==========================================
-        // 9. MODUL ADMIN: FULL CRUD + SWEETALERT
+        // 9. MODUL ADMIN
         // ==========================================
         const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1634,29 +1665,47 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
+                const targetClassName = className.trim();
+                const currentId = editingClass ? editingClass.id : null;
+
+                // VALIDASI NAMA KELAS DUPLIKAT
+                const allClasses = await db.classes.toArray();
+                const isDuplicate = allClasses.some(c => 
+                    c.id !== currentId && 
+                    c.name.toLowerCase() === targetClassName.toLowerCase()
+                );
+
+                if (isDuplicate) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Kelas "${targetClassName}" sudah terdaftar. Silakan gunakan nama kelas lain.`
+                    );
+                    return;
+                }
+
                 const selectedTeacher = teachers.find(t => t.id === teacherId);
 
                 if (editingClass) {
                     const updated = {
                         ...editingClass,
-                        name: className.trim(),
+                        name: targetClassName,
                         teacherId: teacherId || '',
                         teacherName: selectedTeacher ? selectedTeacher.name : ''
                     };
                     await db.classes.put(updated);
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: editingClass.id, action: 'update', status: 'pending', createdAt: new Date() });
-                    showAlert.success('Berhasil Diperbarui', `Data kelas "${className}" berhasil diperbarui.`);
+                    showAlert.success('Berhasil Diperbarui', `Data kelas "${targetClassName}" berhasil diperbarui.`);
                 } else {
                     const newId = `c_${Date.now()}`;
                     const created = { 
                         id: newId, 
-                        name: className.trim(), 
+                        name: targetClassName, 
                         teacherId: teacherId || '', 
                         teacherName: selectedTeacher ? selectedTeacher.name : '' 
                     };
                     await db.classes.put(created);
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    showAlert.success('Kelas Ditambahkan', `Kelas "${className}" berhasil ditambahkan.`);
+                    showAlert.success('Kelas Ditambahkan', `Kelas "${targetClassName}" berhasil ditambahkan.`);
                 }
 
                 if (teacherId) {
@@ -1801,11 +1850,44 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
+                const targetName = formData.name.trim();
+                const targetUsername = formData.username.trim();
+                const currentId = editingTeacher ? editingTeacher.id : null;
+
+                // VALIDASI DUPLIKASI GURU LOKAL
+                const allExistingUsers = await db.users.toArray();
+                
+                // 1. Cek Username
+                const duplicateUsername = allExistingUsers.find(u => 
+                    u.id !== currentId && 
+                    u.username.toLowerCase() === targetUsername.toLowerCase()
+                );
+                if (duplicateUsername) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Username "@${targetUsername}" sudah digunakan oleh "${duplicateUsername.name}". Silakan pilih username lain.`
+                    );
+                    return;
+                }
+
+                // 2. Cek Nama Lengkap
+                const duplicateName = allExistingUsers.find(u => 
+                    u.id !== currentId && 
+                    u.name.toLowerCase() === targetName.toLowerCase()
+                );
+                if (duplicateName) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Guru dengan nama "${targetName}" sudah terdaftar dengan username "@${duplicateName.username}".`
+                    );
+                    return;
+                }
+
                 if (editingTeacher) {
                     const updated = {
                         ...editingTeacher,
-                        name: formData.name.trim(),
-                        username: formData.username.trim(),
+                        name: targetName,
+                        username: targetUsername,
                         phone: formData.phone.trim(),
                         nip: formData.nip.trim(),
                         subject: formData.subject.trim(),
@@ -1814,7 +1896,7 @@
                     };
                     await db.users.put(updated);
                     await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: editingTeacher.id, action: 'update', status: 'pending', createdAt: new Date() });
-                    showAlert.success('Berhasil Diperbarui', `Data guru "${formData.name}" berhasil diperbarui.`);
+                    showAlert.success('Berhasil Diperbarui', `Data guru "${targetName}" berhasil diperbarui.`);
                 } else {
                     const newId = `u_guru_${Date.now()}`;
                     const defaultPass = formData.password.trim() || 'guru123';
@@ -1822,10 +1904,10 @@
 
                     const created = {
                         id: newId,
-                        username: formData.username.trim(),
+                        username: targetUsername,
                         password: hashedPassword,
                         phone: formData.phone.trim(),
-                        name: formData.name.trim(),
+                        name: targetName,
                         nip: formData.nip.trim(),
                         subject: formData.subject.trim(),
                         homeroomClassId: formData.homeroomClassId || '',
@@ -1836,7 +1918,7 @@
                     };
                     await db.users.put(created);
                     await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    showAlert.success('Guru Ditambahkan', `Akun guru "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
+                    showAlert.success('Guru Ditambahkan', `Akun guru "${targetName}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsModalOpen(false);
@@ -2041,14 +2123,47 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
+                const targetName = formData.name.trim();
+                const targetUsername = formData.username.trim();
+                const currentId = editingStudent ? editingStudent.id : null;
+
+                // VALIDASI DUPLIKASI SISWA LOKAL
+                const allExistingUsers = await db.users.toArray();
+                
+                // 1. Cek Username
+                const duplicateUsername = allExistingUsers.find(u => 
+                    u.id !== currentId && 
+                    u.username.toLowerCase() === targetUsername.toLowerCase()
+                );
+                if (duplicateUsername) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Username "@${targetUsername}" sudah digunakan oleh "${duplicateUsername.name}". Silakan gunakan username yang berbeda.`
+                    );
+                    return;
+                }
+
+                // 2. Cek Nama Lengkap
+                const duplicateName = allExistingUsers.find(u => 
+                    u.id !== currentId && 
+                    u.name.toLowerCase() === targetName.toLowerCase()
+                );
+                if (duplicateName) {
+                    showAlert.warning(
+                        'Peringatan Duplikasi!',
+                        `Siswa dengan nama "${targetName}" sudah terdaftar dengan username "@${duplicateName.username}".`
+                    );
+                    return;
+                }
+
                 const selectedClass = classes.find(c => c.id === formData.classId);
                 const selectedMentor = teachers.find(t => t.id === formData.mentorId);
 
                 if (editingStudent) {
                     const updated = {
                         ...editingStudent,
-                        username: formData.username.trim(),
-                        name: formData.name.trim(),
+                        username: targetUsername,
+                        name: targetName,
                         nisn: formData.nisn.trim(),
                         classId: formData.classId,
                         className: selectedClass ? selectedClass.name : editingStudent.className,
@@ -2061,7 +2176,7 @@
 
                     await db.users.put(updated);
                     await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: editingStudent.id, action: 'update', status: 'pending', createdAt: new Date() });
-                    showAlert.success('Berhasil Diperbarui', `Data siswa "${formData.name}" berhasil diperbarui.`);
+                    showAlert.success('Berhasil Diperbarui', `Data siswa "${targetName}" berhasil diperbarui.`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
                     const defaultPass = formData.password.trim() || 'siswa123';
@@ -2069,9 +2184,9 @@
 
                     const created = {
                         id: newId,
-                        username: formData.username.trim(),
+                        username: targetUsername,
                         password: hashedPassword,
-                        name: formData.name.trim(),
+                        name: targetName,
                         nisn: formData.nisn.trim(),
                         classId: formData.classId,
                         className: selectedClass ? selectedClass.name : '',
@@ -2087,7 +2202,7 @@
 
                     await db.users.put(created);
                     await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    showAlert.success('Siswa Ditambahkan', `Siswa "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
+                    showAlert.success('Siswa Ditambahkan', `Siswa "${targetName}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsModalOpen(false);
@@ -2514,17 +2629,14 @@
 
             let content = null;
             switch (currentPath) {
-                // Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
-                // Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
 
-                // Admin
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
