@@ -82,13 +82,26 @@
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxr_T0jcF9vIM2u1wxYK3unkkIjTsUJkobM_SidYr3hf-2doJOBorBxhHWc_EgNs8wpog/exec";
 
-        // Helper Tanggal Hari Ini (Zona Waktu Lokal Perangkat)
-        const getTodayLocalString = () => {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+        // Helper Tanggal & Waktu 24-Jam Zona WITA (Gorontalo / UTC+8)
+        const getTodayWitaDateString = () => {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Makassar',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            return formatter.format(new Date()); // Menghasilkan format YYYY-MM-DD
+        };
+
+        const getNowWitaTimeString = () => {
+            const formatter = new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Makassar',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            // Pastikan menggunakan pemisah titik dua (HH:mm) untuk input tipe time
+            return formatter.format(new Date()).replace('.', ':');
         };
 
         const formatDisplayDate = (dateStr) => {
@@ -112,7 +125,7 @@
         // ==========================================
         // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsLiveSyncDB');
+        const db = new Dexie('SevenHabitsWitaDB');
         db.version(1).stores({
             users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
@@ -134,13 +147,13 @@
         const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
 
         const HABITS_CONFIG = [
-            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur', defaultTime: '04:30' },
-            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an', defaultTime: '05:00' },
-            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit', defaultTime: '06:00' },
-            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih', defaultTime: '06:30' },
-            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit', defaultTime: '19:00' },
-            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga', defaultTime: '16:00' },
-            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai', defaultTime: '21:15' }
+            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi (WITA)', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur' },
+            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama (WITA)', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an' },
+            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga (WITA)', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit' },
+            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan (WITA)', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih' },
+            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar (WITA)', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit' },
+            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas (WITA)', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga' },
+            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
         ];
 
         // ==========================================
@@ -490,10 +503,10 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA (TANGGAL OTOMATIS HARI INI & TERKUNCI)
+        // 7. MODUL SISWA (JAM 24-FORMAT & WITA AUTO-DEFAULT)
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
-            const todayStr = getTodayLocalString();
+            const todayStr = getTodayWitaDateString();
             const [logs, setLogs] = useState({});
             const [points, setPoints] = useState(0);
             const [activeHabitModal, setActiveHabitModal] = useState(null);
@@ -518,9 +531,10 @@
 
             useEffect(() => { loadLogs(); }, [user.id]);
 
+            // Saat modal dibuka: jika belum ada input, default ke jam WITA saat ini (format 24 jam)
             const handleCardClick = (habit) => {
                 const existing = logs[habit.id] || {};
-                setModalTime(existing.timeValue || habit.defaultTime || '06:00');
+                setModalTime(existing.timeValue || getNowWitaTimeString());
                 setModalDetail(existing.detailValue || '');
                 setActiveHabitModal(habit);
             };
@@ -615,10 +629,9 @@
                             <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
                             <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan anak hebat hari ini.</p>
                         </div>
-                        {/* Tanggal Otomatis Hari Ini & Terkunci */}
                         <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-4 py-2 rounded-2xl">
                             <i className="fas fa-calendar-day text-brand-red text-sm"></i>
-                            <span className="text-xs font-black text-brand-red tracking-wide">Hari Ini: {formatDisplayDate(todayStr)}</span>
+                            <span className="text-xs font-black text-brand-red tracking-wide">Hari Ini: {formatDisplayDate(todayStr)} (WITA)</span>
                         </div>
                     </div>
 
@@ -660,7 +673,7 @@
                                         <div className="mt-3 pt-3 border-t border-green-200/60 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl space-y-1">
                                             <div className="flex items-center gap-1 font-bold text-brand-dark">
                                                 <i className="far fa-clock text-brand-blue"></i>
-                                                <span>Pukul: {entry.timeValue || '-'} WIB</span>
+                                                <span>Pukul: {entry.timeValue || '-'} WITA</span>
                                             </div>
                                             <p className="text-gray-600 italic line-clamp-2">"{entry.detailValue || '-'}"</p>
                                         </div>
@@ -678,7 +691,7 @@
                                         <span className="text-3xl">{activeHabitModal.icon}</span>
                                         <div>
                                             <h3 className="font-black text-lg text-brand-dark">{activeHabitModal.name}</h3>
-                                            <p className="text-xs text-gray-400 font-bold">{formatDisplayDate(todayStr)}</p>
+                                            <p className="text-xs text-gray-400 font-bold">{formatDisplayDate(todayStr)} (WITA)</p>
                                         </div>
                                     </div>
                                     <button onClick={() => setActiveHabitModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
@@ -688,9 +701,12 @@
 
                                 <form onSubmit={handleSaveHabitDetail} className="space-y-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                                            <i className="far fa-clock mr-1 text-brand-red"></i> {activeHabitModal.timeLabel}
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-xs font-bold text-gray-700">
+                                                <i className="far fa-clock mr-1 text-brand-red"></i> {activeHabitModal.timeLabel}
+                                            </label>
+                                            <span className="text-[10px] text-gray-400 font-semibold">Format 24 Jam (WITA)</span>
+                                        </div>
                                         <input 
                                             type="time" 
                                             value={modalTime} 
@@ -803,7 +819,7 @@
         };
 
         const StudentJournalPage = ({ user, triggerSync }) => {
-            const todayStr = getTodayLocalString();
+            const todayStr = getTodayWitaDateString();
             const [mood, setMood] = useState('😊 Senang');
             const [content, setContent] = useState('');
             const [savedJournals, setSavedJournals] = useState([]);
@@ -839,7 +855,7 @@
                                 <div className="flex justify-between items-center">
                                     <label className="text-xs font-bold text-gray-600">Tanggal Refleksi:</label>
                                     <span className="px-3 py-1.5 bg-red-50 border border-red-200 text-brand-red rounded-xl text-xs font-black">
-                                        {formatDisplayDate(todayStr)} (Terkunci)
+                                        {formatDisplayDate(todayStr)} (WITA)
                                     </span>
                                 </div>
                                 <div>
@@ -956,7 +972,7 @@
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
             const [selectedTab, setSelectedTab] = useState('all');
-            const [selectedDate, setSelectedDate] = useState(getTodayLocalString());
+            const [selectedDate, setSelectedDate] = useState(getTodayWitaDateString());
             const [classLogs, setClassLogs] = useState([]);
             
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -1205,7 +1221,7 @@
                                                                 <span>{h.icon}</span> {h.name}
                                                             </span>
                                                             <span className={isDone ? 'text-green-600 font-extrabold' : 'text-gray-400 font-normal'}>
-                                                                {isDone ? `Pkl ${log.timeValue || '-'}` : 'Belum'}
+                                                                {isDone ? `Pkl ${log.timeValue || '-'} WITA` : 'Belum'}
                                                             </span>
                                                         </div>
                                                         {isDone && (
@@ -1281,6 +1297,7 @@
                         </div>
                     )}
 
+                    {/* MODAL RESET PASSWORD SISWA */}
                     {resetModalStudent && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-sm shadow-2xl">
@@ -2139,7 +2156,7 @@
         };
 
         // ==========================================
-        // 10. LOGIN & LANDING (Pemberitahuan Manual Reset)
+        // 10. LOGIN & LANDING
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
