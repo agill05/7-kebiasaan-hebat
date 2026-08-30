@@ -1,3 +1,138 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: index.html, manifest.json, sw.js, vercel.json
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+manifest.json
+sw.js
+vercel.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="manifest.json">
+{
+    "name": "7 Kebiasaan Anak Indonesia Hebat",
+    "short_name": "7 Kebiasaan",
+    "description": "Aplikasi Pembiasaan Karakter Positif Siswa SMP Negeri 1 Talaga Jaya",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F9FAFB",
+    "theme_color": "#EF4444",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇮🇩</text></svg>",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+</file>
+
+<file path="sw.js">
+const CACHE_NAME = "7kebiasaan-cache-v1";
+const ASSETS_TO_CACHE = [
+    "/",
+    "/index.html",
+    "/manifest.json",
+    "https://unpkg.com/react@18/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone/babel.min.js",
+    "https://cdn.tailwindcss.com",
+    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                }),
+            ),
+        ),
+    );
+    self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Jangan cache permintaan POST/GET API Google Apps Script
+    if (event.request.url.includes("script.google.com")) {
+        return;
+    }
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            return (
+                cachedResponse ||
+                fetch(event.request).catch(() => caches.match("/index.html"))
+            );
+        }),
+    );
+});
+</file>
+
+<file path="vercel.json">
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -87,7 +222,7 @@
         // ==========================================
         async function hashPassword(text) {
             if (!text) return '';
-            const msgBuffer = new TextEncoder().encode(String(text).trim());
+            const msgBuffer = new TextEncoder().encode(text);
             const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -96,7 +231,7 @@
         // ==========================================
         // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsProductionDB');
+        const db = new Dexie('SevenHabitsSecureDB');
         db.version(1).stores({
             users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
@@ -118,101 +253,88 @@
         const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
 
         const HABITS_CONFIG = [
-            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur', defaultTime: '04:30' },
-            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an', defaultTime: '05:00' },
-            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit', defaultTime: '06:00' },
-            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih', defaultTime: '06:30' },
-            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit', defaultTime: '19:00' },
-            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga', defaultTime: '16:00' },
-            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai', defaultTime: '21:15' }
+            {
+                id: 'h1',
+                name: 'Bangun Pagi',
+                description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat',
+                icon: '🌅',
+                color: 'bg-blue-100 text-blue-600',
+                timeLabel: 'Jam Bangun Pagi',
+                detailLabel: 'Catatan Saat Bangun',
+                detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur',
+                defaultTime: '04:30'
+            },
+            {
+                id: 'h2',
+                name: 'Beribadah',
+                description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan',
+                icon: '🙏',
+                color: 'bg-indigo-100 text-indigo-600',
+                timeLabel: 'Waktu Ibadah Utama',
+                detailLabel: 'Ibadah yang Dikerjakan',
+                detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an',
+                defaultTime: '05:00'
+            },
+            {
+                id: 'h3',
+                name: 'Berolahraga',
+                description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit',
+                icon: '🏃',
+                color: 'bg-green-100 text-green-600',
+                timeLabel: 'Waktu Berolahraga',
+                detailLabel: 'Jenis Olahraga & Durasi',
+                detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit',
+                defaultTime: '06:00'
+            },
+            {
+                id: 'h4',
+                name: 'Makan Sehat & Bergizi',
+                description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang',
+                icon: '🍎',
+                color: 'bg-red-100 text-red-600',
+                timeLabel: 'Waktu Sarapan',
+                detailLabel: 'Menu Makanan & Minuman Sehat',
+                detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih',
+                defaultTime: '06:30'
+            },
+            {
+                id: 'h5',
+                name: 'Gemar Belajar',
+                description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi',
+                icon: '📚',
+                color: 'bg-yellow-100 text-yellow-600',
+                timeLabel: 'Waktu Mulai Belajar',
+                detailLabel: 'Materi / Buku yang Dipelajari',
+                detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit',
+                defaultTime: '19:00'
+            },
+            {
+                id: 'h6',
+                name: 'Bermasyarakat',
+                description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan',
+                icon: '🤝',
+                color: 'bg-teal-100 text-teal-600',
+                timeLabel: 'Waktu Beraktivitas',
+                detailLabel: 'Bentuk Kebaikan yang Dilakukan',
+                detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga',
+                defaultTime: '16:00'
+            },
+            {
+                id: 'h7',
+                name: 'Tidur Cepat',
+                description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari',
+                icon: '😴',
+                color: 'bg-purple-100 text-purple-600',
+                timeLabel: 'Jam Tidur Malam',
+                detailLabel: 'Aktivitas Sebelum Tidur',
+                detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai',
+                defaultTime: '21:15'
+            },
         ];
 
         // ==========================================
-        // 4. ENGINE SINKRONISASI (PUSH DULU, LALU PULL)
+        // 4. AUTO-PULL DATA DARI GOOGLE SHEETS
         // ==========================================
-        async function pushPendingQueue() {
-            if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
-
-            const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
-            if (pendingQueue.length === 0) return;
-
-            // 1. Sync Habit Logs
-            const habitLogIds = pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId);
-            if (habitLogIds.length > 0) {
-                const logsToSync = await db.habitLogs.where('id').anyOf(habitLogIds).toArray();
-                await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'syncHabits', payload: logsToSync })
-                });
-            }
-
-            // 2. Sync Journals
-            const journalIds = pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId);
-            for (let jId of journalIds) {
-                const journal = await db.journals.get(jId);
-                if (journal) {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'syncJournal', payload: journal })
-                    });
-                }
-            }
-
-            // 3. Sync Users
-            const userSyncs = pendingQueue.filter(q => q.tableName === 'users');
-            for (let uItem of userSyncs) {
-                if (uItem.action === 'delete') {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'deleteUser', payload: { id: uItem.recordId } })
-                    });
-                } else {
-                    const uData = await db.users.get(uItem.recordId);
-                    if (uData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncUser', payload: uData })
-                        });
-                    }
-                }
-            }
-
-            // 4. Sync Classes
-            const classSyncs = pendingQueue.filter(q => q.tableName === 'classes');
-            for (let cItem of classSyncs) {
-                if (cItem.action === 'delete') {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'deleteClass', payload: { id: cItem.recordId } })
-                    });
-                } else {
-                    const cData = await db.classes.get(cItem.recordId);
-                    if (cData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncClass', payload: cData })
-                        });
-                    }
-                }
-            }
-
-            for (let item of pendingQueue) {
-                await db.syncQueue.update(item.id, { status: 'synced' });
-            }
-        }
-
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -220,55 +342,52 @@
                 const json = await res.json();
                 
                 if (json.status === 'success') {
-                    // Update Classes
                     if (json.classes && Array.isArray(json.classes) && json.classes.length > 0) {
                         const formattedClasses = json.classes.map(c => ({
-                            id: String(c['Class ID'] || c['id'] || '').trim(),
-                            name: String(c['Nama Kelas'] || c['name'] || '').trim(),
-                            teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || '').trim(),
-                            teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '').trim()
+                            id: String(c['Class ID'] || c['id'] || ''),
+                            name: String(c['Nama Kelas'] || c['name'] || ''),
+                            teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || ''),
+                            teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '')
                         })).filter(c => c.id);
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    // Update Users
                     if (json.users && Array.isArray(json.users) && json.users.length > 0) {
                         const formattedUsers = json.users.map(u => ({
-                            id: String(u['User ID'] || u['id'] || '').trim(),
-                            username: String(u['Username'] || u['username'] || '').trim(),
-                            name: String(u['Nama Lengkap'] || u['name'] || '').trim(),
-                            role: String(u['Role'] || u['role'] || 'siswa').trim().toLowerCase(),
-                            password: String(u['Password'] || u['password'] || '').trim(),
-                            phone: String(u['Nomor WhatsApp'] || u['phone'] || '').trim(),
-                            className: String(u['Kelas'] || u['className'] || '').trim(),
-                            classId: String(u['Class ID'] || u['classId'] || '').trim(),
-                            nisn: String(u['NISN'] || u['nisn'] || '').trim(),
-                            nip: String(u['NIP'] || u['nip'] || '').trim(),
-                            subject: String(u['Mata Pelajaran'] || u['subject'] || '').trim(),
-                            homeroomClassId: String(u['Homeroom Class ID'] || u['homeroomClassId'] || '').trim(),
-                            mentorId: String(u['Mentor ID'] || u['mentorId'] || '').trim(),
-                            mentorName: String(u['Mentor Name'] || u['mentorName'] || '').trim(),
-                            createdBy: String(u['Created By'] || u['createdBy'] || 'admin').trim(),
-                            status: String(u['Status'] || u['status'] || 'Aktif').trim(),
+                            id: String(u['User ID'] || u['id'] || ''),
+                            username: String(u['Username'] || u['username'] || ''),
+                            name: String(u['Nama Lengkap'] || u['name'] || ''),
+                            role: String(u['Role'] || u['role'] || 'siswa').toLowerCase(),
+                            password: String(u['Password'] || u['password'] || ''),
+                            phone: String(u['Nomor WhatsApp'] || u['phone'] || ''),
+                            className: String(u['Kelas'] || u['className'] || ''),
+                            classId: String(u['Class ID'] || u['classId'] || ''),
+                            nisn: String(u['NISN'] || u['nisn'] || ''),
+                            nip: String(u['NIP'] || u['nip'] || ''),
+                            subject: String(u['Mata Pelajaran'] || u['subject'] || ''),
+                            homeroomClassId: String(u['Homeroom Class ID'] || u['homeroomClassId'] || ''),
+                            mentorId: String(u['Mentor ID'] || u['mentorId'] || ''),
+                            mentorName: String(u['Mentor Name'] || u['mentorName'] || ''),
+                            createdBy: String(u['Created By'] || u['createdBy'] || 'admin'),
+                            status: String(u['Status'] || u['status'] || 'Aktif'),
                             avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
                         })).filter(u => u.id);
 
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    // Update Habit Logs
                     if (json.habitLogs && Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
                         const formattedLogs = json.habitLogs.map(l => ({
-                            id: String(l['ID Log'] || l['id'] || '').trim(),
-                            userId: String(l['User ID'] || l['userId'] || '').trim(),
-                            studentName: String(l['Nama Siswa'] || l['studentName'] || '').trim(),
-                            className: String(l['Kelas'] || l['className'] || '').trim(),
-                            habitId: String(l['Habit ID'] || l['habitId'] || '').trim(),
-                            habitName: String(l['Nama Kebiasaan'] || l['habitName'] || '').trim(),
-                            date: String(l['Tanggal'] || l['date'] || '').trim().split('T')[0],
-                            completed: String(l['Status Selesai'] || l['completed']).trim() === 'Selesai' || l['completed'] === true,
-                            timeValue: String(l['Jam / Waktu'] || l['timeValue'] || '').trim(),
-                            detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || '').trim(),
+                            id: String(l['ID Log'] || l['id'] || ''),
+                            userId: String(l['User ID'] || l['userId'] || ''),
+                            studentName: String(l['Nama Siswa'] || l['studentName'] || ''),
+                            className: String(l['Kelas'] || l['className'] || ''),
+                            habitId: String(l['Habit ID'] || l['habitId'] || ''),
+                            habitName: String(l['Nama Kebiasaan'] || l['habitName'] || ''),
+                            date: String(l['Tanggal'] || l['date'] || '').split('T')[0],
+                            completed: String(l['Status Selesai'] || l['completed']) === 'Selesai' || l['completed'] === true,
+                            timeValue: String(l['Jam / Waktu'] || l['timeValue'] || ''),
+                            detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || ''),
                             syncStatus: 'synced'
                         })).filter(l => l.id);
 
@@ -278,7 +397,7 @@
                     return true;
                 }
             } catch (err) {
-                console.warn("Pull data notice:", err);
+                console.warn("Auto-pull cloud notice:", err);
             }
             return false;
         }
@@ -295,7 +414,7 @@
                         username: 'admin',
                         name: 'Administrator Talaga Jaya',
                         role: ROLES.ADMIN,
-                        password: 'admin',
+                        password: 'admin', // Admin password tidak di-hash
                         phone: '6281234567890',
                         avatar: '⚙️',
                         status: 'Aktif',
@@ -303,38 +422,142 @@
                     });
                 }
             } catch (err) {
-                console.error("Master DB Seed notice:", err);
+                console.error("Gagal inisialisasi master database:", err);
             }
         }
 
+        // ==========================================
+        // 5. ENGINE SINKRONISASI ONLINE (PUSH & PULL)
+        // ==========================================
         function useOnlineSyncEngine() {
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [syncStatus, setSyncStatus] = useState('idle');
 
-            const fullSynchronize = async () => {
+            const processSyncQueue = async () => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+
+                const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
+                if (pendingQueue.length === 0) {
+                    await pullAllCloudData();
+                    return;
+                }
+
                 setSyncStatus('syncing');
                 try {
-                    await pushPendingQueue();
+                    // Sync Habit Logs
+                    const habitLogIds = pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId);
+                    if (habitLogIds.length > 0) {
+                        const logsToSync = await db.habitLogs.where('id').anyOf(habitLogIds).toArray();
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: logsToSync })
+                        });
+                    }
+
+                    // Sync Journals
+                    const journalIds = pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId);
+                    if (journalIds.length > 0) {
+                        for (let jId of journalIds) {
+                            const journal = await db.journals.get(jId);
+                            if (journal) {
+                                await fetch(GAS_API_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: JSON.stringify({ action: 'syncJournal', payload: journal })
+                                });
+                            }
+                        }
+                    }
+
+                    // Sync Users
+                    const userSyncs = pendingQueue.filter(q => q.tableName === 'users');
+                    for (let uItem of userSyncs) {
+                        if (uItem.action === 'delete') {
+                            await fetch(GAS_API_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'text/plain' },
+                                body: JSON.stringify({ action: 'deleteUser', payload: { id: uItem.recordId } })
+                            });
+                        } else {
+                            const uData = await db.users.get(uItem.recordId);
+                            if (uData) {
+                                await fetch(GAS_API_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: JSON.stringify({ action: 'syncUser', payload: uData })
+                                });
+                            }
+                        }
+                    }
+
+                    // Sync Classes
+                    const classSyncs = pendingQueue.filter(q => q.tableName === 'classes');
+                    for (let cItem of classSyncs) {
+                        if (cItem.action === 'delete') {
+                            await fetch(GAS_API_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'text/plain' },
+                                body: JSON.stringify({ action: 'deleteClass', payload: { id: cItem.recordId } })
+                            });
+                        } else {
+                            const cData = await db.classes.get(cItem.recordId);
+                            if (cData) {
+                                await fetch(GAS_API_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: JSON.stringify({ action: 'syncClass', payload: cData })
+                                });
+                            }
+                        }
+                    }
+
+                    for (let item of pendingQueue) {
+                        await db.syncQueue.update(item.id, { status: 'synced' });
+                    }
+
                     await pullAllCloudData();
                     setSyncStatus('synced');
                     setTimeout(() => setSyncStatus('idle'), 3000);
-                } catch (e) {
+                } catch (error) {
+                    console.error("Gagal sinkronisasi data:", error);
+                    setSyncStatus('error');
+                    setTimeout(() => setSyncStatus('idle'), 4000);
+                }
+            };
+
+            const triggerManualPull = async () => {
+                if (!navigator.onLine) {
+                    alert("Perangkat sedang offline. Sambungkan internet untuk menarik data cloud.");
+                    return;
+                }
+                setSyncStatus('syncing');
+                const success = await pullAllCloudData();
+                if (success) {
+                    setSyncStatus('synced');
+                    setTimeout(() => setSyncStatus('idle'), 3000);
+                } else {
                     setSyncStatus('error');
                     setTimeout(() => setSyncStatus('idle'), 4000);
                 }
             };
 
             useEffect(() => {
-                const handleOnline = () => { setIsOnline(true); fullSynchronize(); };
+                const handleOnline = () => { setIsOnline(true); processSyncQueue(); };
                 const handleOffline = () => { setIsOnline(false); setSyncStatus('idle'); };
 
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
                 const interval = setInterval(() => {
-                    if (navigator.onLine) fullSynchronize();
-                }, 30000);
+                    if (navigator.onLine) processSyncQueue();
+                }, 25000);
 
                 return () => {
                     window.removeEventListener('online', handleOnline);
@@ -343,11 +566,11 @@
                 };
             }, []);
 
-            return { isOnline, syncStatus, triggerSync: fullSynchronize, triggerManualPull: fullSynchronize };
+            return { isOnline, syncStatus, triggerSync: processSyncQueue, triggerManualPull };
         }
 
         // ==========================================
-        // 5. ATOM UI
+        // 6. ATOM UI
         // ==========================================
         const Card = ({ children, className = '' }) => (
             <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
@@ -377,7 +600,7 @@
         );
 
         // ==========================================
-        // 6. LAYOUT UTAMA
+        // 7. LAYOUT UTAMA
         // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, children }) => {
             const navItems = {
@@ -477,7 +700,7 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA
+        // 8. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -934,7 +1157,7 @@
         };
 
         // ==========================================
-        // 8. MODUL GURU (CRU Siswa Binaan + Reset Password Siswa)
+        // 9. MODUL GURU (CRU Siswa Binaan + Reset Password Siswa)
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
@@ -943,6 +1166,7 @@
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [classLogs, setClassLogs] = useState([]);
             
+            // Modal Tambah / Edit Siswa oleh Guru (CRU)
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
             const [studentFormData, setStudentFormData] = useState({
@@ -954,6 +1178,7 @@
                 classId: user.homeroomClassId || ''
             });
 
+            // Modal Reset Password Siswa oleh Guru
             const [resetModalStudent, setResetModalStudent] = useState(null);
             const [newResetPassword, setNewResetPassword] = useState('siswa123');
 
@@ -1271,6 +1496,7 @@
                             <Card className="w-full max-w-sm shadow-2xl">
                                 <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Siswa</h3>
                                 <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetModalStudent.name}</strong>.</p>
+
                                 <form onSubmit={handleExecuteResetPassword} className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Siswa</label>
@@ -1296,10 +1522,10 @@
 
             const handleUpdatePhone = async (e) => {
                 e.preventDefault();
-                const updated = { ...user, phone: phone.trim() };
+                const updated = { ...user, phone };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
-                alert("✨ Nomor WhatsApp berhasil diperbarui!");
+                alert("✨ Nomor WhatsApp berhasil diperbarui! Siswa Anda kini dapat menghubungi nomor ini saat lupa password.");
                 triggerSync();
             };
 
@@ -1371,7 +1597,7 @@
         };
 
         // ==========================================
-        // 9. MODUL ADMIN: FULL CRUD + RESET PASSWORD
+        // 10. MODUL ADMIN: FULL CRUD + RESET PASSWORD
         // ==========================================
         const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1461,7 +1687,7 @@
                 if (editingClass) {
                     const updated = {
                         ...editingClass,
-                        name: className.trim(),
+                        name: className,
                         teacherId: teacherId || '',
                         teacherName: selectedTeacher ? selectedTeacher.name : ''
                     };
@@ -1472,7 +1698,7 @@
                     const newId = `c_${Date.now()}`;
                     const created = { 
                         id: newId, 
-                        name: className.trim(), 
+                        name: className, 
                         teacherId: teacherId || '', 
                         teacherName: selectedTeacher ? selectedTeacher.name : '' 
                     };
@@ -1618,11 +1844,11 @@
                 if (editingTeacher) {
                     const updated = {
                         ...editingTeacher,
-                        name: formData.name.trim(),
-                        username: formData.username.trim(),
-                        phone: formData.phone.trim(),
-                        nip: formData.nip.trim(),
-                        subject: formData.subject.trim(),
+                        name: formData.name,
+                        username: formData.username,
+                        phone: formData.phone,
+                        nip: formData.nip,
+                        subject: formData.subject,
                         homeroomClassId: formData.homeroomClassId || '',
                         updatedAt: new Date()
                     };
@@ -1631,17 +1857,17 @@
                     alert(`✨ Data guru "${formData.name}" berhasil diperbarui!`);
                 } else {
                     const newId = `u_guru_${Date.now()}`;
-                    const defaultPass = formData.password.trim() || 'guru123';
+                    const defaultPass = formData.password || 'guru123';
                     const hashedPassword = await hashPassword(defaultPass);
 
                     const created = {
                         id: newId,
-                        username: formData.username.trim(),
+                        username: formData.username,
                         password: hashedPassword,
-                        phone: formData.phone.trim(),
-                        name: formData.name.trim(),
-                        nip: formData.nip.trim(),
-                        subject: formData.subject.trim(),
+                        phone: formData.phone,
+                        name: formData.name,
+                        nip: formData.nip,
+                        subject: formData.subject,
                         homeroomClassId: formData.homeroomClassId || '',
                         role: ROLES.GURU,
                         avatar: '👨‍🏫',
@@ -1662,7 +1888,7 @@
                 e.preventDefault();
                 if (!resetTeacherModal) return;
 
-                const hashed = await hashPassword(newTeacherPass.trim());
+                const hashed = await hashPassword(newTeacherPass);
                 const updated = { ...resetTeacherModal, password: hashed };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_trst_${Date.now()}`, tableName: 'users', recordId: resetTeacherModal.id, action: 'update', status: 'pending', createdAt: new Date() });
@@ -1853,9 +2079,9 @@
                 if (editingStudent) {
                     const updated = {
                         ...editingStudent,
-                        username: formData.username.trim(),
-                        name: formData.name.trim(),
-                        nisn: formData.nisn.trim(),
+                        username: formData.username,
+                        name: formData.name,
+                        nisn: formData.nisn,
                         classId: formData.classId,
                         className: selectedClass ? selectedClass.name : editingStudent.className,
                         mentorId: formData.mentorId || '',
@@ -1870,15 +2096,15 @@
                     alert(`✨ Data siswa "${formData.name}" berhasil diperbarui!`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
-                    const defaultPass = formData.password.trim() || 'siswa123';
+                    const defaultPass = formData.password || 'siswa123';
                     const hashedPassword = await hashPassword(defaultPass);
 
                     const created = {
                         id: newId,
-                        username: formData.username.trim(),
+                        username: formData.username,
                         password: hashedPassword,
-                        name: formData.name.trim(),
-                        nisn: formData.nisn.trim(),
+                        name: formData.name,
+                        nisn: formData.nisn,
                         classId: formData.classId,
                         className: selectedClass ? selectedClass.name : '',
                         mentorId: formData.mentorId || '',
@@ -1905,7 +2131,7 @@
                 e.preventDefault();
                 if (!resetStudentModal) return;
 
-                const hashed = await hashPassword(newStudentPass.trim());
+                const hashed = await hashPassword(newStudentPass);
                 const updated = { ...resetStudentModal, password: hashed };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_srst_${Date.now()}`, tableName: 'users', recordId: resetStudentModal.id, action: 'update', status: 'pending', createdAt: new Date() });
@@ -2061,34 +2287,16 @@
             );
         };
 
-        const AdminProfilePage = ({ user, onUpdateAdmin, triggerSync }) => {
+        const AdminProfilePage = ({ user, triggerSync }) => {
             const [username, setUsername] = useState(user.username || 'admin');
             const [password, setPassword] = useState(user.password || 'admin');
             const [phone, setPhone] = useState(user.phone || '');
 
             const handleSave = async (e) => {
                 e.preventDefault();
-                const updated = { 
-                    ...user, 
-                    username: username.trim(), 
-                    password: password.trim(), 
-                    phone: phone.trim() 
-                };
-                
-                // Simpan ke IndexedDB lokal & perbarui session state
+                const updated = { ...user, username, password, phone };
                 await db.users.put(updated);
-                onUpdateAdmin(updated);
-
-                // Masukkan ke antrean sinkronisasi
-                await db.syncQueue.put({ 
-                    id: `sync_adm_${Date.now()}`, 
-                    tableName: 'users', 
-                    recordId: user.id, 
-                    action: 'update', 
-                    status: 'pending', 
-                    createdAt: new Date() 
-                });
-
+                await db.syncQueue.put({ id: `sync_adm_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
                 alert("✨ Kredensial Administrator berhasil disimpan!");
                 triggerSync();
             };
@@ -2127,7 +2335,7 @@
         };
 
         // ==========================================
-        // 10. LOGIN & LANDING (Auto-Sync & Password Auth)
+        // 11. LOGIN & LANDING (Dengan Autentikasi Password & Lupa Password WA)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -2146,7 +2354,7 @@
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
             const [inputPassword, setInputPassword] = useState('');
-            const [isLoadingPull, setIsLoadingPull] = useState(true);
+            const [isLoadingPull, setIsLoadingPull] = useState(false);
 
             const loadUsers = async () => {
                 const res = await db.users.where('role').equals(selectedRole).toArray();
@@ -2189,20 +2397,19 @@
                     return;
                 }
 
-                const typedPassword = String(inputPassword).trim();
-
-                // Verifikasi Password Admin: Plaintext comparison
+                // Verifikasi Password:
                 if (user.role === ROLES.ADMIN) {
-                    const expected = String(user.password || 'admin').trim();
-                    if (typedPassword !== expected) {
+                    // Admin: Plaintext comparison
+                    const expected = user.password || 'admin';
+                    if (inputPassword !== expected) {
                         alert("❌ Password Administrator salah!");
                         return;
                     }
                 } else {
-                    // Verifikasi Password Guru & Siswa: SHA-256 Hashed comparison
-                    const inputHashed = await hashPassword(typedPassword);
+                    // Guru & Siswa: SHA-256 Hashed comparison
+                    const inputHashed = await hashPassword(inputPassword);
                     const defaultPass = user.role === ROLES.GURU ? 'guru123' : 'siswa123';
-                    const expectedHashed = user.password ? String(user.password).trim() : await hashPassword(defaultPass);
+                    const expectedHashed = user.password || await hashPassword(defaultPass);
 
                     if (inputHashed !== expectedHashed) {
                         alert("❌ Password yang Anda masukkan salah! Silakan gunakan tombol 'Lupa Password' jika tidak ingat.");
@@ -2222,6 +2429,7 @@
                 if (!selectedUser) return;
 
                 if (selectedRole === ROLES.SISWA) {
+                    // Cari guru pembimbing / wali kelas
                     let targetTeacher = null;
                     if (selectedUser.mentorId) {
                         targetTeacher = await db.users.get(selectedUser.mentorId);
@@ -2242,6 +2450,7 @@
                         alert(`Harap hubungi guru/wali kelas Anda (${targetTeacher ? targetTeacher.name : 'Guru'}) secara langsung di sekolah untuk mereset password.`);
                     }
                 } else if (selectedRole === ROLES.GURU) {
+                    // Hubungi Admin
                     if (adminUser && adminUser.phone) {
                         const cleanPhone = adminUser.phone.replace(/[^0-9]/g, '');
                         const msg = `Halo Administrator Sekolah, saya ${selectedUser.name} (Guru) lupa password akun 7 Kebiasaan saya. Mohon bantuan reset password.`;
@@ -2289,13 +2498,9 @@
                                         <i className={`fas fa-sync-alt ${isLoadingPull ? 'fa-spin' : ''}`}></i> Perbarui Akun
                                     </button>
                                 </div>
-                                {isLoadingPull ? (
-                                    <div className="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500 text-center font-bold">
-                                        <i className="fas fa-spinner fa-spin mr-1"></i> Memuat data akun dari Google Sheets...
-                                    </div>
-                                ) : users.length === 0 ? (
+                                {users.length === 0 ? (
                                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
-                                        Belum ada akun {selectedRole}. Masuk sebagai Admin untuk mendaftarkan akun.
+                                        {isLoadingPull ? "Sedang memuat data akun..." : `Belum ada akun ${selectedRole}. Masuk sebagai Admin untuk mendaftarkan akun.`}
                                     </div>
                                 ) : (
                                     <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
@@ -2323,12 +2528,12 @@
                                 />
                                 {selectedRole !== ROLES.ADMIN && (
                                     <p className="text-[10px] text-gray-400 mt-1">
-                                        Password bawaan awal: <strong>{selectedRole === ROLES.GURU ? 'guru123' : 'siswa123'}</strong>
+                                        Password awal bawaan: <strong>{selectedRole === ROLES.GURU ? 'guru123' : 'siswa123'}</strong>
                                     </p>
                                 )}
                             </div>
 
-                            <Button type="submit" fullWidth disabled={users.length === 0 || isLoadingPull}>Masuk Sistem</Button>
+                            <Button type="submit" fullWidth disabled={users.length === 0}>Masuk Sistem</Button>
                         </form>
                     </Card>
                 </div>
@@ -2336,7 +2541,7 @@
         };
 
         // ==========================================
-        // 11. ROOT CONTROLLER
+        // 12. ROOT CONTROLLER
         // ==========================================
         const App = () => {
             const [currentPath, setCurrentPath] = useState('/');
@@ -2371,19 +2576,22 @@
 
             let content = null;
             switch (currentPath) {
+                // Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Admin
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
-                case '/admin/profile': content = <AdminProfilePage user={user} onUpdateAdmin={setUser} triggerSync={triggerSync} />; break;
+                case '/admin/profile': content = <AdminProfilePage user={user} triggerSync={triggerSync} />; break;
 
                 default: content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
             }
@@ -2407,3 +2615,6 @@
     </script>
 </body>
 </html>
+</file>
+
+</files>
