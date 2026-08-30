@@ -83,11 +83,22 @@
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxr_T0jcF9vIM2u1wxYK3unkkIjTsUJkobM_SidYr3hf-2doJOBorBxhHWc_EgNs8wpog/exec";
 
         // ==========================================
-        // 2. DATABASE CLIENT-SIDE (Dexie IndexedDB)
+        // 2. HELPER KRIPTOGRAFI (SHA-256 HASH)
         // ==========================================
-        const db = new Dexie('SevenHabitsSyncDB');
+        async function hashPassword(text) {
+            if (!text) return '';
+            const msgBuffer = new TextEncoder().encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // ==========================================
+        // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
+        // ==========================================
+        const db = new Dexie('SevenHabitsSecureDB');
         db.version(1).stores({
-            users: 'id, username, role, classId, mentorId, nisn, nip, status',
+            users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
             habits: 'id, name, active',
             habitLogs: 'id, userId, habitId, date, completed, timeValue, detailValue, studentName, className, syncStatus',
@@ -187,7 +198,7 @@
         ];
 
         // ==========================================
-        // 3. AUTO-PULL CLOUD DATA KE INDEXEDDB
+        // 4. AUTO-PULL DATA DARI GOOGLE SHEETS
         // ==========================================
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
@@ -196,7 +207,6 @@
                 const json = await res.json();
                 
                 if (json.status === 'success') {
-                    // 1. Simpan Master Classes dari Cloud
                     if (json.classes && Array.isArray(json.classes) && json.classes.length > 0) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || ''),
@@ -204,18 +214,17 @@
                             teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || ''),
                             teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '')
                         })).filter(c => c.id);
-                        if (formattedClasses.length > 0) {
-                            await db.classes.bulkPut(formattedClasses);
-                        }
+                        if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    // 2. Simpan Master Users (Admin, Guru, Siswa) dari Cloud
                     if (json.users && Array.isArray(json.users) && json.users.length > 0) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || ''),
                             username: String(u['Username'] || u['username'] || ''),
                             name: String(u['Nama Lengkap'] || u['name'] || ''),
                             role: String(u['Role'] || u['role'] || 'siswa').toLowerCase(),
+                            password: String(u['Password'] || u['password'] || ''),
+                            phone: String(u['Nomor WhatsApp'] || u['phone'] || ''),
                             className: String(u['Kelas'] || u['className'] || ''),
                             classId: String(u['Class ID'] || u['classId'] || ''),
                             nisn: String(u['NISN'] || u['nisn'] || ''),
@@ -229,12 +238,9 @@
                             avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
                         })).filter(u => u.id);
 
-                        if (formattedUsers.length > 0) {
-                            await db.users.bulkPut(formattedUsers);
-                        }
+                        if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    // 3. Simpan Habit Logs dari Cloud
                     if (json.habitLogs && Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || ''),
@@ -250,9 +256,7 @@
                             syncStatus: 'synced'
                         })).filter(l => l.id);
 
-                        if (formattedLogs.length > 0) {
-                            await db.habitLogs.bulkPut(formattedLogs);
-                        }
+                        if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
                     }
 
                     return true;
@@ -266,11 +270,8 @@
         async function seedDatabaseClean() {
             try {
                 const habitCount = await db.habits.count();
-                if (habitCount === 0) {
-                    await db.habits.bulkPut(HABITS_CONFIG);
-                }
+                if (habitCount === 0) await db.habits.bulkPut(HABITS_CONFIG);
 
-                // Selalu pastikan admin default tersedia jika database lokal baru
                 const adminCount = await db.users.where('role').equals(ROLES.ADMIN).count();
                 if (adminCount === 0) {
                     await db.users.put({
@@ -278,6 +279,8 @@
                         username: 'admin',
                         name: 'Administrator Talaga Jaya',
                         role: ROLES.ADMIN,
+                        password: 'admin', // Admin password tidak di-hash
+                        phone: '6281234567890',
                         avatar: '⚙️',
                         status: 'Aktif',
                         createdAt: new Date()
@@ -289,7 +292,7 @@
         }
 
         // ==========================================
-        // 4. ENGINE SINKRONISASI (PUSH & PULL)
+        // 5. ENGINE SINKRONISASI ONLINE (PUSH & PULL)
         // ==========================================
         function useOnlineSyncEngine() {
             const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -300,7 +303,6 @@
 
                 const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
                 if (pendingQueue.length === 0) {
-                    // Jika tidak ada antrean kirim, lakukan sinkronisasi tarik data dari Sheets
                     await pullAllCloudData();
                     return;
                 }
@@ -385,9 +387,7 @@
                         await db.syncQueue.update(item.id, { status: 'synced' });
                     }
 
-                    // Setelah push selesai, tarik data terbaru agar selalu sinkron
                     await pullAllCloudData();
-
                     setSyncStatus('synced');
                     setTimeout(() => setSyncStatus('idle'), 3000);
                 } catch (error) {
@@ -420,7 +420,6 @@
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
-                // Auto-sync berkala setiap 25 detik
                 const interval = setInterval(() => {
                     if (navigator.onLine) processSyncQueue();
                 }, 25000);
@@ -436,7 +435,7 @@
         }
 
         // ==========================================
-        // 5. ATOM UI
+        // 6. ATOM UI
         // ==========================================
         const Card = ({ children, className = '' }) => (
             <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
@@ -466,15 +465,15 @@
         );
 
         // ==========================================
-        // 6. LAYOUT UTAMA
+        // 7. LAYOUT UTAMA
         // ==========================================
-        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerSync, triggerManualPull, children }) => {
+        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, children }) => {
             const navItems = {
                 [ROLES.SISWA]: [
                     { path: '/student/habits', label: '7 Kebiasaan', icon: 'fas fa-check-circle' },
                     { path: '/student/calendar', label: 'Kalender', icon: 'fas fa-calendar-alt' },
                     { path: '/student/journal', label: 'Jurnal Refleksi', icon: 'fas fa-book' },
-                    { path: '/student/profile', label: 'Profil Siswa', icon: 'fas fa-user-graduate' },
+                    { path: '/student/profile', label: 'Profil Saya', icon: 'fas fa-user-graduate' },
                 ],
                 [ROLES.GURU]: [
                     { path: '/teacher/dashboard', label: 'Siswa Binaan', icon: 'fas fa-chart-line' },
@@ -485,6 +484,7 @@
                     { path: '/admin/classes', label: 'Data Kelas', icon: 'fas fa-door-open' },
                     { path: '/admin/teachers', label: 'Data Guru', icon: 'fas fa-chalkboard-teacher' },
                     { path: '/admin/students', label: 'Data Siswa', icon: 'fas fa-user-graduate' },
+                    { path: '/admin/profile', label: 'Profil Admin', icon: 'fas fa-user-shield' },
                 ]
             }[user.role] || [];
 
@@ -565,7 +565,7 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA
+        // 8. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -954,22 +954,75 @@
             );
         };
 
-        const StudentProfilePage = ({ user }) => (
-            <Card className="max-w-md mx-auto text-center space-y-4 py-8">
-                <div className="w-20 h-20 rounded-full bg-brand-yellow text-white text-3xl flex items-center justify-center mx-auto shadow-md">{user.avatar || '👦'}</div>
-                <div>
-                    <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
-                    <p className="text-xs font-bold text-gray-400">NISN: {user.nisn || '-'}</p>
-                    <div className="mt-3 flex justify-center gap-2 flex-wrap">
-                        <span className="px-3 py-1 bg-red-100 text-brand-red rounded-full text-xs font-bold">Kelas: {user.className || 'Belum Diatur'}</span>
-                        {user.mentorName && <span className="px-3 py-1 bg-blue-100 text-brand-blue rounded-full text-xs font-bold">Guru Mentor: {user.mentorName}</span>}
-                    </div>
+        const StudentProfilePage = ({ user, triggerSync }) => {
+            const [oldPass, setOldPass] = useState('');
+            const [newPass, setNewPass] = useState('');
+            const [confirmPass, setConfirmPass] = useState('');
+
+            const handleChangePassword = async (e) => {
+                e.preventDefault();
+                if (newPass !== confirmPass) {
+                    alert("Password baru dan konfirmasi tidak cocok!");
+                    return;
+                }
+                const oldHash = await hashPassword(oldPass);
+                const currentHash = user.password || await hashPassword('siswa123');
+
+                if (oldHash !== currentHash) {
+                    alert("Password lama yang Anda masukkan salah!");
+                    return;
+                }
+
+                const newHashed = await hashPassword(newPass);
+                const updated = { ...user, password: newHashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                alert("✨ Password akun Anda berhasil diubah!");
+                setOldPass('');
+                setNewPass('');
+                setConfirmPass('');
+                triggerSync();
+            };
+
+            return (
+                <div className="max-w-md mx-auto space-y-6">
+                    <Card className="text-center space-y-4 py-8">
+                        <div className="w-20 h-20 rounded-full bg-brand-yellow text-white text-3xl flex items-center justify-center mx-auto shadow-md">{user.avatar || '👦'}</div>
+                        <div>
+                            <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                            <p className="text-xs font-bold text-gray-400">Username: @{user.username} • NISN: {user.nisn || '-'}</p>
+                            <div className="mt-3 flex justify-center gap-2 flex-wrap">
+                                <span className="px-3 py-1 bg-red-100 text-brand-red rounded-full text-xs font-bold">Kelas: {user.className || 'Belum Diatur'}</span>
+                                {user.mentorName && <span className="px-3 py-1 bg-blue-100 text-brand-blue rounded-full text-xs font-bold">Guru Mentor: {user.mentorName}</span>}
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-key text-brand-red mr-1.5"></i> Ganti Password Siswa</h3>
+                        <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Lama</label>
+                                <input type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Baru</label>
+                                <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Ulangi Password Baru</label>
+                                <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Password Baru</Button>
+                        </form>
+                    </Card>
                 </div>
-            </Card>
-        );
+            );
+        };
 
         // ==========================================
-        // 8. MODUL GURU (CRU: Create, Read, Update Siswa Binaan)
+        // 9. MODUL GURU (CRU Siswa Binaan + Reset Password Siswa)
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
@@ -984,10 +1037,15 @@
             const [studentFormData, setStudentFormData] = useState({
                 name: '',
                 username: '',
+                password: '',
                 nisn: '',
                 gender: 'Laki-laki',
                 classId: user.homeroomClassId || ''
             });
+
+            // Modal Reset Password Siswa oleh Guru
+            const [resetModalStudent, setResetModalStudent] = useState(null);
+            const [newResetPassword, setNewResetPassword] = useState('siswa123');
 
             const loadData = async () => {
                 const cls = await db.classes.toArray();
@@ -1002,7 +1060,6 @@
 
             useEffect(() => { loadData(); }, [selectedDate]);
 
-            // Filter siswa binaan milik guru ini
             const myStudents = useMemo(() => {
                 return allStudents.filter(s => {
                     const isHomeroom = user.homeroomClassId && s.classId === user.homeroomClassId;
@@ -1014,12 +1071,12 @@
                 });
             }, [allStudents, user, selectedTab]);
 
-            // Buka Modal Tambah Siswa Baru
             const handleOpenAddModal = () => {
                 setEditingStudent(null);
                 setStudentFormData({
                     name: '',
                     username: '',
+                    password: '',
                     nisn: '',
                     gender: 'Laki-laki',
                     classId: user.homeroomClassId || (classes[0] ? classes[0].id : '')
@@ -1027,12 +1084,12 @@
                 setIsStudentModalOpen(true);
             };
 
-            // Buka Modal Edit Siswa Binaan (Fitur Update Guru)
             const handleOpenEditModal = (student) => {
                 setEditingStudent(student);
                 setStudentFormData({
                     name: student.name || '',
                     username: student.username || '',
+                    password: '',
                     nisn: student.nisn || '',
                     gender: student.gender || 'Laki-laki',
                     classId: student.classId || ''
@@ -1040,13 +1097,11 @@
                 setIsStudentModalOpen(true);
             };
 
-            // Simpan Data Tambah / Edit oleh Guru
             const handleTeacherSaveStudent = async (e) => {
                 e.preventDefault();
                 const selectedClass = classes.find(c => c.id === studentFormData.classId);
 
                 if (editingStudent) {
-                    // UPDATE Siswa Binaan
                     const updatedStudent = {
                         ...editingStudent,
                         name: studentFormData.name,
@@ -1071,11 +1126,14 @@
 
                     alert(`✨ Data siswa "${studentFormData.name}" berhasil diperbarui!`);
                 } else {
-                    // CREATE Siswa Binaan Baru
                     const newId = `u_siswa_${Date.now()}`;
+                    const defaultPass = studentFormData.password || 'siswa123';
+                    const hashedPassword = await hashPassword(defaultPass);
+
                     const createdStudent = {
                         id: newId,
                         username: studentFormData.username,
+                        password: hashedPassword,
                         name: studentFormData.name,
                         nisn: studentFormData.nisn,
                         classId: studentFormData.classId || '',
@@ -1100,10 +1158,33 @@
                         createdAt: new Date()
                     });
 
-                    alert(`✨ Siswa "${studentFormData.name}" berhasil didaftarkan sebagai binaan Anda!`);
+                    alert(`✨ Siswa "${studentFormData.name}" berhasil didaftarkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsStudentModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleExecuteResetPassword = async (e) => {
+                e.preventDefault();
+                if (!resetModalStudent) return;
+
+                const hashed = await hashPassword(newResetPassword);
+                const updated = { ...resetModalStudent, password: hashed };
+                
+                await db.users.put(updated);
+                await db.syncQueue.put({
+                    id: `sync_rst_${Date.now()}`,
+                    tableName: 'users',
+                    recordId: resetModalStudent.id,
+                    action: 'update',
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+
+                alert(`✅ Password siswa ${resetModalStudent.name} berhasil di-reset menjadi: "${newResetPassword}". Harap beritahukan siswa.`);
+                setResetModalStudent(null);
                 await loadData();
                 triggerSync();
             };
@@ -1118,11 +1199,11 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan (CRU)</h1>
-                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, kelola dan perbarui data profil siswa binaan Anda.</p>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, edit profil, dan reset password siswa binaan Anda.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3 flex items-center gap-1.5">
-                                <i className="fas fa-user-plus"></i> + Tambah Siswa Binaan
+                                <i className="fas fa-user-plus"></i> + Tambah Siswa
                             </Button>
                             <Button variant="white" onClick={handleRefreshFromCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-sync-alt"></i> Tarik Cloud
@@ -1131,7 +1212,6 @@
                         </div>
                     </div>
 
-                    {/* Filter Tab Binaan */}
                     <div className="flex gap-2 border-b border-gray-200 pb-2 overflow-x-auto text-xs font-bold">
                         <button onClick={() => setSelectedTab('all')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'all' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
                             Semua Siswa Binaan ({allStudents.filter(s => (user.homeroomClassId && s.classId === user.homeroomClassId) || s.mentorId === user.id).length})
@@ -1145,7 +1225,7 @@
                     </div>
 
                     {myStudents.length === 0 ? (
-                        <Card><EmptyState icon="👦" title="Belum Ada Siswa Binaan" description="Anda belum memiliki siswa di tab ini. Klik tombol '+ Tambah Siswa Binaan' atau 'Tarik Cloud' untuk memperbarui data." /></Card>
+                        <Card><EmptyState icon="👦" title="Belum Ada Siswa Binaan" description="Anda belum memiliki siswa di tab ini. Klik tombol '+ Tambah Siswa' atau 'Tarik Cloud' untuk memperbarui data." /></Card>
                     ) : (
                         <div className="space-y-4">
                             {myStudents.map(student => {
@@ -1165,19 +1245,24 @@
                                                         {student.name}
                                                         {isMyMentee && <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-brand-blue rounded-full font-bold">Mentee</span>}
                                                     </h3>
-                                                    <p className="text-xs text-gray-400 font-bold">NISN: {student.nisn || '-'} • Kelas: {student.className || '-'}</p>
+                                                    <p className="text-xs text-gray-400 font-bold">@{student.username} • NISN: {student.nisn || '-'} • Kelas: {student.className || '-'}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                    {count} / 7 Kebiasaan Terisi
+                                                    {count} / 7 Selesai
                                                 </span>
                                                 <button 
                                                     onClick={() => handleOpenEditModal(student)} 
                                                     className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all"
-                                                    title="Edit Data Siswa Binaan"
                                                 >
-                                                    <i className="fas fa-edit"></i> Edit Profil
+                                                    <i className="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setResetModalStudent(student); setNewResetPassword('siswa123'); }} 
+                                                    className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 flex items-center gap-1 transition-all"
+                                                >
+                                                    <i className="fas fa-key"></i> Reset Password
                                                 </button>
                                             </div>
                                         </div>
@@ -1217,7 +1302,7 @@
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md shadow-2xl">
                                 <h3 className="font-black text-lg mb-1 text-brand-dark">{editingStudent ? 'Edit Profil Siswa Binaan' : 'Tambah Siswa Binaan'}</h3>
-                                <p className="text-xs text-gray-500 mb-4">{editingStudent ? 'Perbarui informasi siswa binaan Anda di bawah ini.' : 'Siswa yang Anda tambahkan otomatis masuk ke kelompok binaan Anda.'}</p>
+                                <p className="text-xs text-gray-500 mb-4">{editingStudent ? 'Perbarui informasi siswa binaan Anda.' : 'Siswa yang Anda tambahkan otomatis masuk ke binaan Anda.'}</p>
                                 
                                 <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
                                     <div>
@@ -1234,6 +1319,12 @@
                                             <input type="text" value={studentFormData.nisn} onChange={e => setStudentFormData({...studentFormData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
+                                    {!editingStudent && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal Siswa (Default: siswa123)</label>
+                                            <input type="text" value={studentFormData.password} onChange={e => setStudentFormData({...studentFormData, password: e.target.value})} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
@@ -1263,23 +1354,115 @@
                             </Card>
                         </div>
                     )}
+
+                    {/* MODAL RESET PASSWORD SISWA */}
+                    {resetModalStudent && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm shadow-2xl">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Siswa</h3>
+                                <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetModalStudent.name}</strong>.</p>
+
+                                <form onSubmit={handleExecuteResetPassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Siswa</label>
+                                        <input type="text" value={newResetPassword} onChange={e => setNewResetPassword(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold text-brand-red" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setResetModalStudent(null)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Reset Password</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
                 </div>
             );
         };
 
-        const TeacherProfilePage = ({ user }) => (
-            <Card className="max-w-md mx-auto text-center space-y-4 py-8">
-                <div className="w-20 h-20 rounded-full bg-brand-red text-white text-3xl flex items-center justify-center mx-auto">{user.avatar || '👨‍🏫'}</div>
-                <div>
-                    <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
-                    <p className="text-xs font-bold text-gray-400">NIP: {user.nip || '-'}</p>
-                    <p className="text-xs text-brand-blue font-bold mt-1">Mata Pelajaran: {user.subject || 'Umum'}</p>
+        const TeacherProfilePage = ({ user, triggerSync }) => {
+            const [phone, setPhone] = useState(user.phone || '');
+            const [oldPass, setOldPass] = useState('');
+            const [newPass, setNewPass] = useState('');
+            const [confirmPass, setConfirmPass] = useState('');
+
+            const handleUpdatePhone = async (e) => {
+                e.preventDefault();
+                const updated = { ...user, phone };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                alert("✨ Nomor WhatsApp berhasil diperbarui! Siswa Anda kini dapat menghubungi nomor ini saat lupa password.");
+                triggerSync();
+            };
+
+            const handleChangePassword = async (e) => {
+                e.preventDefault();
+                if (newPass !== confirmPass) {
+                    alert("Password baru dan konfirmasi tidak cocok!");
+                    return;
+                }
+                const oldHash = await hashPassword(oldPass);
+                const currentHash = user.password || await hashPassword('guru123');
+
+                if (oldHash !== currentHash) {
+                    alert("Password lama yang Anda masukkan salah!");
+                    return;
+                }
+
+                const newHashed = await hashPassword(newPass);
+                const updated = { ...user, password: newHashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                alert("✨ Password akun Guru Anda berhasil diubah!");
+                setOldPass('');
+                setNewPass('');
+                setConfirmPass('');
+                triggerSync();
+            };
+
+            return (
+                <div className="max-w-md mx-auto space-y-6">
+                    <Card className="text-center space-y-4 py-8">
+                        <div className="w-20 h-20 rounded-full bg-brand-red text-white text-3xl flex items-center justify-center mx-auto">{user.avatar || '👨‍🏫'}</div>
+                        <div>
+                            <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                            <p className="text-xs font-bold text-gray-400">NIP: {user.nip || '-'} • Mapel: {user.subject || 'Umum'}</p>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-2"><i className="fab fa-whatsapp text-green-500 mr-1.5"></i> Nomor WhatsApp Bantuan Siswa</h3>
+                        <p className="text-xs text-gray-500 mb-3">Nomor ini digunakan siswa binaan Anda saat menekan tombol lupa password.</p>
+                        <form onSubmit={handleUpdatePhone} className="space-y-3">
+                            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Contoh: 6281234567890" className="w-full p-2.5 border rounded-xl text-xs font-bold" required />
+                            <Button type="submit" fullWidth variant="green" className="py-2 text-xs">Simpan Nomor WA</Button>
+                        </form>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-key text-brand-red mr-1.5"></i> Ganti Password Guru</h3>
+                        <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Lama</label>
+                                <input type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Baru</label>
+                                <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Ulangi Password Baru</label>
+                                <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Password Baru</Button>
+                        </form>
+                    </Card>
                 </div>
-            </Card>
-        );
+            );
+        };
 
         // ==========================================
-        // 9. MODUL ADMIN: FULL CRUD DATA KELAS, GURU, SISWA
+        // 10. MODUL ADMIN: FULL CRUD + RESET PASSWORD
         // ==========================================
         const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1331,7 +1514,6 @@
             );
         };
 
-        // ADMIN: CRUD DATA KELAS
         const AdminClassesPage = ({ triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
@@ -1483,13 +1665,15 @@
             );
         };
 
-        // ADMIN: CRUD DATA GURU
         const AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
             const [teachers, setTeachers] = useState([]);
             const [classes, setClasses] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [editingTeacher, setEditingTeacher] = useState(null);
-            const [formData, setFormData] = useState({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
+            const [formData, setFormData] = useState({ name: '', username: '', password: '', phone: '', nip: '', subject: '', homeroomClassId: '' });
+
+            const [resetTeacherModal, setResetTeacherModal] = useState(null);
+            const [newTeacherPass, setNewTeacherPass] = useState('guru123');
 
             const loadData = async () => {
                 const t = await db.users.where('role').equals(ROLES.GURU).toArray();
@@ -1502,7 +1686,7 @@
 
             const handleOpenAdd = () => {
                 setEditingTeacher(null);
-                setFormData({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
+                setFormData({ name: '', username: '', password: '', phone: '', nip: '', subject: '', homeroomClassId: '' });
                 setIsModalOpen(true);
             };
 
@@ -1511,6 +1695,8 @@
                 setFormData({
                     name: teacher.name || '',
                     username: teacher.username || '',
+                    password: '',
+                    phone: teacher.phone || '',
                     nip: teacher.nip || '',
                     subject: teacher.subject || '',
                     homeroomClassId: teacher.homeroomClassId || ''
@@ -1525,6 +1711,7 @@
                         ...editingTeacher,
                         name: formData.name,
                         username: formData.username,
+                        phone: formData.phone,
                         nip: formData.nip,
                         subject: formData.subject,
                         homeroomClassId: formData.homeroomClassId || '',
@@ -1535,9 +1722,14 @@
                     alert(`✨ Data guru "${formData.name}" berhasil diperbarui!`);
                 } else {
                     const newId = `u_guru_${Date.now()}`;
+                    const defaultPass = formData.password || 'guru123';
+                    const hashedPassword = await hashPassword(defaultPass);
+
                     const created = {
                         id: newId,
                         username: formData.username,
+                        password: hashedPassword,
+                        phone: formData.phone,
                         name: formData.name,
                         nip: formData.nip,
                         subject: formData.subject,
@@ -1549,10 +1741,25 @@
                     };
                     await db.users.put(created);
                     await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Akun guru "${formData.name}" berhasil ditambahkan!`);
+                    alert(`✨ Akun guru "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}!`);
                 }
 
                 setIsModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleResetPassword = async (e) => {
+                e.preventDefault();
+                if (!resetTeacherModal) return;
+
+                const hashed = await hashPassword(newTeacherPass);
+                const updated = { ...resetTeacherModal, password: hashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_trst_${Date.now()}`, tableName: 'users', recordId: resetTeacherModal.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                alert(`✅ Password guru ${resetTeacherModal.name} berhasil di-reset menjadi: "${newTeacherPass}"`);
+                setResetTeacherModal(null);
                 await loadData();
                 triggerSync();
             };
@@ -1576,7 +1783,7 @@
                     <div className="flex justify-between items-center">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru (CRUD Admin)</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, dan manajemen akun pengajar.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, nomor WhatsApp, dan reset password guru.</p>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
@@ -1593,16 +1800,23 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">NIP</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi</th></tr>
+                                        <tr>
+                                            <th className="p-3">Nama Guru</th>
+                                            <th className="p-3">Username</th>
+                                            <th className="p-3">No. WhatsApp</th>
+                                            <th className="p-3">Mata Pelajaran</th>
+                                            <th className="p-3 text-right">Aksi</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         {teachers.map(t => (
                                             <tr key={t.id} className="border-b border-gray-50">
                                                 <td className="p-3 font-semibold">{t.name}</td>
-                                                <td className="p-3 text-gray-500">{t.username}</td>
-                                                <td className="p-3 text-gray-500">{t.nip || '-'}</td>
+                                                <td className="p-3 text-gray-500">@{t.username}</td>
+                                                <td className="p-3 text-green-600 font-bold">{t.phone || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
                                                 <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => { setResetTeacherModal(t); setNewTeacherPass('guru123'); }} className="text-amber-600 hover:underline font-bold text-xs"><i className="fas fa-key"></i> Reset Pass</button>
                                                     <button onClick={() => handleOpenEdit(t)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
                                                     <button onClick={() => handleDelete(t.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
@@ -1629,13 +1843,25 @@
                                             <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         </div>
                                         <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Nomor WhatsApp</label>
+                                            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="6281234567890" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    {!editingTeacher && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal (Default: guru123)</label>
+                                            <input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="guru123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">NIP / NIK</label>
                                             <input type="text" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-600 mb-1">Mata Pelajaran</label>
-                                        <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Mata Pelajaran</label>
+                                            <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
                                     </div>
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
@@ -1645,18 +1871,39 @@
                             </Card>
                         </div>
                     )}
+
+                    {resetTeacherModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Guru</h3>
+                                <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetTeacherModal.name}</strong>.</p>
+                                <form onSubmit={handleResetPassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Guru</label>
+                                        <input type="text" value={newTeacherPass} onChange={e => setNewTeacherPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold text-brand-red" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setResetTeacherModal(null)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Reset Password</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
                 </div>
             );
         };
 
-        // ADMIN: CRUD DATA SISWA (Create, Read, Update, Delete)
         const AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
             const [students, setStudents] = useState([]);
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
-            const [formData, setFormData] = useState({ name: '', username: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
+            const [formData, setFormData] = useState({ name: '', username: '', password: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
+
+            const [resetStudentModal, setResetStudentModal] = useState(null);
+            const [newStudentPass, setNewStudentPass] = useState('siswa123');
 
             const loadData = async () => {
                 const s = await db.users.where('role').equals(ROLES.SISWA).toArray();
@@ -1671,7 +1918,7 @@
 
             const handleOpenAdd = () => {
                 setEditingStudent(null);
-                setFormData({ name: '', username: '', nisn: '', classId: classes[0] ? classes[0].id : '', mentorId: '', gender: 'Laki-laki' });
+                setFormData({ name: '', username: '', password: '', nisn: '', classId: classes[0] ? classes[0].id : '', mentorId: '', gender: 'Laki-laki' });
                 setIsModalOpen(true);
             };
 
@@ -1680,6 +1927,7 @@
                 setFormData({
                     name: student.name || '',
                     username: student.username || '',
+                    password: '',
                     nisn: student.nisn || '',
                     classId: student.classId || '',
                     mentorId: student.mentorId || '',
@@ -1713,9 +1961,13 @@
                     alert(`✨ Data siswa "${formData.name}" berhasil diperbarui!`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
+                    const defaultPass = formData.password || 'siswa123';
+                    const hashedPassword = await hashPassword(defaultPass);
+
                     const created = {
                         id: newId,
                         username: formData.username,
+                        password: hashedPassword,
                         name: formData.name,
                         nisn: formData.nisn,
                         classId: formData.classId,
@@ -1732,10 +1984,25 @@
 
                     await db.users.put(created);
                     await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Siswa "${formData.name}" berhasil ditambahkan!`);
+                    alert(`✨ Siswa "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}!`);
                 }
 
                 setIsModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleResetPassword = async (e) => {
+                e.preventDefault();
+                if (!resetStudentModal) return;
+
+                const hashed = await hashPassword(newStudentPass);
+                const updated = { ...resetStudentModal, password: hashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_srst_${Date.now()}`, tableName: 'users', recordId: resetStudentModal.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                alert(`✅ Password siswa ${resetStudentModal.name} berhasil di-reset menjadi: "${newStudentPass}"`);
+                setResetStudentModal(null);
                 await loadData();
                 triggerSync();
             };
@@ -1759,7 +2026,7 @@
                     <div className="flex justify-between items-center">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa (CRUD Admin)</h1>
-                            <p className="text-gray-500 font-medium text-sm">Hak akses penuh untuk mengelola dan menghapus siswa.</p>
+                            <p className="text-gray-500 font-medium text-sm">Hak akses penuh mengelola akun, kelas, dan reset password siswa.</p>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
@@ -1789,17 +2056,14 @@
                                         {students.map(s => (
                                             <tr key={s.id} className="border-b border-gray-50">
                                                 <td className="p-3 font-semibold">{s.name}</td>
-                                                <td className="p-3 text-gray-500">{s.username}</td>
+                                                <td className="p-3 text-gray-500">@{s.username}</td>
                                                 <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
                                                 <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
                                                 <td className="p-3 text-right space-x-2">
-                                                    <button onClick={() => handleOpenEdit(s)} className="text-brand-blue hover:underline font-bold text-xs">
-                                                        <i className="fas fa-edit"></i> Edit
-                                                    </button>
-                                                    <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs">
-                                                        <i className="fas fa-trash"></i> Hapus
-                                                    </button>
+                                                    <button onClick={() => { setResetStudentModal(s); setNewStudentPass('siswa123'); }} className="text-amber-600 hover:underline font-bold text-xs"><i className="fas fa-key"></i> Reset</button>
+                                                    <button onClick={() => handleOpenEdit(s)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
+                                                    <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -1828,6 +2092,12 @@
                                             <input type="text" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
+                                    {!editingStudent && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal Siswa (Default: siswa123)</label>
+                                            <input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
@@ -1859,12 +2129,78 @@
                             </Card>
                         </div>
                     )}
+
+                    {resetStudentModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Siswa</h3>
+                                <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetStudentModal.name}</strong>.</p>
+                                <form onSubmit={handleResetPassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Siswa</label>
+                                        <input type="text" value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold text-brand-red" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setResetStudentModal(null)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Reset Password</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const AdminProfilePage = ({ user, triggerSync }) => {
+            const [username, setUsername] = useState(user.username || 'admin');
+            const [password, setPassword] = useState(user.password || 'admin');
+            const [phone, setPhone] = useState(user.phone || '');
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const updated = { ...user, username, password, phone };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_adm_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                alert("✨ Kredensial Administrator berhasil disimpan!");
+                triggerSync();
+            };
+
+            return (
+                <div className="max-w-md mx-auto space-y-6">
+                    <Card className="text-center space-y-4 py-8">
+                        <div className="w-20 h-20 rounded-full bg-brand-dark text-white text-3xl flex items-center justify-center mx-auto shadow-md">⚙️</div>
+                        <div>
+                            <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                            <p className="text-xs font-bold text-brand-red">Super Administrator Sistem</p>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-user-cog mr-1 text-brand-blue"></i> Pengaturan Akun Admin</h3>
+                        <form onSubmit={handleSave} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Username Admin</label>
+                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full p-2.5 border rounded-xl font-bold" required />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Admin (Plaintext)</label>
+                                <input type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded-xl font-bold text-brand-red" required />
+                                <span className="text-[10px] text-gray-400">Password admin tidak di-hash agar mudah dilihat di Google Sheets.</span>
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Nomor WhatsApp Bantuan Guru</label>
+                                <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="6281234567890" className="w-full p-2.5 border rounded-xl font-bold text-green-600" />
+                            </div>
+                            <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Akun Admin</Button>
+                        </form>
+                    </Card>
                 </div>
             );
         };
 
         // ==========================================
-        // 10. LOGIN & LANDING (Auto-Sync on Mount)
+        // 11. LOGIN & LANDING (Dengan Autentikasi Password & Lupa Password WA)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -1877,8 +2213,12 @@
 
         const LoginPage = ({ onLogin, onBack, triggerManualPull }) => {
             const [users, setUsers] = useState([]);
+            const [teachers, setTeachers] = useState([]);
+            const [adminUser, setAdminUser] = useState(null);
+
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
+            const [inputPassword, setInputPassword] = useState('');
             const [isLoadingPull, setIsLoadingPull] = useState(false);
 
             const loadUsers = async () => {
@@ -1886,13 +2226,19 @@
                 setUsers(res);
                 if (res.length > 0) setSelectedUserId(res[0].id);
                 else setSelectedUserId('');
+
+                const allTeachers = await db.users.where('role').equals(ROLES.GURU).toArray();
+                setTeachers(allTeachers);
+
+                const adm = await db.users.where('role').equals(ROLES.ADMIN).first();
+                setAdminUser(adm);
             };
 
             useEffect(() => {
                 loadUsers();
+                setInputPassword('');
             }, [selectedRole]);
 
-            // Auto-pull saat halaman login dibuka
             useEffect(() => {
                 async function syncInit() {
                     setIsLoadingPull(true);
@@ -1903,13 +2249,81 @@
                 syncInit();
             }, []);
 
-            const handleSubmit = async () => {
+            const handleSubmit = async (e) => {
+                e.preventDefault();
                 if (!selectedUserId) {
-                    alert("Belum ada akun pada role ini. Masuk sebagai Admin untuk mendaftarkan akun.");
+                    alert("Pilih akun Anda terlebih dahulu!");
                     return;
                 }
+
                 const user = await db.users.get(selectedUserId);
-                if (user) onLogin(user);
+                if (!user) {
+                    alert("Akun tidak ditemukan!");
+                    return;
+                }
+
+                // Verifikasi Password:
+                if (user.role === ROLES.ADMIN) {
+                    // Admin: Plaintext comparison
+                    const expected = user.password || 'admin';
+                    if (inputPassword !== expected) {
+                        alert("❌ Password Administrator salah!");
+                        return;
+                    }
+                } else {
+                    // Guru & Siswa: SHA-256 Hashed comparison
+                    const inputHashed = await hashPassword(inputPassword);
+                    const defaultPass = user.role === ROLES.GURU ? 'guru123' : 'siswa123';
+                    const expectedHashed = user.password || await hashPassword(defaultPass);
+
+                    if (inputHashed !== expectedHashed) {
+                        alert("❌ Password yang Anda masukkan salah! Silakan gunakan tombol 'Lupa Password' jika tidak ingat.");
+                        return;
+                    }
+                }
+
+                onLogin(user);
+            };
+
+            const handleForgotPassword = async () => {
+                if (!selectedUserId) {
+                    alert("Pilih akun Anda terlebih dahulu!");
+                    return;
+                }
+                const selectedUser = await db.users.get(selectedUserId);
+                if (!selectedUser) return;
+
+                if (selectedRole === ROLES.SISWA) {
+                    // Cari guru pembimbing / wali kelas
+                    let targetTeacher = null;
+                    if (selectedUser.mentorId) {
+                        targetTeacher = await db.users.get(selectedUser.mentorId);
+                    }
+                    if (!targetTeacher && selectedUser.classId) {
+                        const cls = await db.classes.get(selectedUser.classId);
+                        if (cls && cls.teacherId) targetTeacher = await db.users.get(cls.teacherId);
+                    }
+                    if (!targetTeacher) {
+                        targetTeacher = teachers[0];
+                    }
+
+                    if (targetTeacher && targetTeacher.phone) {
+                        const cleanPhone = targetTeacher.phone.replace(/[^0-9]/g, '');
+                        const msg = `Halo Bapak/Ibu ${targetTeacher.name}, saya ${selectedUser.name} (Kelas: ${selectedUser.className || '-'}) lupa password akun 7 Kebiasaan saya. Mohon bantuan reset password. Terima kasih.`;
+                        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                    } else {
+                        alert(`Harap hubungi guru/wali kelas Anda (${targetTeacher ? targetTeacher.name : 'Guru'}) secara langsung di sekolah untuk mereset password.`);
+                    }
+                } else if (selectedRole === ROLES.GURU) {
+                    // Hubungi Admin
+                    if (adminUser && adminUser.phone) {
+                        const cleanPhone = adminUser.phone.replace(/[^0-9]/g, '');
+                        const msg = `Halo Administrator Sekolah, saya ${selectedUser.name} (Guru) lupa password akun 7 Kebiasaan saya. Mohon bantuan reset password.`;
+                        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                    } else {
+                        alert("Silakan hubungi Administrator sekolah secara langsung untuk mereset password Anda.");
+                    }
+                }
             };
 
             const handleRefreshManual = async () => {
@@ -1926,7 +2340,7 @@
                         <div className="text-center">
                             <div className="text-3xl mb-1">🇮🇩</div>
                             <h2 className="text-lg font-black text-brand-dark">{SCHOOL_IDENTITY.name}</h2>
-                            <p className="text-xs text-gray-400 font-bold">Pilih Peran & Akun Pengguna</p>
+                            <p className="text-xs text-gray-400 font-bold">Masuk dengan Akun & Password</p>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                             {[
@@ -1934,37 +2348,65 @@
                                 { role: ROLES.GURU, label: 'Guru', icon: '👨‍🏫' },
                                 { role: ROLES.ADMIN, label: 'Admin', icon: '⚙️' }
                             ].map(r => (
-                                <button key={r.role} onClick={() => setSelectedRole(r.role)} className={`p-3 rounded-xl flex flex-col items-center border-2 text-xs font-bold transition-all ${selectedRole === r.role ? 'border-brand-red bg-red-50 text-brand-red' : 'border-gray-100 text-gray-500'}`}>
+                                <button key={r.role} type="button" onClick={() => setSelectedRole(r.role)} className={`p-3 rounded-xl flex flex-col items-center border-2 text-xs font-bold transition-all ${selectedRole === r.role ? 'border-brand-red bg-red-50 text-brand-red' : 'border-gray-100 text-gray-500'}`}>
                                     <span className="text-xl mb-1">{r.icon}</span>
                                     {r.label}
                                 </button>
                             ))}
                         </div>
-                        <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <label className="block text-xs font-bold text-gray-600">Pilih Akun Terdaftar:</label>
-                                <button onClick={handleRefreshManual} disabled={isLoadingPull} className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-1">
-                                    <i className={`fas fa-sync-alt ${isLoadingPull ? 'fa-spin' : ''}`}></i> Perbarui Akun
-                                </button>
-                            </div>
-                            {users.length === 0 ? (
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
-                                    {isLoadingPull ? "Sedang memuat data dari Google Sheets..." : `Belum ada akun ${selectedRole} di memori lokal. Klik 'Perbarui Akun' atau masuk sebagai Admin.`}
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-xs font-bold text-gray-600">Pilih Nama Pengguna:</label>
+                                    <button type="button" onClick={handleRefreshManual} disabled={isLoadingPull} className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-1">
+                                        <i className={`fas fa-sync-alt ${isLoadingPull ? 'fa-spin' : ''}`}></i> Perbarui Akun
+                                    </button>
                                 </div>
-                            ) : (
-                                <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
-                                    {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.username})</option>)}
-                                </select>
-                            )}
-                        </div>
-                        <Button fullWidth onClick={handleSubmit} disabled={users.length === 0}>Masuk Sistem</Button>
+                                {users.length === 0 ? (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
+                                        {isLoadingPull ? "Sedang memuat data akun..." : `Belum ada akun ${selectedRole}. Masuk sebagai Admin untuk mendaftarkan akun.`}
+                                    </div>
+                                ) : (
+                                    <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
+                                        {users.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username})</option>)}
+                                    </select>
+                                )}
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-xs font-bold text-gray-600">Kata Sandi / Password:</label>
+                                    {selectedRole !== ROLES.ADMIN && users.length > 0 && (
+                                        <button type="button" onClick={handleForgotPassword} className="text-[11px] font-bold text-green-600 hover:underline flex items-center gap-1">
+                                            <i className="fab fa-whatsapp"></i> Lupa Password?
+                                        </button>
+                                    )}
+                                </div>
+                                <input 
+                                    type="password" 
+                                    value={inputPassword} 
+                                    onChange={e => setInputPassword(e.target.value)} 
+                                    placeholder={selectedRole === ROLES.ADMIN ? "Password admin" : "Masukkan password Anda..."} 
+                                    className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
+                                    required 
+                                />
+                                {selectedRole !== ROLES.ADMIN && (
+                                    <p className="text-[10px] text-gray-400 mt-1">
+                                        Password awal bawaan: <strong>{selectedRole === ROLES.GURU ? 'guru123' : 'siswa123'}</strong>
+                                    </p>
+                                )}
+                            </div>
+
+                            <Button type="submit" fullWidth disabled={users.length === 0}>Masuk Sistem</Button>
+                        </form>
                     </Card>
                 </div>
             );
         };
 
         // ==========================================
-        // 11. ROOT CONTROLLER
+        // 12. ROOT CONTROLLER
         // ==========================================
         const App = () => {
             const [currentPath, setCurrentPath] = useState('/');
@@ -1974,7 +2416,7 @@
             useEffect(() => {
                 async function init() {
                     await seedDatabaseClean();
-                    await pullAllCloudData(); // Auto-pull seluruh data saat aplikasi pertama dibuka
+                    await pullAllCloudData();
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Notice:', err));
                     }
@@ -1999,18 +2441,22 @@
 
             let content = null;
             switch (currentPath) {
+                // Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
-                case '/student/profile': content = <StudentProfilePage user={user} />; break;
+                case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
-                case '/teacher/profile': content = <TeacherProfilePage user={user} />; break;
+                case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Admin
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/admin/profile': content = <AdminProfilePage user={user} triggerSync={triggerSync} />; break;
 
                 default: content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
             }
@@ -2023,7 +2469,6 @@
                     onLogout={handleLogout} 
                     isOnline={isOnline} 
                     syncStatus={syncStatus} 
-                    triggerSync={triggerSync}
                     triggerManualPull={triggerManualPull}
                 >
                     {content}
