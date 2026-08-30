@@ -218,7 +218,7 @@
         ];
 
         // ==========================================
-        // 4. ENGINE SINKRONISASI (PUSH DULU, LALU PULL)
+        // 4. ENGINE SINKRONISASI (PUSH DULU, LALU REKONSILIASI PULL)
         // ==========================================
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
@@ -226,29 +226,49 @@
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
-            // 1. Sync Habit Logs
-            const habitLogIds = pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId);
-            if (habitLogIds.length > 0) {
-                const logsToSync = await db.habitLogs.where('id').anyOf(habitLogIds).toArray();
-                await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'syncHabits', payload: logsToSync })
-                });
-            }
-
-            // 2. Sync Journals
-            const journalIds = pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId);
-            for (let jId of journalIds) {
-                const journal = await db.journals.get(jId);
-                if (journal) {
+            // 1. Sync Habit Logs (Delete & Upsert)
+            const habitSyncs = pendingQueue.filter(q => q.tableName === 'habitLogs');
+            for (let item of habitSyncs) {
+                if (item.action === 'delete') {
                     await fetch(GAS_API_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'syncJournal', payload: journal })
+                        body: JSON.stringify({ action: 'deleteHabitLog', payload: { id: item.recordId } })
                     });
+                } else {
+                    const logData = await db.habitLogs.get(item.recordId);
+                    if (logData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: [logData] })
+                        });
+                    }
+                }
+            }
+
+            // 2. Sync Journals (Delete & Upsert)
+            const journalSyncs = pendingQueue.filter(q => q.tableName === 'journals');
+            for (let item of journalSyncs) {
+                if (item.action === 'delete') {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteJournal', payload: { id: item.recordId } })
+                    });
+                } else {
+                    const jData = await db.journals.get(item.recordId);
+                    if (jData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncJournal', payload: jData })
+                        });
+                    }
                 }
             }
 
@@ -303,6 +323,7 @@
             }
         }
 
+        // FUNGSI PULL LENGKAP DENGAN AUTO-CLEANUP DATA TERHAPUS
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -310,17 +331,33 @@
                 const json = await res.json();
                 
                 if (json.status === 'success') {
-                    if (json.classes && Array.isArray(json.classes) && json.classes.length > 0) {
+                    const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
+                    const pendingUserIds = new Set(pendingQueue.filter(q => q.tableName === 'users').map(q => q.recordId));
+                    const pendingClassIds = new Set(pendingQueue.filter(q => q.tableName === 'classes').map(q => q.recordId));
+                    const pendingLogIds = new Set(pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId));
+                    const pendingJournalIds = new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId));
+
+                    // 1. Rekonsiliasi Classes
+                    if (Array.isArray(json.classes)) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
                             name: String(c['Nama Kelas'] || c['name'] || '').trim(),
                             teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || '').trim(),
                             teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '').trim()
                         })).filter(c => c.id);
+
+                        const cloudClassIds = new Set(formattedClasses.map(c => c.id));
+                        const localClasses = await db.classes.toArray();
+                        const classesToDelete = localClasses
+                            .filter(c => !cloudClassIds.has(c.id) && !pendingClassIds.has(c.id))
+                            .map(c => c.id);
+
+                        if (classesToDelete.length > 0) await db.classes.bulkDelete(classesToDelete);
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    if (json.users && Array.isArray(json.users) && json.users.length > 0) {
+                    // 2. Rekonsiliasi Users
+                    if (Array.isArray(json.users)) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || '').trim(),
                             username: String(u['Username'] || u['username'] || '').trim(),
@@ -341,10 +378,18 @@
                             avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
                         })).filter(u => u.id);
 
+                        const cloudUserIds = new Set(formattedUsers.map(u => u.id));
+                        const localUsers = await db.users.toArray();
+                        const usersToDelete = localUsers
+                            .filter(u => !cloudUserIds.has(u.id) && !pendingUserIds.has(u.id) && u.id !== 'u_admin_default')
+                            .map(u => u.id);
+
+                        if (usersToDelete.length > 0) await db.users.bulkDelete(usersToDelete);
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    if (json.habitLogs && Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
+                    // 3. Rekonsiliasi Habit Logs
+                    if (Array.isArray(json.habitLogs)) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
                             userId: String(l['User ID'] || l['userId'] || '').trim(),
@@ -359,7 +404,37 @@
                             syncStatus: 'synced'
                         })).filter(l => l.id);
 
+                        const cloudLogIds = new Set(formattedLogs.map(l => l.id));
+                        const localLogs = await db.habitLogs.toArray();
+                        const logsToDelete = localLogs
+                            .filter(l => !cloudLogIds.has(l.id) && !pendingLogIds.has(l.id))
+                            .map(l => l.id);
+
+                        if (logsToDelete.length > 0) await db.habitLogs.bulkDelete(logsToDelete);
                         if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
+                    }
+
+                    // 4. Rekonsiliasi Journals
+                    if (Array.isArray(json.journals)) {
+                        const formattedJournals = json.journals.map(j => ({
+                            id: String(j['ID Jurnal'] || j['id'] || '').trim(),
+                            userId: String(j['User ID'] || j['userId'] || '').trim(),
+                            studentName: String(j['Nama Siswa'] || j['studentName'] || '').trim(),
+                            className: String(j['Kelas'] || j['className'] || '').trim(),
+                            date: String(j['Tanggal'] || j['date'] || '').trim().split('T')[0],
+                            mood: String(j['Mood'] || j['mood'] || '').trim(),
+                            content: String(j['Isi Jurnal'] || j['content'] || '').trim(),
+                            syncStatus: 'synced'
+                        })).filter(j => j.id);
+
+                        const cloudJournalIds = new Set(formattedJournals.map(j => j.id));
+                        const localJournals = await db.journals.toArray();
+                        const journalsToDelete = localJournals
+                            .filter(j => !cloudJournalIds.has(j.id) && !pendingJournalIds.has(j.id))
+                            .map(j => j.id);
+
+                        if (journalsToDelete.length > 0) await db.journals.bulkDelete(journalsToDelete);
+                        if (formattedJournals.length > 0) await db.journals.bulkPut(formattedJournals);
                     }
 
                     return true;
@@ -668,7 +743,7 @@
                     id: `sync_${Date.now()}_${Math.random()}`,
                     tableName: 'habitLogs',
                     recordId: logId,
-                    action: 'upsert',
+                    action: 'delete',
                     status: 'pending',
                     createdAt: new Date()
                 });
@@ -1204,7 +1279,7 @@
             const handleRefreshFromCloud = async () => {
                 await triggerManualPull();
                 await loadData();
-                showAlert.success('Data Terkini', 'Data siswa berhasil ditarik dari Google Sheets.');
+                showAlert.success('Data Terkini', 'Data siswa berhasil diselaraskan dari Google Sheets.');
             };
 
             return (
