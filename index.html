@@ -80,16 +80,15 @@
         // ==========================================
         // 1. KONFIGURASI API GOOGLE APPS SCRIPT
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxkL56ZTuymmgPNci_qNK2khBMBTg8CljV_KHamAkrNLFNYmbf9PUsPDJn1sqBAlyJ-lg/exec";
+        const GAS_API_URL = "MASUKKAN_URL_WEB_APP_GOOGLE_SCRIPT_ANDA_DI_SINI";
 
         // ==========================================
         // 2. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsOnlineDB');
+        const db = new Dexie('SevenHabitsCleanDB');
         db.version(1).stores({
-            users: 'id, username, role, classId, nisn, nis, nip',
-            schools: 'id, name',
-            classes: 'id, name, teacherId, schoolId',
+            users: 'id, username, role, classId, nisn, nip, status',
+            classes: 'id, name, teacherId',
             habits: 'id, name, active',
             habitLogs: 'id, userId, habitId, date, completed, syncStatus',
             points: 'id, userId, totalPoints',
@@ -105,63 +104,41 @@
             academicYear: "2026/2027"
         };
 
-        const ROLES = { SISWA: 'siswa', GURU: 'guru', KEPSEK: 'kepsek', ADMIN: 'admin' };
+        // HANYA 3 ROLE (Kepsek Dihapus)
+        const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
 
         const HABITS_LIST = [
-            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan penuh semangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', points: 10 },
-            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan ibadah tepat waktu sesuai agama/keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', points: 10 },
-            { id: 'h3', name: 'Berolahraga', description: 'Melakukan aktivitas fisik & senam menjaga kebugaran', icon: '🏃', color: 'bg-green-100 text-green-600', points: 10 },
-            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Mengonsumsi sarapan dan makanan bergizi seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', points: 10 },
-            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku dan mengerjakan tugas sekolah', icon: '📚', color: 'bg-yellow-100 text-yellow-600', points: 10 },
-            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua, sopan, dan peduli sesama', icon: '🤝', color: 'bg-teal-100 text-teal-600', points: 10 },
-            { id: 'h7', name: 'Tidur Cepat', description: 'Tidur tepat waktu sebelum pukul 21.30 malam', icon: '😴', color: 'bg-purple-100 text-purple-600', points: 10 },
+            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan semangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', points: 10 },
+            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', points: 10 },
+            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam, atau peregangan tubuh minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', points: 10 },
+            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih berserat', icon: '🍎', color: 'bg-red-100 text-red-600', points: 10 },
+            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku dan mengerjakan tugas dengan tekun', icon: '📚', color: 'bg-yellow-100 text-yellow-600', points: 10 },
+            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah dan menjaga kesantunan sosial', icon: '🤝', color: 'bg-teal-100 text-teal-600', points: 10 },
+            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat dan tidur malam teratur sebelum pukul 21.30', icon: '😴', color: 'bg-purple-100 text-purple-600', points: 10 },
         ];
 
-        // Seeding database lokal jika kosong
-        async function seedDatabaseIfNeeded() {
+        // Inisialisasi Bersih: Hanya Master Habit & 1 Admin Setup
+        async function seedDatabaseClean() {
             try {
-                const userCount = await db.users.count();
-                if (userCount === 0) {
-                    await db.schools.put({ id: 'sch1', name: SCHOOL_IDENTITY.name, district: SCHOOL_IDENTITY.district });
-                    await db.classes.bulkPut([
-                        { id: 'c_vii_1', name: 'VII.1', teacherId: 'u_guru1', schoolId: 'sch1' },
-                        { id: 'c_viii_1', name: 'VIII.1', teacherId: 'u_guru2', schoolId: 'sch1' },
-                        { id: 'c_ix_1', name: 'IX.1', teacherId: 'u_guru3', schoolId: 'sch1' }
-                    ]);
+                const habitCount = await db.habits.count();
+                if (habitCount === 0) {
                     await db.habits.bulkPut(HABITS_LIST);
-                    
-                    await db.users.bulkPut([
-                        { id: 'u_admin', username: 'admin', name: 'Administrator Sekolah', role: ROLES.ADMIN, avatar: '⚙️', status: 'Aktif' },
-                        { id: 'u_kepsek', username: 'kepsek', name: 'Dra. Hj. Fatmawati, M.Pd', role: ROLES.KEPSEK, avatar: '🏫', status: 'Aktif' },
-                        { id: 'u_guru1', username: 'guru1', nip: '198201012005011001', name: 'Rahmat Dai, S.Pd', role: ROLES.GURU, subject: 'Matematika', isHomeroomTeacher: true, homeroomClassId: 'c_vii_1', avatar: '👨‍🏫', status: 'Aktif' },
-                    ]);
+                }
 
-                    const initialStudents = [];
-                    for (let i = 1; i <= 10; i++) {
-                        initialStudents.push({
-                            id: `u_siswa${i}`,
-                            username: `siswa${i}`,
-                            nisn: `008923000${i}`,
-                            name: `Siswa Binaan ${i}`,
-                            role: ROLES.SISWA,
-                            classId: 'c_vii_1',
-                            className: 'VII.1',
-                            gender: i % 2 === 0 ? 'Laki-laki' : 'Perempuan',
-                            status: 'Aktif',
-                            avatar: i % 2 === 0 ? '👦' : '👧'
-                        });
-                    }
-                    await db.users.bulkPut(initialStudents);
-
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    for (let i = 1; i <= 10; i++) {
-                        const sid = `u_siswa${i}`;
-                        await db.points.put({ id: `p_${sid}`, userId: sid, totalPoints: 70, updatedAt: new Date() });
-                        await db.streaks.put({ userId: sid, currentStreak: 3, longestStreak: 7, updatedAt: new Date() });
-                    }
+                const adminCount = await db.users.where('role').equals(ROLES.ADMIN).count();
+                if (adminCount === 0) {
+                    await db.users.put({
+                        id: 'u_admin_default',
+                        username: 'admin',
+                        name: 'Administrator Talaga Jaya',
+                        role: ROLES.ADMIN,
+                        avatar: '⚙️',
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    });
                 }
             } catch (err) {
-                console.error("Inisialisasi Database Lokal Gagal:", err);
+                console.error("Gagal inisialisasi master database:", err);
             }
         }
 
@@ -170,33 +147,29 @@
         // ==========================================
         function useOnlineSyncEngine() {
             const [isOnline, setIsOnline] = useState(navigator.onLine);
-            const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
+            const [syncStatus, setSyncStatus] = useState('idle');
 
             const processSyncQueue = async () => {
-                if (!navigator.onLine || GAS_API_URL.includes("MASUKKAN_URL")) return;
+                if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
                 const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
                 if (pendingQueue.length === 0) return;
 
                 setSyncStatus('syncing');
                 try {
-                    // 1. Kumpulkan seluruh batch habit logs
+                    // Batch Sync Habit Logs
                     const habitLogIds = pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId);
                     if (habitLogIds.length > 0) {
                         const logsToSync = await db.habitLogs.where('id').anyOf(habitLogIds).toArray();
-                        
                         await fetch(GAS_API_URL, {
                             method: 'POST',
                             mode: 'no-cors',
                             headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({
-                                action: 'syncHabits',
-                                payload: logsToSync
-                            })
+                            body: JSON.stringify({ action: 'syncHabits', payload: logsToSync })
                         });
                     }
 
-                    // 2. Kumpulkan seluruh batch jurnal
+                    // Sync Jurnal
                     const journalIds = pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId);
                     if (journalIds.length > 0) {
                         for (let jId of journalIds) {
@@ -206,16 +179,35 @@
                                     method: 'POST',
                                     mode: 'no-cors',
                                     headers: { 'Content-Type': 'text/plain' },
-                                    body: JSON.stringify({
-                                        action: 'syncJournal',
-                                        payload: journal
-                                    })
+                                    body: JSON.stringify({ action: 'syncJournal', payload: journal })
                                 });
                             }
                         }
                     }
 
-                    // Tandai semua item antrean berhasil disinkronkan
+                    // Sync Users
+                    const userSyncs = pendingQueue.filter(q => q.tableName === 'users');
+                    for (let uItem of userSyncs) {
+                        if (uItem.action === 'delete') {
+                            await fetch(GAS_API_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'text/plain' },
+                                body: JSON.stringify({ action: 'deleteUser', payload: { id: uItem.recordId } })
+                            });
+                        } else {
+                            const uData = await db.users.get(uItem.recordId);
+                            if (uData) {
+                                await fetch(GAS_API_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: JSON.stringify({ action: 'syncUser', payload: uData })
+                                });
+                            }
+                        }
+                    }
+
                     for (let item of pendingQueue) {
                         await db.syncQueue.update(item.id, { status: 'synced' });
                     }
@@ -223,7 +215,7 @@
                     setSyncStatus('synced');
                     setTimeout(() => setSyncStatus('idle'), 3000);
                 } catch (error) {
-                    console.error("Gagal sinkronisasi:", error);
+                    console.error("Gagal sinkronisasi data:", error);
                     setSyncStatus('error');
                     setTimeout(() => setSyncStatus('idle'), 4000);
                 }
@@ -236,7 +228,6 @@
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
-                // Interval sinkronisasi otomatis setiap 30 detik saat online
                 const interval = setInterval(() => {
                     if (navigator.onLine) processSyncQueue();
                 }, 30000);
@@ -252,7 +243,7 @@
         }
 
         // ==========================================
-        // 4. UI COMPONENTS UMUM
+        // 4. UI ATOMS
         // ==========================================
         const Card = ({ children, className = '' }) => (
             <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
@@ -273,19 +264,34 @@
             );
         };
 
+        const EmptyState = ({ icon = '📂', title = 'Belum Ada Data', description = 'Data akan muncul setelah ditambahkan ke dalam sistem.' }) => (
+            <div className="text-center py-12 px-4 space-y-3">
+                <div className="text-5xl opacity-80 mb-2">{icon}</div>
+                <h4 className="text-base font-extrabold text-gray-700">{title}</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">{description}</p>
+            </div>
+        );
+
+        // ==========================================
+        // 5. LAYOUT UTAMA (Hanya 3 Role)
+        // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerSync, children }) => {
             const navItems = {
                 [ROLES.SISWA]: [
-                    { path: '/student/habits', label: 'Kebiasaan', icon: 'fas fa-check-circle' },
+                    { path: '/student/habits', label: '7 Kebiasaan', icon: 'fas fa-check-circle' },
                     { path: '/student/calendar', label: 'Kalender', icon: 'fas fa-calendar-alt' },
-                    { path: '/student/journal', label: 'Jurnal', icon: 'fas fa-book' },
+                    { path: '/student/journal', label: 'Jurnal Refleksi', icon: 'fas fa-book' },
+                    { path: '/student/profile', label: 'Profil Siswa', icon: 'fas fa-user-graduate' },
                 ],
                 [ROLES.GURU]: [
-                    { path: '/teacher/dashboard', label: 'Monitoring Kelas', icon: 'fas fa-chart-line' },
-                    { path: '/teacher/profile', label: 'Profil Saya', icon: 'fas fa-user-cog' },
+                    { path: '/teacher/dashboard', label: 'Monitoring Siswa', icon: 'fas fa-chart-line' },
+                    { path: '/teacher/profile', label: 'Profil Saya', icon: 'fas fa-chalkboard-teacher' },
                 ],
                 [ROLES.ADMIN]: [
-                    { path: '/admin/dashboard', label: 'Database Siswa', icon: 'fas fa-database' },
+                    { path: '/admin/dashboard', label: 'Ringkasan Sistem', icon: 'fas fa-home' },
+                    { path: '/admin/classes', label: 'Data Kelas', icon: 'fas fa-door-open' },
+                    { path: '/admin/teachers', label: 'Data Guru', icon: 'fas fa-chalkboard-teacher' },
+                    { path: '/admin/students', label: 'Data Siswa', icon: 'fas fa-user-graduate' },
                 ]
             }[user.role] || [];
 
@@ -325,7 +331,7 @@
                                 <span className="text-2xl md:hidden">🇮🇩</span>
                                 <div>
                                     <h1 className="font-extrabold text-brand-dark text-sm md:text-base leading-tight">{SCHOOL_IDENTITY.name}</h1>
-                                    <p className="text-[10px] text-gray-400">Tahun Ajaran {SCHOOL_IDENTITY.academicYear}</p>
+                                    <p className="text-[10px] text-gray-400">Tahun Pelajaran {SCHOOL_IDENTITY.academicYear}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -346,7 +352,7 @@
 
                         {!isOnline && (
                             <div className="bg-orange-500 text-white text-center py-1 text-xs font-bold shadow-sm">
-                                🛡️ Mode Offline Aktif. Data tersimpan di HP dan otomatis dikirim saat online.
+                                🛡️ Mode Offline Aktif. Data tersimpan lokal di browser/HP dan akan diunggah saat online.
                             </div>
                         )}
 
@@ -366,7 +372,7 @@
         };
 
         // ==========================================
-        // 5. MODUL SISWA (Habits, Calendar, Journal)
+        // 6. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -390,7 +396,6 @@
                 const newStatus = !currentStatus;
                 const logId = `${user.id}_${habitId}_${selectedDate}`;
 
-                // Simpan ke IndexedDB lokal
                 await db.habitLogs.put({
                     id: logId,
                     userId: user.id,
@@ -401,7 +406,6 @@
                     updatedAt: new Date()
                 });
 
-                // Masukkan antrean sinkronisasi
                 await db.syncQueue.put({
                     id: `sync_${Date.now()}_${Math.random()}`,
                     tableName: 'habitLogs',
@@ -434,22 +438,22 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
-                            <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan hebat setiap hari.</p>
+                            <p className="text-gray-500 font-medium text-sm">Mari amalkan 7 kebiasaan anak hebat hari ini.</p>
                         </div>
                         <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl shadow-soft border">
-                            <span className="text-xs font-bold text-gray-500">Tanggal:</span>
+                            <span className="text-xs font-bold text-gray-500">Pilih Tanggal:</span>
                             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="font-bold text-sm text-brand-red bg-transparent outline-none cursor-pointer" />
                         </div>
                     </div>
 
                     <Card className="bg-gradient-to-r from-brand-red to-red-600 text-white flex justify-between items-center shadow-lg">
                         <div>
-                            <h3 className="font-black text-lg">Progres Hari Ini ({selectedDate})</h3>
-                            <p className="text-xs opacity-90">Kumpulkan 10 poin untuk setiap kebiasaan baik.</p>
+                            <h3 className="font-black text-lg">Progres: {selectedDate}</h3>
+                            <p className="text-xs opacity-90">Setiap kebiasaan bernilai 10 poin karakter.</p>
                         </div>
                         <div className="text-right">
                             <span className="text-4xl font-black">{completedCount}/7</span>
-                            <p className="text-xs font-bold uppercase opacity-90">{points} Total Poin</p>
+                            <p className="text-xs font-bold uppercase opacity-90">{points} Poin Akumulasi</p>
                         </div>
                     </Card>
 
@@ -502,7 +506,7 @@
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-brand-dark">📅 Riwayat Kalender</h1>
+                        <h1 className="text-2xl font-black text-brand-dark">📅 Kalender Pembiasaan</h1>
                         <div className="flex items-center gap-2">
                             <Button variant="white" onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="py-2 px-3"><i className="fas fa-chevron-left"></i></Button>
                             <span className="font-extrabold text-brand-dark min-w-[130px] text-center text-sm">{monthNames[month]} {year}</span>
@@ -563,105 +567,159 @@
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
                 alert("✨ Catatan refleksi berhasil disimpan!");
+                setContent('');
                 loadJournals();
                 triggerSync();
             };
 
             return (
                 <div className="space-y-6">
-                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi Harian</h1>
+                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <Card className="lg:col-span-2">
                             <form onSubmit={handleSave} className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-xs font-bold text-gray-600">Tanggal:</label>
+                                    <label className="text-xs font-bold text-gray-600">Tanggal Refleksi:</label>
                                     <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="p-2 border rounded-xl text-xs font-bold text-brand-red bg-gray-50" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Perasaan Hari Ini:</label>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Perasaan / Suasana Hati:</label>
                                     <select value={mood} onChange={e => setMood(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-sm">
                                         <option value="😀 Sangat Senang">😀 Sangat Senang</option>
                                         <option value="😊 Senang">😊 Senang</option>
                                         <option value="💪 Semangat">💪 Semangat</option>
                                         <option value="😐 Biasa Saja">😐 Biasa Saja</option>
-                                        <option value="😔 Kurang Baik">😔 Kurang Baik</option>
+                                        <option value="😔 Butuh Semangat">😔 Butuh Semangat</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Kebaikan & Pelajaran yang Saya Dapatkan Hari Ini:</label>
-                                    <textarea rows="5" value={content} onChange={e => setContent(e.target.value)} placeholder="Tuliskan pengalaman positifmu..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm" required></textarea>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Kebaikan & Pembelajaran Hari Ini:</label>
+                                    <textarea rows="5" value={content} onChange={e => setContent(e.target.value)} placeholder="Tuliskan pengalaman atau kebaikan yang kamu lakukan hari ini..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm" required></textarea>
                                 </div>
                                 <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi</Button>
                             </form>
                         </Card>
                         <Card className="space-y-3">
                             <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal</h3>
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                                {savedJournals.map(j => (
-                                    <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-                                        <div className="flex justify-between font-bold text-brand-red mb-1">
-                                            <span>{j.date}</span>
-                                            <span>{j.mood}</span>
+                            {savedJournals.length === 0 ? (
+                                <EmptyState icon="📝" title="Belum Ada Jurnal" description="Tulis refleksi harian pertamamu hari ini." />
+                            ) : (
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                    {savedJournals.map(j => (
+                                        <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                                            <div className="flex justify-between font-bold text-brand-red mb-1">
+                                                <span>{j.date}</span>
+                                                <span>{j.mood}</span>
+                                            </div>
+                                            <p className="text-gray-600 line-clamp-2">{j.content}</p>
                                         </div>
-                                        <p className="text-gray-600 line-clamp-2">{j.content}</p>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </Card>
                     </div>
                 </div>
             );
         };
 
+        const StudentProfilePage = ({ user }) => (
+            <Card className="max-w-md mx-auto text-center space-y-4 py-8">
+                <div className="w-20 h-20 rounded-full bg-brand-yellow text-white text-3xl flex items-center justify-center mx-auto shadow-md">{user.avatar || '👦'}</div>
+                <div>
+                    <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                    <p className="text-xs font-bold text-gray-400">NISN: {user.nisn || '-'}</p>
+                    <span className="inline-block mt-2 px-3 py-1 bg-red-100 text-brand-red rounded-full text-xs font-bold">Kelas: {user.className || 'Belum Diatur'}</span>
+                </div>
+            </Card>
+        );
+
         // ==========================================
-        // 6. MODUL GURU & ADMIN
+        // 7. MODUL GURU
         // ==========================================
         const TeacherDashboard = ({ user }) => {
+            const [classes, setClasses] = useState([]);
+            const [selectedClassId, setSelectedClassId] = useState('');
             const [students, setStudents] = useState([]);
+
             useEffect(() => {
-                db.users.where('classId').equals('c_vii_1').toArray().then(setStudents);
+                db.classes.toArray().then(res => {
+                    setClasses(res);
+                    if (res.length > 0) setSelectedClassId(res[0].id);
+                });
             }, []);
+
+            useEffect(() => {
+                if (selectedClassId) {
+                    db.users.where('classId').equals(selectedClassId).toArray().then(setStudents);
+                } else {
+                    setStudents([]);
+                }
+            }, [selectedClassId]);
 
             return (
                 <div className="space-y-6">
-                    <h1 className="text-2xl font-black text-brand-dark">Dashboard Monitoring Wali Kelas</h1>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <Card className="text-center">
-                            <i className="fas fa-users text-3xl text-brand-blue mb-1"></i>
-                            <div className="text-2xl font-black">{students.length}</div>
-                            <div className="text-xs text-gray-400 font-bold">Total Siswa Binaan</div>
-                        </Card>
-                        <Card className="text-center">
-                            <i className="fas fa-check-double text-3xl text-brand-green mb-1"></i>
-                            <div className="text-2xl font-black">88%</div>
-                            <div className="text-xs text-gray-400 font-bold">Rata-rata Ketercapaian</div>
-                        </Card>
-                        <Card className="text-center col-span-2 md:col-span-1">
-                            <i className="fas fa-shield-alt text-3xl text-brand-yellow mb-1"></i>
-                            <div className="text-2xl font-black">Aktif</div>
-                            <div className="text-xs text-gray-400 font-bold">Status Server Cloud</div>
-                        </Card>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Guru & Wali Kelas</h1>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan siswa secara berkala.</p>
+                        </div>
+                        {classes.length > 0 && (
+                            <div className="flex items-center gap-2 bg-white p-2 px-4 rounded-xl border">
+                                <span className="text-xs font-bold text-gray-500">Pilih Kelas:</span>
+                                <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="font-bold text-sm text-brand-red bg-transparent outline-none cursor-pointer">
+                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
-                    <Card>
-                        <h3 className="font-bold text-base mb-3 text-gray-800">Daftar Siswa Kelas VII.1</h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-gray-50 text-gray-500 font-bold">
-                                    <tr><th className="p-3">Nama Siswa</th><th className="p-3">NISN</th><th className="p-3">Status</th></tr>
-                                </thead>
-                                <tbody>
-                                    {students.map(s => (
-                                        <tr key={s.id} className="border-b border-gray-50">
-                                            <td className="p-3 font-semibold">{s.name}</td>
-                                            <td className="p-3 text-gray-500">{s.nisn}</td>
-                                            <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-brand-green">Aktif</span></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
+                    {classes.length === 0 ? (
+                        <Card><EmptyState icon="🏫" title="Belum Ada Kelas Terdaftar" description="Admin belum menambahkan data kelas pada sistem." /></Card>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <Card className="text-center">
+                                    <i className="fas fa-users text-3xl text-brand-blue mb-1"></i>
+                                    <div className="text-2xl font-black">{students.length}</div>
+                                    <div className="text-xs text-gray-400 font-bold">Total Siswa di Kelas</div>
+                                </Card>
+                                <Card className="text-center">
+                                    <i className="fas fa-check-circle text-3xl text-brand-green mb-1"></i>
+                                    <div className="text-2xl font-black">{students.filter(s => s.status === 'Aktif').length}</div>
+                                    <div className="text-xs text-gray-400 font-bold">Siswa Aktif</div>
+                                </Card>
+                                <Card className="text-center col-span-2 md:col-span-1">
+                                    <i className="fas fa-calendar-check text-3xl text-brand-yellow mb-1"></i>
+                                    <div className="text-2xl font-black">{new Date().toISOString().split('T')[0]}</div>
+                                    <div className="text-xs text-gray-400 font-bold">Tanggal Pemantauan</div>
+                                </Card>
+                            </div>
+
+                            <Card>
+                                <h3 className="font-bold text-base mb-3 text-gray-800">Daftar Siswa</h3>
+                                {students.length === 0 ? (
+                                    <EmptyState icon="👦" title="Belum Ada Siswa di Kelas Ini" description="Admin belum mendaftarkan siswa untuk kelas yang dipilih." />
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-gray-50 text-gray-500 font-bold">
+                                                <tr><th className="p-3">Nama Siswa</th><th className="p-3">NISN</th><th className="p-3">Status</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {students.map(s => (
+                                                    <tr key={s.id} className="border-b border-gray-50">
+                                                        <td className="p-3 font-semibold">{s.name}</td>
+                                                        <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
+                                                        <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-brand-green">Aktif</span></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </Card>
+                        </>
+                    )}
                 </div>
             );
         };
@@ -672,19 +730,378 @@
                 <div>
                     <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
                     <p className="text-xs font-bold text-gray-400">NIP: {user.nip || '-'}</p>
-                    <p className="text-xs text-brand-blue font-bold mt-1">Guru Mapel: {user.subject || 'Umum'}</p>
+                    <p className="text-xs text-brand-blue font-bold mt-1">Mata Pelajaran: {user.subject || 'Umum'}</p>
                 </div>
             </Card>
         );
 
         // ==========================================
-        // 7. LOGIN & LANDING PAGE
+        // 8. MODUL ADMIN LENGKAP (CRUD Master Data)
+        // ==========================================
+        const AdminDashboard = () => {
+            const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
+
+            useEffect(() => {
+                async function loadStats() {
+                    const t = await db.users.where('role').equals(ROLES.GURU).count();
+                    const s = await db.users.where('role').equals(ROLES.SISWA).count();
+                    const c = await db.classes.count();
+                    setStats({ teachers: t, students: s, classes: c });
+                }
+                loadStats();
+            }, []);
+
+            return (
+                <div className="space-y-6">
+                    <h1 className="text-2xl font-black text-brand-dark">Ringkasan Sistem Administrator</h1>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="text-center">
+                            <i className="fas fa-chalkboard-teacher text-3xl text-brand-blue mb-1"></i>
+                            <div className="text-3xl font-black">{stats.teachers}</div>
+                            <div className="text-xs text-gray-400 font-bold uppercase">Total Guru</div>
+                        </Card>
+                        <Card className="text-center">
+                            <i className="fas fa-user-graduate text-3xl text-brand-green mb-1"></i>
+                            <div className="text-3xl font-black">{stats.students}</div>
+                            <div className="text-xs text-gray-400 font-bold uppercase">Total Siswa</div>
+                        </Card>
+                        <Card className="text-center">
+                            <i className="fas fa-door-open text-3xl text-brand-yellow mb-1"></i>
+                            <div className="text-3xl font-black">{stats.classes}</div>
+                            <div className="text-xs text-gray-400 font-bold uppercase">Total Kelas</div>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminClassesPage = ({ triggerSync }) => {
+            const [classes, setClasses] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [className, setClassName] = useState('');
+
+            const loadClasses = () => db.classes.toArray().then(setClasses);
+            useEffect(() => { loadClasses(); }, []);
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const newId = `c_${Date.now()}`;
+                await db.classes.put({ id: newId, name: className });
+                setClassName('');
+                setIsModalOpen(false);
+                loadClasses();
+                triggerSync();
+            };
+
+            const handleDelete = async (id) => {
+                if (confirm('Hapus kelas ini?')) {
+                    await db.classes.delete(id);
+                    loadClasses();
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas</h1>
+                        <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
+                    </div>
+
+                    <Card>
+                        {classes.length === 0 ? (
+                            <EmptyState icon="🏫" title="Belum Ada Kelas" description="Silakan klik tombol '+ Tambah Kelas' untuk menambahkan rombel pertama." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-gray-50 text-gray-500 font-bold">
+                                        <tr><th className="p-3">Nama Kelas</th><th className="p-3 text-right">Aksi</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {classes.map(c => (
+                                            <tr key={c.id} className="border-b border-gray-50">
+                                                <td className="p-3 font-semibold">{c.name}</td>
+                                                <td className="p-3 text-right">
+                                                    <button onClick={() => handleDelete(c.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm">
+                                <h3 className="font-black text-lg mb-4">Tambah Kelas Baru</h3>
+                                <form onSubmit={handleSave} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Kelas (contoh: VII.1)</label>
+                                        <input type="text" value={className} onChange={e => setClassName(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const AdminTeachersPage = ({ triggerSync }) => {
+            const [teachers, setTeachers] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [formData, setFormData] = useState({ name: '', username: '', nip: '', subject: '' });
+
+            const loadTeachers = () => db.users.where('role').equals(ROLES.GURU).toArray().then(setTeachers);
+            useEffect(() => { loadTeachers(); }, []);
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const newId = `u_guru_${Date.now()}`;
+                const newTeacher = {
+                    id: newId,
+                    username: formData.username,
+                    name: formData.name,
+                    nip: formData.nip,
+                    subject: formData.subject,
+                    role: ROLES.GURU,
+                    avatar: '👨‍🏫',
+                    status: 'Aktif',
+                    createdAt: new Date()
+                };
+
+                await db.users.put(newTeacher);
+                await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+
+                setFormData({ name: '', username: '', nip: '', subject: '' });
+                setIsModalOpen(false);
+                loadTeachers();
+                triggerSync();
+            };
+
+            const handleDelete = async (id) => {
+                if (confirm('Hapus akun guru ini?')) {
+                    await db.users.delete(id);
+                    await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    loadTeachers();
+                    triggerSync();
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
+                        <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Guru</Button>
+                    </div>
+
+                    <Card>
+                        {teachers.length === 0 ? (
+                            <EmptyState icon="👨‍🏫" title="Belum Ada Guru Terdaftar" description="Tambahkan data guru pengajar atau wali kelas." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-gray-50 text-gray-500 font-bold">
+                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">NIP</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {teachers.map(t => (
+                                            <tr key={t.id} className="border-b border-gray-50">
+                                                <td className="p-3 font-semibold">{t.name}</td>
+                                                <td className="p-3 text-gray-500">{t.username}</td>
+                                                <td className="p-3 text-gray-500">{t.nip || '-'}</td>
+                                                <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
+                                                <td className="p-3 text-right">
+                                                    <button onClick={() => handleDelete(t.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md">
+                                <h3 className="font-black text-lg mb-4">Tambah Guru Baru</h3>
+                                <form onSubmit={handleSave} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap</label>
+                                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
+                                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">NIP / NIK</label>
+                                            <input type="text" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Mata Pelajaran</label>
+                                        <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const AdminStudentsPage = ({ triggerSync }) => {
+            const [students, setStudents] = useState([]);
+            const [classes, setClasses] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [formData, setFormData] = useState({ name: '', username: '', nisn: '', classId: '', gender: 'Laki-laki' });
+
+            const loadData = async () => {
+                const s = await db.users.where('role').equals(ROLES.SISWA).toArray();
+                const c = await db.classes.toArray();
+                setStudents(s);
+                setClasses(c);
+            };
+
+            useEffect(() => { loadData(); }, []);
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const selectedClass = classes.find(c => c.id === formData.classId);
+                const newId = `u_siswa_${Date.now()}`;
+                const newStudent = {
+                    id: newId,
+                    username: formData.username,
+                    name: formData.name,
+                    nisn: formData.nisn,
+                    classId: formData.classId,
+                    className: selectedClass ? selectedClass.name : '',
+                    gender: formData.gender,
+                    role: ROLES.SISWA,
+                    avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
+                    status: 'Aktif',
+                    createdAt: new Date()
+                };
+
+                await db.users.put(newStudent);
+                await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+
+                setFormData({ name: '', username: '', nisn: '', classId: '', gender: 'Laki-laki' });
+                setIsModalOpen(false);
+                loadData();
+                triggerSync();
+            };
+
+            const handleDelete = async (id) => {
+                if (confirm('Hapus akun siswa ini?')) {
+                    await db.users.delete(id);
+                    await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    loadData();
+                    triggerSync();
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
+                        <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
+                    </div>
+
+                    <Card>
+                        {students.length === 0 ? (
+                            <EmptyState icon="👦" title="Belum Ada Siswa Terdaftar" description="Tambahkan data siswa agar mereka dapat mencatat 7 kebiasaan hebat." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-gray-50 text-gray-500 font-bold">
+                                        <tr><th className="p-3">Nama Siswa</th><th className="p-3">Username</th><th className="p-3">NISN</th><th className="p-3">Kelas</th><th className="p-3 text-right">Aksi</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {students.map(s => (
+                                            <tr key={s.id} className="border-b border-gray-50">
+                                                <td className="p-3 font-semibold">{s.name}</td>
+                                                <td className="p-3 text-gray-500">{s.username}</td>
+                                                <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
+                                                <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
+                                                <td className="p-3 text-right">
+                                                    <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md">
+                                <h3 className="font-black text-lg mb-4">Tambah Siswa Baru</h3>
+                                <form onSubmit={handleSave} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
+                                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
+                                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
+                                            <input type="text" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
+                                            <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                                <option value="">-- Pilih Kelas --</option>
+                                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
+                                            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                                <option value="Laki-laki">Laki-laki</option>
+                                                <option value="Perempuan">Perempuan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 9. LOGIN & LANDING (Hanya 3 Role)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
                 <div className="text-6xl mb-3">🇮🇩</div>
                 <h1 className="text-3xl md:text-5xl font-black text-brand-dark mb-3">7 Kebiasaan <span className="text-brand-red">Anak Indonesia Hebat</span></h1>
-                <p className="text-gray-500 max-w-md text-sm md:text-base mb-8">Aplikasi pencatatan kebiasaan positif dan pembentukan karakter generasi tangguh di {SCHOOL_IDENTITY.name}.</p>
+                <p className="text-gray-500 max-w-md text-sm md:text-base mb-8">Pencatatan pembiasaan karakter positif siswa {SCHOOL_IDENTITY.name}.</p>
                 <Button onClick={onStart} className="text-base py-3.5 px-8">Masuk ke Aplikasi</Button>
             </div>
         );
@@ -698,10 +1115,15 @@
                 db.users.where('role').equals(selectedRole).toArray().then(res => {
                     setUsers(res);
                     if (res.length > 0) setSelectedUserId(res[0].id);
+                    else setSelectedUserId('');
                 });
             }, [selectedRole]);
 
             const handleSubmit = async () => {
+                if (!selectedUserId) {
+                    alert("Belum ada akun pada role ini. Silakan masuk sebagai Admin terlebih dahulu untuk mendaftarkan akun.");
+                    return;
+                }
                 const user = await db.users.get(selectedUserId);
                 if (user) onLogin(user);
             };
@@ -712,10 +1134,14 @@
                         <div className="text-center">
                             <div className="text-3xl mb-1">🇮🇩</div>
                             <h2 className="text-lg font-black text-brand-dark">{SCHOOL_IDENTITY.name}</h2>
-                            <p className="text-xs text-gray-400 font-bold">Pilih Akun Demo / Terdaftar</p>
+                            <p className="text-xs text-gray-400 font-bold">Pilih Peran & Akun Pengguna</p>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                            {[{ role: ROLES.SISWA, label: 'Siswa', icon: '👦' }, { role: ROLES.GURU, label: 'Guru', icon: '👨‍🏫' }, { role: ROLES.ADMIN, label: 'Admin', icon: '⚙️' }].map(r => (
+                            {[
+                                { role: ROLES.SISWA, label: 'Siswa', icon: '👦' },
+                                { role: ROLES.GURU, label: 'Guru', icon: '👨‍🏫' },
+                                { role: ROLES.ADMIN, label: 'Admin', icon: '⚙️' }
+                            ].map(r => (
                                 <button key={r.role} onClick={() => setSelectedRole(r.role)} className={`p-3 rounded-xl flex flex-col items-center border-2 text-xs font-bold transition-all ${selectedRole === r.role ? 'border-brand-red bg-red-50 text-brand-red' : 'border-gray-100 text-gray-500'}`}>
                                     <span className="text-xl mb-1">{r.icon}</span>
                                     {r.label}
@@ -723,19 +1149,25 @@
                             ))}
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-600 mb-1">Nama Pengguna:</label>
-                            <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
-                                {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.username})</option>)}
-                            </select>
+                            <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Akun Terdaftar:</label>
+                            {users.length === 0 ? (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
+                                    Belum ada akun {selectedRole}. Masuk sebagai <strong>Admin</strong> untuk menambahkan data.
+                                </div>
+                            ) : (
+                                <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
+                                    {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.username})</option>)}
+                                </select>
+                            )}
                         </div>
-                        <Button fullWidth onClick={handleSubmit}>Buka Dashboard</Button>
+                        <Button fullWidth onClick={handleSubmit} disabled={users.length === 0}>Masuk Sistem</Button>
                     </Card>
                 </div>
             );
         };
 
         // ==========================================
-        // 8. ROOT APPLICATION CONTROLLER
+        // 10. ROOT APPLICATION CONTROLLER
         // ==========================================
         const App = () => {
             const [currentPath, setCurrentPath] = useState('/');
@@ -743,10 +1175,9 @@
             const { isOnline, syncStatus, triggerSync } = useOnlineSyncEngine();
 
             useEffect(() => {
-                seedDatabaseIfNeeded();
-                // Daftarkan Service Worker PWA jika didukung browser
+                seedDatabaseClean();
                 if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Register Notice:', err));
+                    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Notice:', err));
                 }
             }, []);
 
@@ -756,7 +1187,7 @@
                 setUser(u);
                 if (u.role === ROLES.SISWA) navigate('/student/habits');
                 else if (u.role === ROLES.GURU) navigate('/teacher/dashboard');
-                else navigate('/teacher/dashboard');
+                else if (u.role === ROLES.ADMIN) navigate('/admin/dashboard');
             };
 
             const handleLogout = () => { setUser(null); navigate('/'); };
@@ -767,11 +1198,22 @@
 
             let content = null;
             switch (currentPath) {
+                // Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
+                case '/student/profile': content = <StudentProfilePage user={user} />; break;
+
+                // Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} />; break;
+
+                // Admin
+                case '/admin/dashboard': content = <AdminDashboard />; break;
+                case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} />; break;
+                case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} />; break;
+                case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} />; break;
+
                 default: content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
             }
 
