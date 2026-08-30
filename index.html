@@ -82,6 +82,22 @@
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxr_T0jcF9vIM2u1wxYK3unkkIjTsUJkobM_SidYr3hf-2doJOBorBxhHWc_EgNs8wpog/exec";
 
+        // Helper Tanggal Hari Ini (Zona Waktu Lokal Perangkat)
+        const getTodayLocalString = () => {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const formatDisplayDate = (dateStr) => {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
+        };
+
         // ==========================================
         // 2. HELPER KRIPTOGRAFI (SHA-256 HASH)
         // ==========================================
@@ -96,7 +112,7 @@
         // ==========================================
         // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsProductionDB');
+        const db = new Dexie('SevenHabitsLiveSyncDB');
         db.version(1).stores({
             users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
@@ -220,7 +236,6 @@
                 const json = await res.json();
                 
                 if (json.status === 'success') {
-                    // Update Classes
                     if (json.classes && Array.isArray(json.classes) && json.classes.length > 0) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
@@ -231,7 +246,6 @@
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    // Update Users
                     if (json.users && Array.isArray(json.users) && json.users.length > 0) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || '').trim(),
@@ -239,7 +253,7 @@
                             name: String(u['Nama Lengkap'] || u['name'] || '').trim(),
                             role: String(u['Role'] || u['role'] || 'siswa').trim().toLowerCase(),
                             password: String(u['Password'] || u['password'] || '').trim(),
-                            phone: String(u['Nomor WhatsApp'] || u['phone'] || '').trim(),
+                            phone: String(u['Nomor Telepon'] || u['Nomor WhatsApp'] || u['phone'] || '').trim(),
                             className: String(u['Kelas'] || u['className'] || '').trim(),
                             classId: String(u['Class ID'] || u['classId'] || '').trim(),
                             nisn: String(u['NISN'] || u['nisn'] || '').trim(),
@@ -256,7 +270,6 @@
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    // Update Habit Logs
                     if (json.habitLogs && Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
@@ -296,7 +309,7 @@
                         name: 'Administrator Talaga Jaya',
                         role: ROLES.ADMIN,
                         password: 'admin',
-                        phone: '6281234567890',
+                        phone: '',
                         avatar: '⚙️',
                         status: 'Aktif',
                         createdAt: new Date()
@@ -477,18 +490,18 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA
+        // 7. MODUL SISWA (TANGGAL OTOMATIS HARI INI & TERKUNCI)
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
-            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+            const todayStr = getTodayLocalString();
             const [logs, setLogs] = useState({});
             const [points, setPoints] = useState(0);
             const [activeHabitModal, setActiveHabitModal] = useState(null);
             const [modalTime, setModalTime] = useState('');
             const [modalDetail, setModalDetail] = useState('');
 
-            const loadLogs = async (dateStr) => {
-                const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === dateStr).toArray();
+            const loadLogs = async () => {
+                const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
                 const logMap = {};
                 userLogs.forEach(l => { 
                     logMap[l.habitId] = {
@@ -503,7 +516,7 @@
                 setPoints(p ? p.totalPoints : 0);
             };
 
-            useEffect(() => { loadLogs(selectedDate); }, [user.id, selectedDate]);
+            useEffect(() => { loadLogs(); }, [user.id]);
 
             const handleCardClick = (habit) => {
                 const existing = logs[habit.id] || {};
@@ -517,7 +530,7 @@
                 if (!activeHabitModal) return;
 
                 const habit = activeHabitModal;
-                const logId = `${user.id}_${habit.id}_${selectedDate}`;
+                const logId = `${user.id}_${habit.id}_${todayStr}`;
                 const wasCompleted = logs[habit.id]?.completed;
 
                 await db.habitLogs.put({
@@ -527,7 +540,7 @@
                     className: user.className || '',
                     habitId: habit.id,
                     habitName: habit.name,
-                    date: selectedDate,
+                    date: todayStr,
                     completed: true,
                     timeValue: modalTime,
                     detailValue: modalDetail,
@@ -567,7 +580,7 @@
             };
 
             const handleCancelHabit = async (habitId) => {
-                const logId = `${user.id}_${habitId}_${selectedDate}`;
+                const logId = `${user.id}_${habitId}_${todayStr}`;
                 await db.habitLogs.delete(logId);
                 await db.syncQueue.put({
                     id: `sync_${Date.now()}_${Math.random()}`,
@@ -600,17 +613,18 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
-                            <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan anak hebat setiap hari.</p>
+                            <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan anak hebat hari ini.</p>
                         </div>
-                        <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl shadow-soft border">
-                            <span className="text-xs font-bold text-gray-500">Tanggal:</span>
-                            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="font-bold text-sm text-brand-red bg-transparent outline-none cursor-pointer" />
+                        {/* Tanggal Otomatis Hari Ini & Terkunci */}
+                        <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-4 py-2 rounded-2xl">
+                            <i className="fas fa-calendar-day text-brand-red text-sm"></i>
+                            <span className="text-xs font-black text-brand-red tracking-wide">Hari Ini: {formatDisplayDate(todayStr)}</span>
                         </div>
                     </div>
 
                     <Card className="bg-gradient-to-r from-brand-red to-red-600 text-white flex justify-between items-center shadow-lg">
                         <div>
-                            <h3 className="font-black text-lg">Progres Pembiasaan: {selectedDate}</h3>
+                            <h3 className="font-black text-lg">Progres Pembiasaan Hari Ini</h3>
                             <p className="text-xs opacity-90">Setiap kebiasaan bernilai 10 poin karakter hebat.</p>
                         </div>
                         <div className="text-right">
@@ -664,7 +678,7 @@
                                         <span className="text-3xl">{activeHabitModal.icon}</span>
                                         <div>
                                             <h3 className="font-black text-lg text-brand-dark">{activeHabitModal.name}</h3>
-                                            <p className="text-xs text-gray-400 font-bold">{selectedDate}</p>
+                                            <p className="text-xs text-gray-400 font-bold">{formatDisplayDate(todayStr)}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => setActiveHabitModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
@@ -707,7 +721,7 @@
                                                 onClick={() => handleCancelHabit(activeHabitModal.id)} 
                                                 className="text-xs font-bold text-brand-red hover:underline"
                                             >
-                                                <i className="fas fa-trash-alt mr-1"></i> Batalkan Kebiasaan
+                                                <i className="fas fa-trash-alt mr-1"></i> Batalkan
                                             </button>
                                         ) : <div></div>}
                                         
@@ -789,7 +803,7 @@
         };
 
         const StudentJournalPage = ({ user, triggerSync }) => {
-            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+            const todayStr = getTodayLocalString();
             const [mood, setMood] = useState('😊 Senang');
             const [content, setContent] = useState('');
             const [savedJournals, setSavedJournals] = useState([]);
@@ -803,14 +817,14 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
-                const jId = `j_${user.id}_${selectedDate}`;
+                const jId = `j_${user.id}_${todayStr}`;
                 await db.journals.put({
-                    id: jId, userId: user.id, studentName: user.name, className: user.className || '', date: selectedDate, mood: mood, content: content, syncStatus: 'pending', updatedAt: new Date()
+                    id: jId, userId: user.id, studentName: user.name, className: user.className || '', date: todayStr, mood: mood, content: content, syncStatus: 'pending', updatedAt: new Date()
                 });
                 await db.syncQueue.put({
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
-                alert("✨ Catatan refleksi berhasil disimpan!");
+                alert("✨ Catatan refleksi hari ini berhasil disimpan!");
                 setContent('');
                 loadJournals();
                 triggerSync();
@@ -824,10 +838,12 @@
                             <form onSubmit={handleSave} className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <label className="text-xs font-bold text-gray-600">Tanggal Refleksi:</label>
-                                    <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="p-2 border rounded-xl text-xs font-bold text-brand-red bg-gray-50" />
+                                    <span className="px-3 py-1.5 bg-red-50 border border-red-200 text-brand-red rounded-xl text-xs font-black">
+                                        {formatDisplayDate(todayStr)} (Terkunci)
+                                    </span>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Perasaan / Suasana Hati:</label>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Perasaan / Suasana Hati Hari Ini:</label>
                                     <select value={mood} onChange={e => setMood(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-sm">
                                         <option value="😀 Sangat Senang">😀 Sangat Senang</option>
                                         <option value="😊 Senang">😊 Senang</option>
@@ -840,7 +856,7 @@
                                     <label className="block text-xs font-bold text-gray-600 mb-1">Kebaikan & Pembelajaran Hari Ini:</label>
                                     <textarea rows="5" value={content} onChange={e => setContent(e.target.value)} placeholder="Tuliskan pengalaman atau kebaikan yang kamu lakukan hari ini..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm" required></textarea>
                                 </div>
-                                <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi</Button>
+                                <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi Hari Ini</Button>
                             </form>
                         </Card>
                         <Card className="space-y-3">
@@ -852,7 +868,7 @@
                                     {savedJournals.map(j => (
                                         <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
                                             <div className="flex justify-between font-bold text-brand-red mb-1">
-                                                <span>{j.date}</span>
+                                                <span>{formatDisplayDate(j.date)}</span>
                                                 <span>{j.mood}</span>
                                             </div>
                                             <p className="text-gray-600 line-clamp-2">{j.content}</p>
@@ -940,7 +956,7 @@
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
             const [selectedTab, setSelectedTab] = useState('all');
-            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+            const [selectedDate, setSelectedDate] = useState(getTodayLocalString());
             const [classLogs, setClassLogs] = useState([]);
             
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -1014,9 +1030,9 @@
                 if (editingStudent) {
                     const updatedStudent = {
                         ...editingStudent,
-                        name: studentFormData.name,
-                        username: studentFormData.username,
-                        nisn: studentFormData.nisn,
+                        name: studentFormData.name.trim(),
+                        username: studentFormData.username.trim(),
+                        nisn: studentFormData.nisn.trim(),
                         gender: studentFormData.gender,
                         classId: studentFormData.classId,
                         className: selectedClass ? selectedClass.name : editingStudent.className,
@@ -1037,15 +1053,15 @@
                     alert(`✨ Data siswa "${studentFormData.name}" berhasil diperbarui!`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
-                    const defaultPass = studentFormData.password || 'siswa123';
+                    const defaultPass = studentFormData.password.trim() || 'siswa123';
                     const hashedPassword = await hashPassword(defaultPass);
 
                     const createdStudent = {
                         id: newId,
-                        username: studentFormData.username,
+                        username: studentFormData.username.trim(),
                         password: hashedPassword,
-                        name: studentFormData.name,
-                        nisn: studentFormData.nisn,
+                        name: studentFormData.name.trim(),
+                        nisn: studentFormData.nisn.trim(),
                         classId: studentFormData.classId || '',
                         className: selectedClass ? selectedClass.name : '',
                         mentorId: user.id,
@@ -1080,7 +1096,7 @@
                 e.preventDefault();
                 if (!resetModalStudent) return;
 
-                const hashed = await hashPassword(newResetPassword);
+                const hashed = await hashPassword(newResetPassword.trim());
                 const updated = { ...resetModalStudent, password: hashed };
                 
                 await db.users.put(updated);
@@ -1265,7 +1281,6 @@
                         </div>
                     )}
 
-                    {/* MODAL RESET PASSWORD SISWA */}
                     {resetModalStudent && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-sm shadow-2xl">
@@ -1299,7 +1314,7 @@
                 const updated = { ...user, phone: phone.trim() };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
-                alert("✨ Nomor WhatsApp berhasil diperbarui!");
+                alert("✨ Nomor telepon berhasil diperbarui!");
                 triggerSync();
             };
 
@@ -1340,11 +1355,10 @@
                     </Card>
 
                     <Card>
-                        <h3 className="font-black text-base text-brand-dark mb-2"><i className="fab fa-whatsapp text-green-500 mr-1.5"></i> Nomor WhatsApp Bantuan Siswa</h3>
-                        <p className="text-xs text-gray-500 mb-3">Nomor ini digunakan siswa binaan Anda saat menekan tombol lupa password.</p>
+                        <h3 className="font-black text-base text-brand-dark mb-2"><i className="fas fa-phone text-blue-500 mr-1.5"></i> Nomor Telepon Guru</h3>
                         <form onSubmit={handleUpdatePhone} className="space-y-3">
-                            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Contoh: 6281234567890" className="w-full p-2.5 border rounded-xl text-xs font-bold" required />
-                            <Button type="submit" fullWidth variant="green" className="py-2 text-xs">Simpan Nomor WA</Button>
+                            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Contoh: 081234567890" className="w-full p-2.5 border rounded-xl text-xs font-bold" required />
+                            <Button type="submit" fullWidth variant="secondary" className="py-2 text-xs">Simpan Nomor Telepon</Button>
                         </form>
                     </Card>
 
@@ -1692,7 +1706,7 @@
                     <div className="flex justify-between items-center">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru (CRUD Admin)</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, nomor WhatsApp, dan reset password guru.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, dan reset password guru.</p>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
@@ -1712,7 +1726,7 @@
                                         <tr>
                                             <th className="p-3">Nama Guru</th>
                                             <th className="p-3">Username</th>
-                                            <th className="p-3">No. WhatsApp</th>
+                                            <th className="p-3">No. Telepon</th>
                                             <th className="p-3">Mata Pelajaran</th>
                                             <th className="p-3 text-right">Aksi</th>
                                         </tr>
@@ -1722,7 +1736,7 @@
                                             <tr key={t.id} className="border-b border-gray-50">
                                                 <td className="p-3 font-semibold">{t.name}</td>
                                                 <td className="p-3 text-gray-500">@{t.username}</td>
-                                                <td className="p-3 text-green-600 font-bold">{t.phone || '-'}</td>
+                                                <td className="p-3 text-gray-600 font-bold">{t.phone || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
                                                 <td className="p-3 text-right space-x-2">
                                                     <button onClick={() => { setResetTeacherModal(t); setNewTeacherPass('guru123'); }} className="text-amber-600 hover:underline font-bold text-xs"><i className="fas fa-key"></i> Reset Pass</button>
@@ -1752,8 +1766,8 @@
                                             <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-600 mb-1">Nomor WhatsApp</label>
-                                            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="6281234567890" className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Nomor Telepon</label>
+                                            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="081234567890" className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
                                     {!editingTeacher && (
@@ -2075,11 +2089,9 @@
                     phone: phone.trim() 
                 };
                 
-                // Simpan ke IndexedDB lokal & perbarui session state
                 await db.users.put(updated);
                 onUpdateAdmin(updated);
 
-                // Masukkan ke antrean sinkronisasi
                 await db.syncQueue.put({ 
                     id: `sync_adm_${Date.now()}`, 
                     tableName: 'users', 
@@ -2116,8 +2128,8 @@
                                 <span className="text-[10px] text-gray-400">Password admin tidak di-hash agar mudah dilihat di Google Sheets.</span>
                             </div>
                             <div>
-                                <label className="block font-bold text-gray-600 mb-1">Nomor WhatsApp Bantuan Guru</label>
-                                <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="6281234567890" className="w-full p-2.5 border rounded-xl font-bold text-green-600" />
+                                <label className="block font-bold text-gray-600 mb-1">Nomor Telepon Admin</label>
+                                <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="081234567890" className="w-full p-2.5 border rounded-xl font-bold" />
                             </div>
                             <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Akun Admin</Button>
                         </form>
@@ -2127,7 +2139,7 @@
         };
 
         // ==========================================
-        // 10. LOGIN & LANDING (Auto-Sync & Password Auth)
+        // 10. LOGIN & LANDING (Pemberitahuan Manual Reset)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -2140,9 +2152,6 @@
 
         const LoginPage = ({ onLogin, onBack, triggerManualPull }) => {
             const [users, setUsers] = useState([]);
-            const [teachers, setTeachers] = useState([]);
-            const [adminUser, setAdminUser] = useState(null);
-
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
             const [inputPassword, setInputPassword] = useState('');
@@ -2153,12 +2162,6 @@
                 setUsers(res);
                 if (res.length > 0) setSelectedUserId(res[0].id);
                 else setSelectedUserId('');
-
-                const allTeachers = await db.users.where('role').equals(ROLES.GURU).toArray();
-                setTeachers(allTeachers);
-
-                const adm = await db.users.where('role').equals(ROLES.ADMIN).first();
-                setAdminUser(adm);
             };
 
             useEffect(() => {
@@ -2191,7 +2194,6 @@
 
                 const typedPassword = String(inputPassword).trim();
 
-                // Verifikasi Password Admin: Plaintext comparison
                 if (user.role === ROLES.ADMIN) {
                     const expected = String(user.password || 'admin').trim();
                     if (typedPassword !== expected) {
@@ -2199,57 +2201,17 @@
                         return;
                     }
                 } else {
-                    // Verifikasi Password Guru & Siswa: SHA-256 Hashed comparison
                     const inputHashed = await hashPassword(typedPassword);
                     const defaultPass = user.role === ROLES.GURU ? 'guru123' : 'siswa123';
                     const expectedHashed = user.password ? String(user.password).trim() : await hashPassword(defaultPass);
 
                     if (inputHashed !== expectedHashed) {
-                        alert("❌ Password yang Anda masukkan salah! Silakan gunakan tombol 'Lupa Password' jika tidak ingat.");
+                        alert("❌ Password salah! Jika lupa password, silakan hubungi Guru / Wali Kelas Anda.");
                         return;
                     }
                 }
 
                 onLogin(user);
-            };
-
-            const handleForgotPassword = async () => {
-                if (!selectedUserId) {
-                    alert("Pilih akun Anda terlebih dahulu!");
-                    return;
-                }
-                const selectedUser = await db.users.get(selectedUserId);
-                if (!selectedUser) return;
-
-                if (selectedRole === ROLES.SISWA) {
-                    let targetTeacher = null;
-                    if (selectedUser.mentorId) {
-                        targetTeacher = await db.users.get(selectedUser.mentorId);
-                    }
-                    if (!targetTeacher && selectedUser.classId) {
-                        const cls = await db.classes.get(selectedUser.classId);
-                        if (cls && cls.teacherId) targetTeacher = await db.users.get(cls.teacherId);
-                    }
-                    if (!targetTeacher) {
-                        targetTeacher = teachers[0];
-                    }
-
-                    if (targetTeacher && targetTeacher.phone) {
-                        const cleanPhone = targetTeacher.phone.replace(/[^0-9]/g, '');
-                        const msg = `Halo Bapak/Ibu ${targetTeacher.name}, saya ${selectedUser.name} (Kelas: ${selectedUser.className || '-'}) lupa password akun 7 Kebiasaan saya. Mohon bantuan reset password. Terima kasih.`;
-                        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                    } else {
-                        alert(`Harap hubungi guru/wali kelas Anda (${targetTeacher ? targetTeacher.name : 'Guru'}) secara langsung di sekolah untuk mereset password.`);
-                    }
-                } else if (selectedRole === ROLES.GURU) {
-                    if (adminUser && adminUser.phone) {
-                        const cleanPhone = adminUser.phone.replace(/[^0-9]/g, '');
-                        const msg = `Halo Administrator Sekolah, saya ${selectedUser.name} (Guru) lupa password akun 7 Kebiasaan saya. Mohon bantuan reset password.`;
-                        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                    } else {
-                        alert("Silakan hubungi Administrator sekolah secara langsung untuk mereset password Anda.");
-                    }
-                }
             };
 
             const handleRefreshManual = async () => {
@@ -2305,14 +2267,7 @@
                             </div>
 
                             <div>
-                                <div className="flex justify-between items-center mb-1">
-                                    <label className="block text-xs font-bold text-gray-600">Kata Sandi / Password:</label>
-                                    {selectedRole !== ROLES.ADMIN && users.length > 0 && (
-                                        <button type="button" onClick={handleForgotPassword} className="text-[11px] font-bold text-green-600 hover:underline flex items-center gap-1">
-                                            <i className="fab fa-whatsapp"></i> Lupa Password?
-                                        </button>
-                                    )}
-                                </div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">Kata Sandi / Password:</label>
                                 <input 
                                     type="password" 
                                     value={inputPassword} 
@@ -2322,8 +2277,8 @@
                                     required 
                                 />
                                 {selectedRole !== ROLES.ADMIN && (
-                                    <p className="text-[10px] text-gray-400 mt-1">
-                                        Password bawaan awal: <strong>{selectedRole === ROLES.GURU ? 'guru123' : 'siswa123'}</strong>
+                                    <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                                        💡 Password bawaan: <strong>{selectedRole === ROLES.GURU ? 'guru123' : 'siswa123'}</strong>. Jika lupa password, hubungi {selectedRole === ROLES.GURU ? 'Admin Sekolah' : 'Guru / Wali Kelas'} Anda.
                                     </p>
                                 )}
                             </div>
@@ -2371,14 +2326,17 @@
 
             let content = null;
             switch (currentPath) {
+                // Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Admin
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
