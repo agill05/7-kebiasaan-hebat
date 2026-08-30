@@ -85,7 +85,7 @@
         // ==========================================
         // 2. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsHybridDB');
+        const db = new Dexie('SevenHabitsFullCrudDB');
         db.version(1).stores({
             users: 'id, username, role, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
@@ -279,14 +279,23 @@
                     // Sync Classes
                     const classSyncs = pendingQueue.filter(q => q.tableName === 'classes');
                     for (let cItem of classSyncs) {
-                        const cData = await db.classes.get(cItem.recordId);
-                        if (cData) {
+                        if (cItem.action === 'delete') {
                             await fetch(GAS_API_URL, {
                                 method: 'POST',
                                 mode: 'no-cors',
                                 headers: { 'Content-Type': 'text/plain' },
-                                body: JSON.stringify({ action: 'syncClass', payload: cData })
+                                body: JSON.stringify({ action: 'deleteClass', payload: { id: cItem.recordId } })
                             });
+                        } else {
+                            const cData = await db.classes.get(cItem.recordId);
+                            if (cData) {
+                                await fetch(GAS_API_URL, {
+                                    method: 'POST',
+                                    mode: 'no-cors',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: JSON.stringify({ action: 'syncClass', payload: cData })
+                                });
+                            }
                         }
                     }
 
@@ -858,25 +867,25 @@
         );
 
         // ==========================================
-        // 7. MODUL GURU (Hybrid & Add Student Enabled)
+        // 7. MODUL GURU (CRU: Create, Read, Update Siswa Binaan)
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
-            const [selectedTab, setSelectedTab] = useState('all'); // 'all' | 'homeroom' | 'mentor'
+            const [selectedTab, setSelectedTab] = useState('all');
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [classLogs, setClassLogs] = useState([]);
             const [isFetchingCloud, setIsFetchingCloud] = useState(false);
             
-            // Modal Tambah Siswa Sendiri oleh Guru
-            const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-            const [newStudentData, setNewStudentData] = useState({
+            // Modal Tambah / Edit Siswa oleh Guru (CRU)
+            const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+            const [editingStudent, setEditingStudent] = useState(null);
+            const [studentFormData, setStudentFormData] = useState({
                 name: '',
                 username: '',
                 nisn: '',
                 gender: 'Laki-laki',
-                classId: user.homeroomClassId || '',
-                isMenteeOnly: false
+                classId: user.homeroomClassId || ''
             });
 
             const loadData = async () => {
@@ -900,46 +909,100 @@
 
                     if (selectedTab === 'homeroom') return isHomeroom;
                     if (selectedTab === 'mentor') return isMentor;
-                    return isHomeroom || isMentor; // 'all' tab
+                    return isHomeroom || isMentor;
                 });
             }, [allStudents, user, selectedTab]);
 
-            // Handler Guru Menambah Siswa
-            const handleTeacherAddStudent = async (e) => {
-                e.preventDefault();
-                const selectedClass = classes.find(c => c.id === newStudentData.classId);
-                const newId = `u_siswa_${Date.now()}`;
-                
-                const createdStudent = {
-                    id: newId,
-                    username: newStudentData.username,
-                    name: newStudentData.name,
-                    nisn: newStudentData.nisn,
-                    classId: newStudentData.classId || '',
-                    className: selectedClass ? selectedClass.name : '',
-                    mentorId: user.id, // Otomatis dibimbing oleh guru ini
-                    mentorName: user.name,
-                    gender: newStudentData.gender,
-                    role: ROLES.SISWA,
-                    avatar: newStudentData.gender === 'Laki-laki' ? '👦' : '👧',
-                    createdBy: user.name,
-                    status: 'Aktif',
-                    createdAt: new Date()
-                };
-
-                await db.users.put(createdStudent);
-                await db.syncQueue.put({
-                    id: `sync_${Date.now()}`,
-                    tableName: 'users',
-                    recordId: newId,
-                    action: 'create',
-                    status: 'pending',
-                    createdAt: new Date()
+            // Buka Modal Tambah Siswa Baru
+            const handleOpenAddModal = () => {
+                setEditingStudent(null);
+                setStudentFormData({
+                    name: '',
+                    username: '',
+                    nisn: '',
+                    gender: 'Laki-laki',
+                    classId: user.homeroomClassId || (classes[0] ? classes[0].id : '')
                 });
+                setIsStudentModalOpen(true);
+            };
 
-                alert(`✨ Siswa "${newStudentData.name}" berhasil didaftarkan sebagai binaan Anda!`);
-                setNewStudentData({ name: '', username: '', nisn: '', gender: 'Laki-laki', classId: user.homeroomClassId || '', isMenteeOnly: false });
-                setIsAddStudentOpen(false);
+            // Buka Modal Edit Siswa Binaan (Fitur Update Guru)
+            const handleOpenEditModal = (student) => {
+                setEditingStudent(student);
+                setStudentFormData({
+                    name: student.name || '',
+                    username: student.username || '',
+                    nisn: student.nisn || '',
+                    gender: student.gender || 'Laki-laki',
+                    classId: student.classId || ''
+                });
+                setIsStudentModalOpen(true);
+            };
+
+            // Simpan Data Tambah / Edit oleh Guru
+            const handleTeacherSaveStudent = async (e) => {
+                e.preventDefault();
+                const selectedClass = classes.find(c => c.id === studentFormData.classId);
+
+                if (editingStudent) {
+                    // UPDATE Siswa Binaan
+                    const updatedStudent = {
+                        ...editingStudent,
+                        name: studentFormData.name,
+                        username: studentFormData.username,
+                        nisn: studentFormData.nisn,
+                        gender: studentFormData.gender,
+                        classId: studentFormData.classId,
+                        className: selectedClass ? selectedClass.name : editingStudent.className,
+                        avatar: studentFormData.gender === 'Laki-laki' ? '👦' : '👧',
+                        updatedAt: new Date()
+                    };
+
+                    await db.users.put(updatedStudent);
+                    await db.syncQueue.put({
+                        id: `sync_${Date.now()}`,
+                        tableName: 'users',
+                        recordId: editingStudent.id,
+                        action: 'update',
+                        status: 'pending',
+                        createdAt: new Date()
+                    });
+
+                    alert(`✨ Data siswa "${studentFormData.name}" berhasil diperbarui!`);
+                } else {
+                    // CREATE Siswa Binaan Baru
+                    const newId = `u_siswa_${Date.now()}`;
+                    const createdStudent = {
+                        id: newId,
+                        username: studentFormData.username,
+                        name: studentFormData.name,
+                        nisn: studentFormData.nisn,
+                        classId: studentFormData.classId || '',
+                        className: selectedClass ? selectedClass.name : '',
+                        mentorId: user.id,
+                        mentorName: user.name,
+                        gender: studentFormData.gender,
+                        role: ROLES.SISWA,
+                        avatar: studentFormData.gender === 'Laki-laki' ? '👦' : '👧',
+                        createdBy: user.name,
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    };
+
+                    await db.users.put(createdStudent);
+                    await db.syncQueue.put({
+                        id: `sync_${Date.now()}`,
+                        tableName: 'users',
+                        recordId: newId,
+                        action: 'create',
+                        status: 'pending',
+                        createdAt: new Date()
+                    });
+
+                    alert(`✨ Siswa "${studentFormData.name}" berhasil didaftarkan sebagai binaan Anda!`);
+                }
+
+                setIsStudentModalOpen(false);
                 loadData();
                 triggerSync();
             };
@@ -951,7 +1014,6 @@
                 }
                 setIsFetchingCloud(true);
                 try {
-                    // Tarik log
                     const resLogs = await fetch(`${GAS_API_URL}?action=getHabitLogs`);
                     const jsonLogs = await resLogs.json();
                     if (jsonLogs.status === 'success' && jsonLogs.data) {
@@ -971,7 +1033,6 @@
                         await db.habitLogs.bulkPut(formatted);
                     }
 
-                    // Tarik master siswa terbaru
                     const resUsers = await fetch(`${GAS_API_URL}?action=getUsers`);
                     const jsonUsers = await resUsers.json();
                     if (jsonUsers.status === 'success' && jsonUsers.data) {
@@ -1007,11 +1068,11 @@
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
-                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan 7 kebiasaan siswa kelas & kelompok mentor Anda.</p>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan (CRU)</h1>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, kelola dan perbarui data profil siswa binaan Anda.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <Button variant="primary" onClick={() => setIsAddStudentOpen(true)} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                            <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-user-plus"></i> + Tambah Siswa Binaan
                             </Button>
                             <Button variant="white" onClick={fetchCloudData} disabled={isFetchingCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
@@ -1063,6 +1124,14 @@
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
                                                     {count} / 7 Kebiasaan Terisi
                                                 </span>
+                                                {/* Tombol Edit Siswa untuk Guru (Update Only, No Delete) */}
+                                                <button 
+                                                    onClick={() => handleOpenEditModal(student)} 
+                                                    className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all"
+                                                    title="Edit Data Siswa Binaan"
+                                                >
+                                                    <i className="fas fa-edit"></i> Edit Profil
+                                                </button>
                                             </div>
                                         </div>
 
@@ -1096,39 +1165,39 @@
                         </div>
                     )}
 
-                    {/* MODAL GURU MENAMBAH SISWA SENDIRI */}
-                    {isAddStudentOpen && (
+                    {/* MODAL GURU: TAMBAH / EDIT SISWA BINAAN */}
+                    {isStudentModalOpen && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md shadow-2xl">
-                                <h3 className="font-black text-lg mb-1 text-brand-dark">Tambah Siswa Binaan</h3>
-                                <p className="text-xs text-gray-500 mb-4">Siswa yang Anda tambahkan akan otomatis menjadi kelompok binaan Anda.</p>
+                                <h3 className="font-black text-lg mb-1 text-brand-dark">{editingStudent ? 'Edit Profil Siswa Binaan' : 'Tambah Siswa Binaan'}</h3>
+                                <p className="text-xs text-gray-500 mb-4">{editingStudent ? 'Perbarui informasi siswa binaan Anda di bawah ini.' : 'Siswa yang Anda tambahkan otomatis masuk ke kelompok binaan Anda.'}</p>
                                 
-                                <form onSubmit={handleTeacherAddStudent} className="space-y-3">
+                                <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
-                                        <input type="text" value={newStudentData.name} onChange={e => setNewStudentData({...newStudentData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" value={studentFormData.name} onChange={e => setStudentFormData({...studentFormData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
-                                            <input type="text" value={newStudentData.username} onChange={e => setNewStudentData({...newStudentData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                            <input type="text" value={studentFormData.username} onChange={e => setStudentFormData({...studentFormData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
-                                            <input type="text" value={newStudentData.nisn} onChange={e => setNewStudentData({...newStudentData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={studentFormData.nisn} onChange={e => setStudentFormData({...studentFormData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
-                                            <select value={newStudentData.classId} onChange={e => setNewStudentData({...newStudentData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                            <select value={studentFormData.classId} onChange={e => setStudentFormData({...studentFormData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
                                                 <option value="">-- Pilih Kelas --</option>
                                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
-                                            <select value={newStudentData.gender} onChange={e => setNewStudentData({...newStudentData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <select value={studentFormData.gender} onChange={e => setStudentFormData({...studentFormData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                                 <option value="Laki-laki">Laki-laki</option>
                                                 <option value="Perempuan">Perempuan</option>
                                             </select>
@@ -1136,12 +1205,12 @@
                                     </div>
 
                                     <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
-                                        ℹ️ Guru Pembimbing otomatis disetel ke <strong>{user.name}</strong>.
+                                        ℹ️ Guru Pembimbing: <strong>{user.name}</strong>.
                                     </div>
 
                                     <div className="flex justify-end gap-2 pt-2">
-                                        <Button variant="white" onClick={() => setIsAddStudentOpen(false)}>Batal</Button>
-                                        <Button variant="primary" type="submit">Simpan Siswa</Button>
+                                        <Button variant="white" onClick={() => setIsStudentModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">{editingStudent ? 'Simpan Perubahan' : 'Simpan Siswa'}</Button>
                                     </div>
                                 </form>
                             </Card>
@@ -1163,7 +1232,7 @@
         );
 
         // ==========================================
-        // 8. MODUL ADMIN (Full CRUD + Delete Authority)
+        // 8. MODUL ADMIN: FULL CRUD DATA KELAS, GURU, SISWA
         // ==========================================
         const AdminDashboard = () => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1202,10 +1271,12 @@
             );
         };
 
+        // ADMIN: CRUD DATA KELAS
         const AdminClassesPage = ({ triggerSync }) => {
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingClass, setEditingClass] = useState(null);
             const [className, setClassName] = useState('');
             const [teacherId, setTeacherId] = useState('');
 
@@ -1218,45 +1289,76 @@
 
             useEffect(() => { loadData(); }, []);
 
+            const handleOpenAdd = () => {
+                setEditingClass(null);
+                setClassName('');
+                setTeacherId('');
+                setIsModalOpen(true);
+            };
+
+            const handleOpenEdit = (cls) => {
+                setEditingClass(cls);
+                setClassName(cls.name || '');
+                setTeacherId(cls.teacherId || '');
+                setIsModalOpen(true);
+            };
+
             const handleSave = async (e) => {
                 e.preventDefault();
-                const newId = `c_${Date.now()}`;
                 const selectedTeacher = teachers.find(t => t.id === teacherId);
-                const classPayload = { 
-                    id: newId, 
-                    name: className, 
-                    teacherId: teacherId || '', 
-                    teacherName: selectedTeacher ? selectedTeacher.name : '' 
-                };
 
-                await db.classes.put(classPayload);
-                await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                if (editingClass) {
+                    // Update Kelas
+                    const updated = {
+                        ...editingClass,
+                        name: className,
+                        teacherId: teacherId || '',
+                        teacherName: selectedTeacher ? selectedTeacher.name : ''
+                    };
+                    await db.classes.put(updated);
+                    await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: editingClass.id, action: 'update', status: 'pending', createdAt: new Date() });
+                    alert(`✨ Data kelas "${className}" berhasil diperbarui!`);
+                } else {
+                    // Create Kelas Baru
+                    const newId = `c_${Date.now()}`;
+                    const created = { 
+                        id: newId, 
+                        name: className, 
+                        teacherId: teacherId || '', 
+                        teacherName: selectedTeacher ? selectedTeacher.name : '' 
+                    };
+                    await db.classes.put(created);
+                    await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                    alert(`✨ Kelas "${className}" berhasil ditambahkan!`);
+                }
 
-                // Update wali kelas di profil guru jika ada
                 if (teacherId) {
-                    await db.users.update(teacherId, { homeroomClassId: newId });
+                    await db.users.update(teacherId, { homeroomClassId: editingClass ? editingClass.id : `c_${Date.now()}` });
                     await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: teacherId, action: 'update', status: 'pending', createdAt: new Date() });
                 }
 
-                setClassName('');
-                setTeacherId('');
                 setIsModalOpen(false);
                 loadData();
                 triggerSync();
             };
 
             const handleDelete = async (id) => {
-                if (confirm('Hapus kelas ini?')) {
+                if (confirm('Apakah Anda yakin ingin menghapus kelas ini?')) {
                     await db.classes.delete(id);
+                    await db.syncQueue.put({ id: `sync_cdel_${Date.now()}`, tableName: 'classes', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     loadData();
+                    triggerSync();
                 }
             };
 
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas & Wali Kelas</h1>
-                        <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas (CRUD Admin)</h1>
+                            <p className="text-gray-500 font-medium text-sm">Kelola rombel dan penugasan wali kelas.</p>
+                        </div>
+                        <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
                     </div>
 
                     <Card>
@@ -1266,14 +1368,15 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Kelas</th><th className="p-3">Wali Kelas</th><th className="p-3 text-right">Aksi (Admin)</th></tr>
+                                        <tr><th className="p-3">Nama Kelas</th><th className="p-3">Wali Kelas</th><th className="p-3 text-right">Aksi</th></tr>
                                     </thead>
                                     <tbody>
                                         {classes.map(c => (
                                             <tr key={c.id} className="border-b border-gray-50">
                                                 <td className="p-3 font-semibold">{c.name}</td>
                                                 <td className="p-3 text-brand-blue font-bold">{c.teacherName || '-'}</td>
-                                                <td className="p-3 text-right">
+                                                <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => handleOpenEdit(c)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
                                                     <button onClick={() => handleDelete(c.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
                                             </tr>
@@ -1287,14 +1390,14 @@
                     {isModalOpen && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-sm">
-                                <h3 className="font-black text-lg mb-4">Tambah Kelas Baru</h3>
+                                <h3 className="font-black text-lg mb-4">{editingClass ? 'Edit Data Kelas' : 'Tambah Kelas Baru'}</h3>
                                 <form onSubmit={handleSave} className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Kelas (contoh: VII.1)</label>
                                         <input type="text" value={className} onChange={e => setClassName(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Wali Kelas (Opsional)</label>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Wali Kelas</label>
                                         <select value={teacherId} onChange={e => setTeacherId(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                             <option value="">-- Belum Ditentukan --</option>
                                             {teachers.map(t => <option key={t.id} value={t.id}>{t.name} ({t.subject || 'Guru'})</option>)}
@@ -1312,10 +1415,12 @@
             );
         };
 
+        // ADMIN: CRUD DATA GURU
         const AdminTeachersPage = ({ triggerSync }) => {
             const [teachers, setTeachers] = useState([]);
             const [classes, setClasses] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingTeacher, setEditingTeacher] = useState(null);
             const [formData, setFormData] = useState({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
 
             const loadData = async () => {
@@ -1327,35 +1432,69 @@
 
             useEffect(() => { loadData(); }, []);
 
+            const handleOpenAdd = () => {
+                setEditingTeacher(null);
+                setFormData({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
+                setIsModalOpen(true);
+            };
+
+            const handleOpenEdit = (teacher) => {
+                setEditingTeacher(teacher);
+                setFormData({
+                    name: teacher.name || '',
+                    username: teacher.username || '',
+                    nip: teacher.nip || '',
+                    subject: teacher.subject || '',
+                    homeroomClassId: teacher.homeroomClassId || ''
+                });
+                setIsModalOpen(true);
+            };
+
             const handleSave = async (e) => {
                 e.preventDefault();
-                const newId = `u_guru_${Date.now()}`;
-                const newTeacher = {
-                    id: newId,
-                    username: formData.username,
-                    name: formData.name,
-                    nip: formData.nip,
-                    subject: formData.subject,
-                    homeroomClassId: formData.homeroomClassId || '',
-                    role: ROLES.GURU,
-                    avatar: '👨‍🏫',
-                    status: 'Aktif',
-                    createdAt: new Date()
-                };
+                if (editingTeacher) {
+                    // Update Guru
+                    const updated = {
+                        ...editingTeacher,
+                        name: formData.name,
+                        username: formData.username,
+                        nip: formData.nip,
+                        subject: formData.subject,
+                        homeroomClassId: formData.homeroomClassId || '',
+                        updatedAt: new Date()
+                    };
+                    await db.users.put(updated);
+                    await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: editingTeacher.id, action: 'update', status: 'pending', createdAt: new Date() });
+                    alert(`✨ Data guru "${formData.name}" berhasil diperbarui!`);
+                } else {
+                    // Create Guru Baru
+                    const newId = `u_guru_${Date.now()}`;
+                    const created = {
+                        id: newId,
+                        username: formData.username,
+                        name: formData.name,
+                        nip: formData.nip,
+                        subject: formData.subject,
+                        homeroomClassId: formData.homeroomClassId || '',
+                        role: ROLES.GURU,
+                        avatar: '👨‍🏫',
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    };
+                    await db.users.put(created);
+                    await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                    alert(`✨ Akun guru "${formData.name}" berhasil ditambahkan!`);
+                }
 
-                await db.users.put(newTeacher);
-                await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-
-                setFormData({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
                 setIsModalOpen(false);
                 loadData();
                 triggerSync();
             };
 
             const handleDelete = async (id) => {
-                if (confirm('Hapus akun guru ini?')) {
+                if (confirm('Hapus akun guru ini secara permanen?')) {
                     await db.users.delete(id);
-                    await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     loadData();
                     triggerSync();
                 }
@@ -1364,8 +1503,11 @@
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
-                        <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Guru</Button>
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru (CRUD Admin)</h1>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, dan manajemen akun pengajar.</p>
+                        </div>
+                        <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Guru</Button>
                     </div>
 
                     <Card>
@@ -1375,7 +1517,7 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">NIP</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi (Admin)</th></tr>
+                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">NIP</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi</th></tr>
                                     </thead>
                                     <tbody>
                                         {teachers.map(t => (
@@ -1384,7 +1526,8 @@
                                                 <td className="p-3 text-gray-500">{t.username}</td>
                                                 <td className="p-3 text-gray-500">{t.nip || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
-                                                <td className="p-3 text-right">
+                                                <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => handleOpenEdit(t)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
                                                     <button onClick={() => handleDelete(t.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
                                             </tr>
@@ -1398,7 +1541,7 @@
                     {isModalOpen && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md">
-                                <h3 className="font-black text-lg mb-4">Tambah Guru Baru</h3>
+                                <h3 className="font-black text-lg mb-4">{editingTeacher ? 'Edit Data Guru' : 'Tambah Guru Baru'}</h3>
                                 <form onSubmit={handleSave} className="space-y-3">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap</label>
@@ -1430,11 +1573,13 @@
             );
         };
 
+        // ADMIN: CRUD DATA SISWA (Create, Read, Update, Delete)
         const AdminStudentsPage = ({ triggerSync }) => {
             const [students, setStudents] = useState([]);
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingStudent, setEditingStudent] = useState(null);
             const [formData, setFormData] = useState({ name: '', username: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
 
             const loadData = async () => {
@@ -1448,43 +1593,83 @@
 
             useEffect(() => { loadData(); }, []);
 
+            const handleOpenAdd = () => {
+                setEditingStudent(null);
+                setFormData({ name: '', username: '', nisn: '', classId: classes[0] ? classes[0].id : '', mentorId: '', gender: 'Laki-laki' });
+                setIsModalOpen(true);
+            };
+
+            const handleOpenEdit = (student) => {
+                setEditingStudent(student);
+                setFormData({
+                    name: student.name || '',
+                    username: student.username || '',
+                    nisn: student.nisn || '',
+                    classId: student.classId || '',
+                    mentorId: student.mentorId || '',
+                    gender: student.gender || 'Laki-laki'
+                });
+                setIsModalOpen(true);
+            };
+
             const handleSave = async (e) => {
                 e.preventDefault();
                 const selectedClass = classes.find(c => c.id === formData.classId);
                 const selectedMentor = teachers.find(t => t.id === formData.mentorId);
-                const newId = `u_siswa_${Date.now()}`;
-                
-                const newStudent = {
-                    id: newId,
-                    username: formData.username,
-                    name: formData.name,
-                    nisn: formData.nisn,
-                    classId: formData.classId,
-                    className: selectedClass ? selectedClass.name : '',
-                    mentorId: formData.mentorId || '',
-                    mentorName: selectedMentor ? selectedMentor.name : '',
-                    gender: formData.gender,
-                    role: ROLES.SISWA,
-                    avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
-                    createdBy: 'admin',
-                    status: 'Aktif',
-                    createdAt: new Date()
-                };
 
-                await db.users.put(newStudent);
-                await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                if (editingStudent) {
+                    // Update Siswa
+                    const updated = {
+                        ...editingStudent,
+                        username: formData.username,
+                        name: formData.name,
+                        nisn: formData.nisn,
+                        classId: formData.classId,
+                        className: selectedClass ? selectedClass.name : editingStudent.className,
+                        mentorId: formData.mentorId || '',
+                        mentorName: selectedMentor ? selectedMentor.name : '',
+                        gender: formData.gender,
+                        avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
+                        updatedAt: new Date()
+                    };
 
-                setFormData({ name: '', username: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
+                    await db.users.put(updated);
+                    await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: editingStudent.id, action: 'update', status: 'pending', createdAt: new Date() });
+                    alert(`✨ Data siswa "${formData.name}" berhasil diperbarui!`);
+                } else {
+                    // Create Siswa Baru
+                    const newId = `u_siswa_${Date.now()}`;
+                    const created = {
+                        id: newId,
+                        username: formData.username,
+                        name: formData.name,
+                        nisn: formData.nisn,
+                        classId: formData.classId,
+                        className: selectedClass ? selectedClass.name : '',
+                        mentorId: formData.mentorId || '',
+                        mentorName: selectedMentor ? selectedMentor.name : '',
+                        gender: formData.gender,
+                        role: ROLES.SISWA,
+                        avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
+                        createdBy: 'admin',
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    };
+
+                    await db.users.put(created);
+                    await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                    alert(`✨ Siswa "${formData.name}" berhasil ditambahkan!`);
+                }
+
                 setIsModalOpen(false);
                 loadData();
                 triggerSync();
             };
 
-            // Hak hapus hanya ada di panel Admin ini
             const handleDelete = async (id) => {
                 if (confirm('Apakah Anda yakin ingin menghapus akun siswa ini secara permanen?')) {
                     await db.users.delete(id);
-                    await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     loadData();
                     triggerSync();
                 }
@@ -1493,8 +1678,11 @@
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa (Hak Penuh Admin)</h1>
-                        <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa (CRUD Admin)</h1>
+                            <p className="text-gray-500 font-medium text-sm">Hak akses penuh untuk mengelola dan menghapus siswa.</p>
+                        </div>
+                        <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
                     </div>
 
                     <Card>
@@ -1510,7 +1698,7 @@
                                             <th className="p-3">NISN</th>
                                             <th className="p-3">Kelas</th>
                                             <th className="p-3">Guru Mentor</th>
-                                            <th className="p-3 text-right">Aksi Hapus</th>
+                                            <th className="p-3 text-right">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1521,7 +1709,10 @@
                                                 <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
                                                 <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
-                                                <td className="p-3 text-right">
+                                                <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => handleOpenEdit(s)} className="text-brand-blue hover:underline font-bold text-xs">
+                                                        <i className="fas fa-edit"></i> Edit
+                                                    </button>
                                                     <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs">
                                                         <i className="fas fa-trash"></i> Hapus
                                                     </button>
@@ -1537,7 +1728,7 @@
                     {isModalOpen && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md">
-                                <h3 className="font-black text-lg mb-4">Tambah Siswa Baru</h3>
+                                <h3 className="font-black text-lg mb-4">{editingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Baru'}</h3>
                                 <form onSubmit={handleSave} className="space-y-3">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
