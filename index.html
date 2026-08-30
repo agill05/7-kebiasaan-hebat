@@ -28,6 +28,9 @@
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -78,6 +81,65 @@
         const { useState, useEffect, useMemo, useRef } = React;
 
         // ==========================================
+        // SWEETALERT2 HELPER WRAPPER
+        // ==========================================
+        const showAlert = {
+            success: (title, text = '') => {
+                return Swal.fire({
+                    icon: 'success',
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#EF4444',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            },
+            error: (title, text = '') => {
+                return Swal.fire({
+                    icon: 'error',
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#EF4444',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            },
+            warning: (title, text = '') => {
+                return Swal.fire({
+                    icon: 'warning',
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#EF4444',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            },
+            confirm: async (title, text = '', confirmText = 'Ya, Lanjutkan') => {
+                return await Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF4444',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: confirmText,
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5',
+                        cancelButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            }
+        };
+
+        // ==========================================
         // 1. KONFIGURASI API GOOGLE APPS SCRIPT
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxr_T0jcF9vIM2u1wxYK3unkkIjTsUJkobM_SidYr3hf-2doJOBorBxhHWc_EgNs8wpog/exec";
@@ -90,7 +152,7 @@
                 month: '2-digit',
                 day: '2-digit'
             });
-            return formatter.format(new Date()); // Menghasilkan format YYYY-MM-DD
+            return formatter.format(new Date()); // Format YYYY-MM-DD
         };
 
         const getNowWitaTimeString = () => {
@@ -100,7 +162,6 @@
                 minute: '2-digit',
                 hour12: false
             });
-            // Pastikan menggunakan pemisah titik dua (HH:mm) untuk input tipe time
             return formatter.format(new Date()).replace('.', ':');
         };
 
@@ -503,7 +564,7 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA (JAM 24-FORMAT & WITA AUTO-DEFAULT)
+        // 7. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const todayStr = getTodayWitaDateString();
@@ -531,7 +592,6 @@
 
             useEffect(() => { loadLogs(); }, [user.id]);
 
-            // Saat modal dibuka: jika belum ada input, default ke jam WITA saat ini (format 24 jam)
             const handleCardClick = (habit) => {
                 const existing = logs[habit.id] || {};
                 setModalTime(existing.timeValue || getNowWitaTimeString());
@@ -584,6 +644,7 @@
                 }
 
                 setActiveHabitModal(null);
+                showAlert.success('Kebiasaan Tercatat!', `${habit.name} berhasil disimpan.`);
 
                 const updatedCompleted = Object.values({ ...logs, [habit.id]: { completed: true } }).filter(l => l.completed).length;
                 if (updatedCompleted === 7) {
@@ -594,6 +655,13 @@
             };
 
             const handleCancelHabit = async (habitId) => {
+                const confirmRes = await showAlert.confirm(
+                    'Batalkan Kebiasaan?',
+                    'Catatan kebiasaan ini akan dihapus dan poin akan dikurangi 10 poin.',
+                    'Ya, Batalkan'
+                );
+                if (!confirmRes.isConfirmed) return;
+
                 const logId = `${user.id}_${habitId}_${todayStr}`;
                 await db.habitLogs.delete(logId);
                 await db.syncQueue.put({
@@ -617,6 +685,7 @@
                 setPoints(newTotal);
 
                 setActiveHabitModal(null);
+                showAlert.success('Dibatalkan', 'Catatan pembiasaan telah dihapus.');
                 triggerSync();
             };
 
@@ -840,7 +909,8 @@
                 await db.syncQueue.put({
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
-                alert("✨ Catatan refleksi hari ini berhasil disimpan!");
+                
+                showAlert.success('Jurnal Tersimpan!', 'Catatan refleksi harianmu berhasil disimpan.');
                 setContent('');
                 loadJournals();
                 triggerSync();
@@ -906,14 +976,14 @@
             const handleChangePassword = async (e) => {
                 e.preventDefault();
                 if (newPass !== confirmPass) {
-                    alert("Password baru dan konfirmasi tidak cocok!");
+                    showAlert.warning('Perhatian', 'Password baru dan konfirmasi tidak cocok!');
                     return;
                 }
                 const oldHash = await hashPassword(oldPass);
                 const currentHash = user.password || await hashPassword('siswa123');
 
                 if (oldHash !== currentHash) {
-                    alert("Password lama yang Anda masukkan salah!");
+                    showAlert.error('Gagal', 'Password lama yang Anda masukkan salah!');
                     return;
                 }
 
@@ -922,7 +992,7 @@
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
                 
-                alert("✨ Password akun Anda berhasil diubah!");
+                showAlert.success('Berhasil!', 'Password akun Anda berhasil diubah.');
                 setOldPass('');
                 setNewPass('');
                 setConfirmPass('');
@@ -966,7 +1036,7 @@
         };
 
         // ==========================================
-        // 8. MODUL GURU (CRU Siswa Binaan + Reset Password Siswa)
+        // 8. MODUL GURU
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
@@ -1066,7 +1136,7 @@
                         createdAt: new Date()
                     });
 
-                    alert(`✨ Data siswa "${studentFormData.name}" berhasil diperbarui!`);
+                    showAlert.success('Berhasil Diperbarui', `Data siswa "${studentFormData.name}" berhasil diperbarui.`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
                     const defaultPass = studentFormData.password.trim() || 'siswa123';
@@ -1100,7 +1170,7 @@
                         createdAt: new Date()
                     });
 
-                    alert(`✨ Siswa "${studentFormData.name}" berhasil didaftarkan dengan password awal: ${defaultPass}`);
+                    showAlert.success('Siswa Ditambahkan', `Siswa "${studentFormData.name}" berhasil didaftarkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsStudentModalOpen(false);
@@ -1125,7 +1195,7 @@
                     createdAt: new Date()
                 });
 
-                alert(`✅ Password siswa ${resetModalStudent.name} berhasil di-reset menjadi: "${newResetPassword}". Harap beritahukan siswa.`);
+                showAlert.success('Password Direset', `Password siswa ${resetModalStudent.name} berhasil di-reset menjadi: "${newResetPassword}".`);
                 setResetModalStudent(null);
                 await loadData();
                 triggerSync();
@@ -1134,13 +1204,14 @@
             const handleRefreshFromCloud = async () => {
                 await triggerManualPull();
                 await loadData();
+                showAlert.success('Data Terkini', 'Data siswa berhasil ditarik dari Google Sheets.');
             };
 
             return (
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan (CRU)</h1>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
                             <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, edit profil, dan reset password siswa binaan Anda.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1331,21 +1402,21 @@
                 const updated = { ...user, phone: phone.trim() };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
-                alert("✨ Nomor telepon berhasil diperbarui!");
+                showAlert.success('Berhasil!', 'Nomor telepon berhasil diperbarui.');
                 triggerSync();
             };
 
             const handleChangePassword = async (e) => {
                 e.preventDefault();
                 if (newPass !== confirmPass) {
-                    alert("Password baru dan konfirmasi tidak cocok!");
+                    showAlert.warning('Perhatian', 'Password baru dan konfirmasi tidak cocok!');
                     return;
                 }
                 const oldHash = await hashPassword(oldPass);
                 const currentHash = user.password || await hashPassword('guru123');
 
                 if (oldHash !== currentHash) {
-                    alert("Password lama yang Anda masukkan salah!");
+                    showAlert.error('Gagal', 'Password lama yang Anda masukkan salah!');
                     return;
                 }
 
@@ -1354,7 +1425,7 @@
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
                 
-                alert("✨ Password akun Guru Anda berhasil diubah!");
+                showAlert.success('Berhasil!', 'Password akun Guru Anda berhasil diubah.');
                 setOldPass('');
                 setNewPass('');
                 setConfirmPass('');
@@ -1402,7 +1473,7 @@
         };
 
         // ==========================================
-        // 9. MODUL ADMIN: FULL CRUD + RESET PASSWORD
+        // 9. MODUL ADMIN: FULL CRUD + SWEETALERT
         // ==========================================
         const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1419,6 +1490,7 @@
             const handleRefresh = async () => {
                 await triggerManualPull();
                 await loadStats();
+                showAlert.success('Sinkronisasi Selesai', 'Data ringkasan sistem telah dimutakhirkan.');
             };
 
             return (
@@ -1498,7 +1570,7 @@
                     };
                     await db.classes.put(updated);
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: editingClass.id, action: 'update', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Data kelas "${className}" berhasil diperbarui!`);
+                    showAlert.success('Berhasil Diperbarui', `Data kelas "${className}" berhasil diperbarui.`);
                 } else {
                     const newId = `c_${Date.now()}`;
                     const created = { 
@@ -1509,7 +1581,7 @@
                     };
                     await db.classes.put(created);
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Kelas "${className}" berhasil ditambahkan!`);
+                    showAlert.success('Kelas Ditambahkan', `Kelas "${className}" berhasil ditambahkan.`);
                 }
 
                 if (teacherId) {
@@ -1523,24 +1595,32 @@
             };
 
             const handleDelete = async (id) => {
-                if (confirm('Apakah Anda yakin ingin menghapus kelas ini?')) {
+                const confirmRes = await showAlert.confirm(
+                    'Hapus Kelas Ini?',
+                    'Apakah Anda yakin ingin menghapus rombongan belajar ini secara permanen?',
+                    'Ya, Hapus'
+                );
+
+                if (confirmRes.isConfirmed) {
                     await db.classes.delete(id);
                     await db.syncQueue.put({ id: `sync_cdel_${Date.now()}`, tableName: 'classes', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     await loadData();
                     triggerSync();
+                    showAlert.success('Terhapus', 'Data kelas berhasil dihapus.');
                 }
             };
 
             const handleRefresh = async () => {
                 await triggerManualPull();
                 await loadData();
+                showAlert.success('Data Terkini', 'Daftar kelas berhasil diselaraskan dari cloud.');
             };
 
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas (CRUD Admin)</h1>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas</h1>
                             <p className="text-gray-500 font-medium text-sm">Kelola rombel dan penugasan wali kelas.</p>
                         </div>
                         <div className="flex gap-2">
@@ -1659,7 +1739,7 @@
                     };
                     await db.users.put(updated);
                     await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: editingTeacher.id, action: 'update', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Data guru "${formData.name}" berhasil diperbarui!`);
+                    showAlert.success('Berhasil Diperbarui', `Data guru "${formData.name}" berhasil diperbarui.`);
                 } else {
                     const newId = `u_guru_${Date.now()}`;
                     const defaultPass = formData.password.trim() || 'guru123';
@@ -1681,7 +1761,7 @@
                     };
                     await db.users.put(created);
                     await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Akun guru "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}!`);
+                    showAlert.success('Guru Ditambahkan', `Akun guru "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsModalOpen(false);
@@ -1698,31 +1778,39 @@
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_trst_${Date.now()}`, tableName: 'users', recordId: resetTeacherModal.id, action: 'update', status: 'pending', createdAt: new Date() });
                 
-                alert(`✅ Password guru ${resetTeacherModal.name} berhasil di-reset menjadi: "${newTeacherPass}"`);
+                showAlert.success('Password Direset', `Password guru ${resetTeacherModal.name} berhasil di-reset menjadi: "${newTeacherPass}"`);
                 setResetTeacherModal(null);
                 await loadData();
                 triggerSync();
             };
 
             const handleDelete = async (id) => {
-                if (confirm('Hapus akun guru ini secara permanen?')) {
+                const confirmRes = await showAlert.confirm(
+                    'Hapus Akun Guru?',
+                    'Hapus akun guru ini secara permanen dari basis data?',
+                    'Ya, Hapus'
+                );
+
+                if (confirmRes.isConfirmed) {
                     await db.users.delete(id);
                     await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     await loadData();
                     triggerSync();
+                    showAlert.success('Terhapus', 'Akun guru telah dihapus.');
                 }
             };
 
             const handleRefresh = async () => {
                 await triggerManualPull();
                 await loadData();
+                showAlert.success('Data Terkini', 'Daftar guru berhasil disinkronkan.');
             };
 
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru (CRUD Admin)</h1>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
                             <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, dan reset password guru.</p>
                         </div>
                         <div className="flex gap-2">
@@ -1898,7 +1986,7 @@
 
                     await db.users.put(updated);
                     await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: editingStudent.id, action: 'update', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Data siswa "${formData.name}" berhasil diperbarui!`);
+                    showAlert.success('Berhasil Diperbarui', `Data siswa "${formData.name}" berhasil diperbarui.`);
                 } else {
                     const newId = `u_siswa_${Date.now()}`;
                     const defaultPass = formData.password.trim() || 'siswa123';
@@ -1924,7 +2012,7 @@
 
                     await db.users.put(created);
                     await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
-                    alert(`✨ Siswa "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}!`);
+                    showAlert.success('Siswa Ditambahkan', `Siswa "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
                 }
 
                 setIsModalOpen(false);
@@ -1941,31 +2029,39 @@
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_srst_${Date.now()}`, tableName: 'users', recordId: resetStudentModal.id, action: 'update', status: 'pending', createdAt: new Date() });
                 
-                alert(`✅ Password siswa ${resetStudentModal.name} berhasil di-reset menjadi: "${newStudentPass}"`);
+                showAlert.success('Password Direset', `Password siswa ${resetStudentModal.name} berhasil di-reset menjadi: "${newStudentPass}"`);
                 setResetStudentModal(null);
                 await loadData();
                 triggerSync();
             };
 
             const handleDelete = async (id) => {
-                if (confirm('Apakah Anda yakin ingin menghapus akun siswa ini secara permanen?')) {
+                const confirmRes = await showAlert.confirm(
+                    'Hapus Akun Siswa?',
+                    'Apakah Anda yakin ingin menghapus akun siswa ini secara permanen?',
+                    'Ya, Hapus'
+                );
+
+                if (confirmRes.isConfirmed) {
                     await db.users.delete(id);
                     await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     await loadData();
                     triggerSync();
+                    showAlert.success('Terhapus', 'Akun siswa berhasil dihapus.');
                 }
             };
 
             const handleRefresh = async () => {
                 await triggerManualPull();
                 await loadData();
+                showAlert.success('Data Terkini', 'Daftar siswa berhasil diselaraskan dari cloud.');
             };
 
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa (CRUD Admin)</h1>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
                             <p className="text-gray-500 font-medium text-sm">Hak akses penuh mengelola akun, kelas, dan reset password siswa.</p>
                         </div>
                         <div className="flex gap-2">
@@ -2118,7 +2214,7 @@
                     createdAt: new Date() 
                 });
 
-                alert("✨ Kredensial Administrator berhasil disimpan!");
+                showAlert.success('Berhasil Disimpan!', 'Kredensial Administrator berhasil disimpan.');
                 triggerSync();
             };
 
@@ -2199,13 +2295,13 @@
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!selectedUserId) {
-                    alert("Pilih akun Anda terlebih dahulu!");
+                    showAlert.warning('Perhatian', 'Pilih akun Anda terlebih dahulu!');
                     return;
                 }
 
                 const user = await db.users.get(selectedUserId);
                 if (!user) {
-                    alert("Akun tidak ditemukan!");
+                    showAlert.error('Gagal', 'Akun tidak ditemukan!');
                     return;
                 }
 
@@ -2214,7 +2310,7 @@
                 if (user.role === ROLES.ADMIN) {
                     const expected = String(user.password || 'admin').trim();
                     if (typedPassword !== expected) {
-                        alert("❌ Password Administrator salah!");
+                        showAlert.error('Akses Ditolak', 'Password Administrator salah!');
                         return;
                     }
                 } else {
@@ -2223,7 +2319,7 @@
                     const expectedHashed = user.password ? String(user.password).trim() : await hashPassword(defaultPass);
 
                     if (inputHashed !== expectedHashed) {
-                        alert("❌ Password salah! Jika lupa password, silakan hubungi Guru / Wali Kelas Anda.");
+                        showAlert.error('Password Salah', 'Password salah! Jika lupa password, silakan hubungi Guru / Wali Kelas Anda.');
                         return;
                     }
                 }
@@ -2236,7 +2332,7 @@
                 await triggerManualPull();
                 await loadUsers();
                 setIsLoadingPull(false);
-                alert("✅ Data akun berhasil diperbarui dari cloud Google Sheets!");
+                showAlert.success('Tersinkron', 'Data akun berhasil diperbarui dari cloud Google Sheets!');
             };
 
             return (

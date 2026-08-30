@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
     "https://cdn.tailwindcss.com",
     "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
     "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdn.jsdelivr.net/npm/sweetalert2@11",
     "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
 ];
 
