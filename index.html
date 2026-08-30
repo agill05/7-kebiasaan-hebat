@@ -85,9 +85,9 @@
         // ==========================================
         // 2. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsDetailDB');
+        const db = new Dexie('SevenHabitsHybridDB');
         db.version(1).stores({
-            users: 'id, username, role, classId, nisn, nip, status',
+            users: 'id, username, role, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
             habits: 'id, name, active',
             habitLogs: 'id, userId, habitId, date, completed, timeValue, detailValue, studentName, className, syncStatus',
@@ -106,7 +106,6 @@
 
         const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
 
-        // Definisi 7 Kebiasaan beserta panduan input rincinya
         const HABITS_CONFIG = [
             {
                 id: 'h1',
@@ -115,7 +114,7 @@
                 icon: '🌅',
                 color: 'bg-blue-100 text-blue-600',
                 timeLabel: 'Jam Bangun Pagi',
-                detailLabel: 'Catatan / Kondisi Saat Bangun',
+                detailLabel: 'Catatan Saat Bangun',
                 detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur',
                 defaultTime: '04:30'
             },
@@ -125,9 +124,9 @@
                 description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan',
                 icon: '🙏',
                 color: 'bg-indigo-100 text-indigo-600',
-                timeLabel: 'Waktu / Jam Ibadah Utama',
+                timeLabel: 'Waktu Ibadah Utama',
                 detailLabel: 'Ibadah yang Dikerjakan',
-                detailPlaceholder: 'Contoh: Salat Subuh berjamaah & membaca Al-Qur\'an',
+                detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an',
                 defaultTime: '05:00'
             },
             {
@@ -136,9 +135,9 @@
                 description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit',
                 icon: '🏃',
                 color: 'bg-green-100 text-green-600',
-                timeLabel: 'Waktu Olahraga',
+                timeLabel: 'Waktu Berolahraga',
                 detailLabel: 'Jenis Olahraga & Durasi',
-                detailPlaceholder: 'Contoh: Senam pagi dan jogging ringan selama 20 menit',
+                detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit',
                 defaultTime: '06:00'
             },
             {
@@ -147,9 +146,9 @@
                 description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang',
                 icon: '🍎',
                 color: 'bg-red-100 text-red-600',
-                timeLabel: 'Waktu Sarapan / Makan',
+                timeLabel: 'Waktu Sarapan',
                 detailLabel: 'Menu Makanan & Minuman Sehat',
-                detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan segelas air putih',
+                detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih',
                 defaultTime: '06:30'
             },
             {
@@ -159,8 +158,8 @@
                 icon: '📚',
                 color: 'bg-yellow-100 text-yellow-600',
                 timeLabel: 'Waktu Mulai Belajar',
-                detailLabel: 'Mata Pelajaran / Buku yang Dipelajari',
-                detailPlaceholder: 'Contoh: Belajar Matematika & membaca buku cerita 30 menit',
+                detailLabel: 'Materi / Buku yang Dipelajari',
+                detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit',
                 defaultTime: '19:00'
             },
             {
@@ -170,8 +169,8 @@
                 icon: '🤝',
                 color: 'bg-teal-100 text-teal-600',
                 timeLabel: 'Waktu Beraktivitas',
-                detailLabel: 'Bentuk Bantuan / Kebaikan yang Dilakukan',
-                detailPlaceholder: 'Contoh: Membantu ibu mencuci piring dan menyapu halaman',
+                detailLabel: 'Bentuk Kebaikan yang Dilakukan',
+                detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga',
                 defaultTime: '16:00'
             },
             {
@@ -180,7 +179,7 @@
                 description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari',
                 icon: '😴',
                 color: 'bg-purple-100 text-purple-600',
-                timeLabel: 'Jam Masuk Tidur Malam',
+                timeLabel: 'Jam Tidur Malam',
                 detailLabel: 'Aktivitas Sebelum Tidur',
                 detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai',
                 defaultTime: '21:15'
@@ -277,6 +276,20 @@
                         }
                     }
 
+                    // Sync Classes
+                    const classSyncs = pendingQueue.filter(q => q.tableName === 'classes');
+                    for (let cItem of classSyncs) {
+                        const cData = await db.classes.get(cItem.recordId);
+                        if (cData) {
+                            await fetch(GAS_API_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'text/plain' },
+                                body: JSON.stringify({ action: 'syncClass', payload: cData })
+                            });
+                        }
+                    }
+
                     for (let item of pendingQueue) {
                         await db.syncQueue.update(item.id, { status: 'synced' });
                     }
@@ -353,7 +366,7 @@
                     { path: '/student/profile', label: 'Profil Siswa', icon: 'fas fa-user-graduate' },
                 ],
                 [ROLES.GURU]: [
-                    { path: '/teacher/dashboard', label: 'Monitoring Siswa', icon: 'fas fa-chart-line' },
+                    { path: '/teacher/dashboard', label: 'Siswa Binaan', icon: 'fas fa-chart-line' },
                     { path: '/teacher/profile', label: 'Profil Saya', icon: 'fas fa-chalkboard-teacher' },
                 ],
                 [ROLES.ADMIN]: [
@@ -441,14 +454,12 @@
         };
 
         // ==========================================
-        // 6. MODUL SISWA (Pengisian Rinci 7 Kebiasaan)
+        // 6. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [logs, setLogs] = useState({});
             const [points, setPoints] = useState(0);
-            
-            // Modal state untuk mengisi jam & rincian kebiasaan
             const [activeHabitModal, setActiveHabitModal] = useState(null);
             const [modalTime, setModalTime] = useState('');
             const [modalDetail, setModalDetail] = useState('');
@@ -512,11 +523,7 @@
 
                 setLogs(prev => ({
                     ...prev,
-                    [habit.id]: {
-                        completed: true,
-                        timeValue: modalTime,
-                        detailValue: modalDetail
-                    }
+                    [habit.id]: { completed: true, timeValue: modalTime, detailValue: modalDetail }
                 }));
 
                 if (!wasCompleted) {
@@ -570,7 +577,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
-                            <p className="text-gray-500 font-medium text-sm">Klik kebiasaan untuk mengisi waktu dan rincian harianmu.</p>
+                            <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan anak hebat setiap hari.</p>
                         </div>
                         <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl shadow-soft border">
                             <span className="text-xs font-bold text-gray-500">Tanggal:</span>
@@ -612,7 +619,6 @@
                                         </div>
                                     </div>
 
-                                    {/* Tampilan rincian yang sudah diisi siswa */}
                                     {isDone && (
                                         <div className="mt-3 pt-3 border-t border-green-200/60 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl space-y-1">
                                             <div className="flex items-center gap-1 font-bold text-brand-dark">
@@ -627,10 +633,9 @@
                         })}
                     </div>
 
-                    {/* MODAL INPUT DETAIL KEBIASAAN */}
                     {activeHabitModal && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                            <Card className="w-full max-w-md shadow-2xl animate-fade-in">
+                            <Card className="w-full max-w-md shadow-2xl">
                                 <div className="flex items-center justify-between border-b pb-3 mb-4">
                                     <div className="flex items-center gap-3">
                                         <span className="text-3xl">{activeHabitModal.icon}</span>
@@ -667,7 +672,7 @@
                                             value={modalDetail} 
                                             onChange={e => setModalDetail(e.target.value)} 
                                             placeholder={activeHabitModal.detailPlaceholder} 
-                                            className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-red outline-none" 
+                                            className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-red" 
                                             required
                                         ></textarea>
                                     </div>
@@ -844,55 +849,113 @@
                 <div>
                     <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
                     <p className="text-xs font-bold text-gray-400">NISN: {user.nisn || '-'}</p>
-                    <span className="inline-block mt-2 px-3 py-1 bg-red-100 text-brand-red rounded-full text-xs font-bold">Kelas: {user.className || 'Belum Diatur'}</span>
+                    <div className="mt-3 flex justify-center gap-2 flex-wrap">
+                        <span className="px-3 py-1 bg-red-100 text-brand-red rounded-full text-xs font-bold">Kelas: {user.className || 'Belum Diatur'}</span>
+                        {user.mentorName && <span className="px-3 py-1 bg-blue-100 text-brand-blue rounded-full text-xs font-bold">Guru Mentor: {user.mentorName}</span>}
+                    </div>
                 </div>
             </Card>
         );
 
         // ==========================================
-        // 7. MODUL GURU (Detail Monitoring Siswa)
+        // 7. MODUL GURU (Hybrid & Add Student Enabled)
         // ==========================================
-        const TeacherDashboard = ({ user }) => {
+        const TeacherDashboard = ({ user, triggerSync }) => {
             const [classes, setClasses] = useState([]);
-            const [selectedClassId, setSelectedClassId] = useState('');
+            const [allStudents, setAllStudents] = useState([]);
+            const [selectedTab, setSelectedTab] = useState('all'); // 'all' | 'homeroom' | 'mentor'
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-            const [students, setStudents] = useState([]);
             const [classLogs, setClassLogs] = useState([]);
             const [isFetchingCloud, setIsFetchingCloud] = useState(false);
+            
+            // Modal Tambah Siswa Sendiri oleh Guru
+            const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+            const [newStudentData, setNewStudentData] = useState({
+                name: '',
+                username: '',
+                nisn: '',
+                gender: 'Laki-laki',
+                classId: user.homeroomClassId || '',
+                isMenteeOnly: false
+            });
 
-            useEffect(() => {
-                db.classes.toArray().then(res => {
-                    setClasses(res);
-                    if (res.length > 0) setSelectedClassId(res[0].id);
-                });
-            }, []);
+            const loadData = async () => {
+                const cls = await db.classes.toArray();
+                setClasses(cls);
 
-            const loadLocalData = async () => {
-                if (selectedClassId) {
-                    const stds = await db.users.where('classId').equals(selectedClassId).toArray();
-                    setStudents(stds);
+                const stds = await db.users.where('role').equals(ROLES.SISWA).toArray();
+                setAllStudents(stds);
 
-                    const logs = await db.habitLogs.where('date').equals(selectedDate).toArray();
-                    setClassLogs(logs);
-                }
+                const logs = await db.habitLogs.where('date').equals(selectedDate).toArray();
+                setClassLogs(logs);
             };
 
-            useEffect(() => {
-                loadLocalData();
-            }, [selectedClassId, selectedDate]);
+            useEffect(() => { loadData(); }, [selectedDate]);
 
-            // Tarik data terbaru dari Google Sheets jika online
+            // Filter siswa binaan milik guru ini
+            const myStudents = useMemo(() => {
+                return allStudents.filter(s => {
+                    const isHomeroom = user.homeroomClassId && s.classId === user.homeroomClassId;
+                    const isMentor = s.mentorId === user.id;
+
+                    if (selectedTab === 'homeroom') return isHomeroom;
+                    if (selectedTab === 'mentor') return isMentor;
+                    return isHomeroom || isMentor; // 'all' tab
+                });
+            }, [allStudents, user, selectedTab]);
+
+            // Handler Guru Menambah Siswa
+            const handleTeacherAddStudent = async (e) => {
+                e.preventDefault();
+                const selectedClass = classes.find(c => c.id === newStudentData.classId);
+                const newId = `u_siswa_${Date.now()}`;
+                
+                const createdStudent = {
+                    id: newId,
+                    username: newStudentData.username,
+                    name: newStudentData.name,
+                    nisn: newStudentData.nisn,
+                    classId: newStudentData.classId || '',
+                    className: selectedClass ? selectedClass.name : '',
+                    mentorId: user.id, // Otomatis dibimbing oleh guru ini
+                    mentorName: user.name,
+                    gender: newStudentData.gender,
+                    role: ROLES.SISWA,
+                    avatar: newStudentData.gender === 'Laki-laki' ? '👦' : '👧',
+                    createdBy: user.name,
+                    status: 'Aktif',
+                    createdAt: new Date()
+                };
+
+                await db.users.put(createdStudent);
+                await db.syncQueue.put({
+                    id: `sync_${Date.now()}`,
+                    tableName: 'users',
+                    recordId: newId,
+                    action: 'create',
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+
+                alert(`✨ Siswa "${newStudentData.name}" berhasil didaftarkan sebagai binaan Anda!`);
+                setNewStudentData({ name: '', username: '', nisn: '', gender: 'Laki-laki', classId: user.homeroomClassId || '', isMenteeOnly: false });
+                setIsAddStudentOpen(false);
+                loadData();
+                triggerSync();
+            };
+
             const fetchCloudData = async () => {
                 if (!navigator.onLine || !GAS_API_URL) {
-                    alert("Harap hubungkan perangkat ke internet untuk mengambil data cloud terbaru.");
+                    alert("Perangkat belum terhubung ke internet.");
                     return;
                 }
                 setIsFetchingCloud(true);
                 try {
-                    const res = await fetch(`${GAS_API_URL}?action=getHabitLogs`);
-                    const json = await res.json();
-                    if (json.status === 'success' && json.data) {
-                        const formatted = json.data.map(item => ({
+                    // Tarik log
+                    const resLogs = await fetch(`${GAS_API_URL}?action=getHabitLogs`);
+                    const jsonLogs = await resLogs.json();
+                    if (jsonLogs.status === 'success' && jsonLogs.data) {
+                        const formatted = jsonLogs.data.map(item => ({
                             id: item['ID Log'],
                             userId: item['User ID'],
                             studentName: item['Nama Siswa'],
@@ -906,12 +969,35 @@
                             syncStatus: 'synced'
                         }));
                         await db.habitLogs.bulkPut(formatted);
-                        await loadLocalData();
-                        alert("✅ Data habit siswa berhasil diperbarui dari Google Sheets!");
                     }
+
+                    // Tarik master siswa terbaru
+                    const resUsers = await fetch(`${GAS_API_URL}?action=getUsers`);
+                    const jsonUsers = await resUsers.json();
+                    if (jsonUsers.status === 'success' && jsonUsers.data) {
+                        const formattedUsers = jsonUsers.data.map(u => ({
+                            id: u['User ID'],
+                            username: u['Username'],
+                            name: u['Nama Lengkap'],
+                            role: u['Role'],
+                            className: u['Kelas'],
+                            classId: u['Class ID'],
+                            nisn: u['NISN'],
+                            nip: u['NIP'],
+                            subject: u['Mata Pelajaran'],
+                            homeroomClassId: u['Homeroom Class ID'],
+                            mentorId: u['Mentor ID'],
+                            mentorName: u['Mentor Name'],
+                            status: u['Status'] || 'Aktif'
+                        }));
+                        await db.users.bulkPut(formattedUsers);
+                    }
+
+                    await loadData();
+                    alert("✅ Data siswa dan pembiasaan berhasil diperbarui dari cloud Google Sheets!");
                 } catch (e) {
-                    console.error("Gagal menarik data cloud:", e);
-                    alert("Terjadi kendala saat menghubungi Google Sheets.");
+                    console.error("Gagal menarik data:", e);
+                    alert("Terjadi kendala saat menghubungkan ke cloud.");
                 } finally {
                     setIsFetchingCloud(false);
                 }
@@ -921,35 +1007,42 @@
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Monitoring 7 Kebiasaan Siswa</h1>
-                            <p className="text-gray-500 font-medium text-sm">Lihat rincian jam dan kegiatan yang diisi siswa setiap hari.</p>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan 7 kebiasaan siswa kelas & kelompok mentor Anda.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="primary" onClick={() => setIsAddStudentOpen(true)} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                                <i className="fas fa-user-plus"></i> + Tambah Siswa Binaan
+                            </Button>
                             <Button variant="white" onClick={fetchCloudData} disabled={isFetchingCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className={`fas fa-sync-alt ${isFetchingCloud ? 'fa-spin' : ''}`}></i>
                                 <span>Tarik Data Cloud</span>
                             </Button>
-                            {classes.length > 0 && (
-                                <div className="flex items-center gap-2 bg-white p-2 px-3 rounded-xl border text-xs font-bold">
-                                    <span className="text-gray-500">Kelas:</span>
-                                    <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="font-bold text-brand-red bg-transparent outline-none cursor-pointer">
-                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                            )}
                             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="p-2 border rounded-xl text-xs font-bold text-brand-red bg-white" />
                         </div>
                     </div>
 
-                    {classes.length === 0 ? (
-                        <Card><EmptyState icon="🏫" title="Belum Ada Kelas" description="Admin belum menambahkan data kelas pada sistem." /></Card>
-                    ) : students.length === 0 ? (
-                        <Card><EmptyState icon="👦" title="Belum Ada Siswa di Kelas Ini" description="Belum ada data siswa terdaftar pada kelas yang dipilih." /></Card>
+                    {/* Filter Tab Binaan */}
+                    <div className="flex gap-2 border-b border-gray-200 pb-2 overflow-x-auto text-xs font-bold">
+                        <button onClick={() => setSelectedTab('all')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'all' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
+                            Semua Siswa Binaan ({allStudents.filter(s => (user.homeroomClassId && s.classId === user.homeroomClassId) || s.mentorId === user.id).length})
+                        </button>
+                        <button onClick={() => setSelectedTab('homeroom')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'homeroom' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
+                            Kelas Binaan (Wali Kelas) ({allStudents.filter(s => user.homeroomClassId && s.classId === user.homeroomClassId).length})
+                        </button>
+                        <button onClick={() => setSelectedTab('mentor')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'mentor' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
+                            Kelompok Mentoring ({allStudents.filter(s => s.mentorId === user.id).length})
+                        </button>
+                    </div>
+
+                    {myStudents.length === 0 ? (
+                        <Card><EmptyState icon="👦" title="Belum Ada Siswa Binaan" description="Anda belum memiliki siswa di tab ini. Klik tombol '+ Tambah Siswa Binaan' untuk mendaftarkan siswa Anda." /></Card>
                     ) : (
                         <div className="space-y-4">
-                            {students.map(student => {
+                            {myStudents.map(student => {
                                 const studentLogs = classLogs.filter(l => l.userId === student.id && l.completed);
                                 const count = studentLogs.length;
+                                const isMyMentee = student.mentorId === user.id;
 
                                 return (
                                     <Card key={student.id} className="space-y-3 hover:border-brand-red/40 transition-all">
@@ -959,7 +1052,10 @@
                                                     {student.avatar || '👦'}
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-extrabold text-brand-dark text-base">{student.name}</h3>
+                                                    <h3 className="font-extrabold text-brand-dark text-base flex items-center gap-2">
+                                                        {student.name}
+                                                        {isMyMentee && <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-brand-blue rounded-full font-bold">Mentee</span>}
+                                                    </h3>
                                                     <p className="text-xs text-gray-400 font-bold">NISN: {student.nisn || '-'} • Kelas: {student.className || '-'}</p>
                                                 </div>
                                             </div>
@@ -970,7 +1066,6 @@
                                             </div>
                                         </div>
 
-                                        {/* Grid 7 Kebiasaan Siswa */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
                                             {HABITS_CONFIG.map(h => {
                                                 const log = studentLogs.find(l => l.habitId === h.id);
@@ -1000,6 +1095,58 @@
                             })}
                         </div>
                     )}
+
+                    {/* MODAL GURU MENAMBAH SISWA SENDIRI */}
+                    {isAddStudentOpen && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md shadow-2xl">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark">Tambah Siswa Binaan</h3>
+                                <p className="text-xs text-gray-500 mb-4">Siswa yang Anda tambahkan akan otomatis menjadi kelompok binaan Anda.</p>
+                                
+                                <form onSubmit={handleTeacherAddStudent} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
+                                        <input type="text" value={newStudentData.name} onChange={e => setNewStudentData({...newStudentData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
+                                            <input type="text" value={newStudentData.username} onChange={e => setNewStudentData({...newStudentData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
+                                            <input type="text" value={newStudentData.nisn} onChange={e => setNewStudentData({...newStudentData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
+                                            <select value={newStudentData.classId} onChange={e => setNewStudentData({...newStudentData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                                <option value="">-- Pilih Kelas --</option>
+                                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
+                                            <select value={newStudentData.gender} onChange={e => setNewStudentData({...newStudentData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                                <option value="Laki-laki">Laki-laki</option>
+                                                <option value="Perempuan">Perempuan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
+                                        ℹ️ Guru Pembimbing otomatis disetel ke <strong>{user.name}</strong>.
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => setIsAddStudentOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan Siswa</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -1016,7 +1163,7 @@
         );
 
         // ==========================================
-        // 8. MODUL ADMIN
+        // 8. MODUL ADMIN (Full CRUD + Delete Authority)
         // ==========================================
         const AdminDashboard = () => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1057,33 +1204,58 @@
 
         const AdminClassesPage = ({ triggerSync }) => {
             const [classes, setClasses] = useState([]);
+            const [teachers, setTeachers] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [className, setClassName] = useState('');
+            const [teacherId, setTeacherId] = useState('');
 
-            const loadClasses = () => db.classes.toArray().then(setClasses);
-            useEffect(() => { loadClasses(); }, []);
+            const loadData = async () => {
+                const c = await db.classes.toArray();
+                const t = await db.users.where('role').equals(ROLES.GURU).toArray();
+                setClasses(c);
+                setTeachers(t);
+            };
+
+            useEffect(() => { loadData(); }, []);
 
             const handleSave = async (e) => {
                 e.preventDefault();
                 const newId = `c_${Date.now()}`;
-                await db.classes.put({ id: newId, name: className });
+                const selectedTeacher = teachers.find(t => t.id === teacherId);
+                const classPayload = { 
+                    id: newId, 
+                    name: className, 
+                    teacherId: teacherId || '', 
+                    teacherName: selectedTeacher ? selectedTeacher.name : '' 
+                };
+
+                await db.classes.put(classPayload);
+                await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+
+                // Update wali kelas di profil guru jika ada
+                if (teacherId) {
+                    await db.users.update(teacherId, { homeroomClassId: newId });
+                    await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: teacherId, action: 'update', status: 'pending', createdAt: new Date() });
+                }
+
                 setClassName('');
+                setTeacherId('');
                 setIsModalOpen(false);
-                loadClasses();
+                loadData();
                 triggerSync();
             };
 
             const handleDelete = async (id) => {
                 if (confirm('Hapus kelas ini?')) {
                     await db.classes.delete(id);
-                    loadClasses();
+                    loadData();
                 }
             };
 
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas</h1>
+                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas & Wali Kelas</h1>
                         <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
                     </div>
 
@@ -1094,12 +1266,13 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Kelas</th><th className="p-3 text-right">Aksi</th></tr>
+                                        <tr><th className="p-3">Nama Kelas</th><th className="p-3">Wali Kelas</th><th className="p-3 text-right">Aksi (Admin)</th></tr>
                                     </thead>
                                     <tbody>
                                         {classes.map(c => (
                                             <tr key={c.id} className="border-b border-gray-50">
                                                 <td className="p-3 font-semibold">{c.name}</td>
+                                                <td className="p-3 text-brand-blue font-bold">{c.teacherName || '-'}</td>
                                                 <td className="p-3 text-right">
                                                     <button onClick={() => handleDelete(c.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
@@ -1120,6 +1293,13 @@
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Kelas (contoh: VII.1)</label>
                                         <input type="text" value={className} onChange={e => setClassName(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Wali Kelas (Opsional)</label>
+                                        <select value={teacherId} onChange={e => setTeacherId(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <option value="">-- Belum Ditentukan --</option>
+                                            {teachers.map(t => <option key={t.id} value={t.id}>{t.name} ({t.subject || 'Guru'})</option>)}
+                                        </select>
+                                    </div>
                                     <div className="flex justify-end gap-2">
                                         <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
                                         <Button variant="primary" type="submit">Simpan</Button>
@@ -1134,11 +1314,18 @@
 
         const AdminTeachersPage = ({ triggerSync }) => {
             const [teachers, setTeachers] = useState([]);
+            const [classes, setClasses] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
-            const [formData, setFormData] = useState({ name: '', username: '', nip: '', subject: '' });
+            const [formData, setFormData] = useState({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
 
-            const loadTeachers = () => db.users.where('role').equals(ROLES.GURU).toArray().then(setTeachers);
-            useEffect(() => { loadTeachers(); }, []);
+            const loadData = async () => {
+                const t = await db.users.where('role').equals(ROLES.GURU).toArray();
+                const c = await db.classes.toArray();
+                setTeachers(t);
+                setClasses(c);
+            };
+
+            useEffect(() => { loadData(); }, []);
 
             const handleSave = async (e) => {
                 e.preventDefault();
@@ -1149,6 +1336,7 @@
                     name: formData.name,
                     nip: formData.nip,
                     subject: formData.subject,
+                    homeroomClassId: formData.homeroomClassId || '',
                     role: ROLES.GURU,
                     avatar: '👨‍🏫',
                     status: 'Aktif',
@@ -1158,9 +1346,9 @@
                 await db.users.put(newTeacher);
                 await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
 
-                setFormData({ name: '', username: '', nip: '', subject: '' });
+                setFormData({ name: '', username: '', nip: '', subject: '', homeroomClassId: '' });
                 setIsModalOpen(false);
-                loadTeachers();
+                loadData();
                 triggerSync();
             };
 
@@ -1168,7 +1356,7 @@
                 if (confirm('Hapus akun guru ini?')) {
                     await db.users.delete(id);
                     await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
-                    loadTeachers();
+                    loadData();
                     triggerSync();
                 }
             };
@@ -1187,7 +1375,7 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">NIP</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi</th></tr>
+                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">NIP</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi (Admin)</th></tr>
                                     </thead>
                                     <tbody>
                                         {teachers.map(t => (
@@ -1245,14 +1433,17 @@
         const AdminStudentsPage = ({ triggerSync }) => {
             const [students, setStudents] = useState([]);
             const [classes, setClasses] = useState([]);
+            const [teachers, setTeachers] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
-            const [formData, setFormData] = useState({ name: '', username: '', nisn: '', classId: '', gender: 'Laki-laki' });
+            const [formData, setFormData] = useState({ name: '', username: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
 
             const loadData = async () => {
                 const s = await db.users.where('role').equals(ROLES.SISWA).toArray();
                 const c = await db.classes.toArray();
+                const t = await db.users.where('role').equals(ROLES.GURU).toArray();
                 setStudents(s);
                 setClasses(c);
+                setTeachers(t);
             };
 
             useEffect(() => { loadData(); }, []);
@@ -1260,7 +1451,9 @@
             const handleSave = async (e) => {
                 e.preventDefault();
                 const selectedClass = classes.find(c => c.id === formData.classId);
+                const selectedMentor = teachers.find(t => t.id === formData.mentorId);
                 const newId = `u_siswa_${Date.now()}`;
+                
                 const newStudent = {
                     id: newId,
                     username: formData.username,
@@ -1268,9 +1461,12 @@
                     nisn: formData.nisn,
                     classId: formData.classId,
                     className: selectedClass ? selectedClass.name : '',
+                    mentorId: formData.mentorId || '',
+                    mentorName: selectedMentor ? selectedMentor.name : '',
                     gender: formData.gender,
                     role: ROLES.SISWA,
                     avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
+                    createdBy: 'admin',
                     status: 'Aktif',
                     createdAt: new Date()
                 };
@@ -1278,14 +1474,15 @@
                 await db.users.put(newStudent);
                 await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
 
-                setFormData({ name: '', username: '', nisn: '', classId: '', gender: 'Laki-laki' });
+                setFormData({ name: '', username: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
                 setIsModalOpen(false);
                 loadData();
                 triggerSync();
             };
 
+            // Hak hapus hanya ada di panel Admin ini
             const handleDelete = async (id) => {
-                if (confirm('Hapus akun siswa ini?')) {
+                if (confirm('Apakah Anda yakin ingin menghapus akun siswa ini secara permanen?')) {
                     await db.users.delete(id);
                     await db.syncQueue.put({ id: `sync_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                     loadData();
@@ -1296,7 +1493,7 @@
             return (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
+                        <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa (Hak Penuh Admin)</h1>
                         <Button variant="primary" onClick={() => setIsModalOpen(true)} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
                     </div>
 
@@ -1307,7 +1504,14 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Siswa</th><th className="p-3">Username</th><th className="p-3">NISN</th><th className="p-3">Kelas</th><th className="p-3 text-right">Aksi</th></tr>
+                                        <tr>
+                                            <th className="p-3">Nama Siswa</th>
+                                            <th className="p-3">Username</th>
+                                            <th className="p-3">NISN</th>
+                                            <th className="p-3">Kelas</th>
+                                            <th className="p-3">Guru Mentor</th>
+                                            <th className="p-3 text-right">Aksi Hapus</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         {students.map(s => (
@@ -1316,8 +1520,11 @@
                                                 <td className="p-3 text-gray-500">{s.username}</td>
                                                 <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
+                                                <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
                                                 <td className="p-3 text-right">
-                                                    <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                    <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs">
+                                                        <i className="fas fa-trash"></i> Hapus
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -1362,6 +1569,13 @@
                                             </select>
                                         </div>
                                     </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Guru Pembimbing / Mentor (Opsional)</label>
+                                        <select value={formData.mentorId} onChange={e => setFormData({...formData, mentorId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <option value="">-- Tidak Ada Mentor Khusus --</option>
+                                            {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                        </select>
+                                    </div>
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
                                         <Button variant="primary" type="submit">Simpan</Button>
@@ -1401,7 +1615,7 @@
 
             const handleSubmit = async () => {
                 if (!selectedUserId) {
-                    alert("Belum ada akun pada role ini. Silakan masuk sebagai Admin terlebih dahulu untuk mendaftarkan akun.");
+                    alert("Belum ada akun pada role ini. Masuk sebagai Admin untuk mendaftarkan akun.");
                     return;
                 }
                 const user = await db.users.get(selectedUserId);
@@ -1483,7 +1697,7 @@
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} />; break;
 
-                case '/teacher/dashboard': content = <TeacherDashboard user={user} />; break;
+                case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} />; break;
 
                 case '/admin/dashboard': content = <AdminDashboard />; break;
