@@ -90,7 +90,7 @@
                 month: '2-digit',
                 day: '2-digit'
             });
-            return formatter.format(new Date()); // Menghasilkan format YYYY-MM-DD
+            return formatter.format(new Date());
         };
 
         const getNowWitaTimeString = () => {
@@ -100,7 +100,6 @@
                 minute: '2-digit',
                 hour12: false
             });
-            // Pastikan menggunakan pemisah titik dua (HH:mm) untuk input tipe time
             return formatter.format(new Date()).replace('.', ':');
         };
 
@@ -125,7 +124,7 @@
         // ==========================================
         // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsWitaDB');
+        const db = new Dexie('SevenHabitsLiveSyncDB');
         db.version(1).stores({
             users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
             classes: 'id, name, teacherId',
@@ -503,7 +502,7 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA (JAM 24-FORMAT & WITA AUTO-DEFAULT)
+        // 7. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const todayStr = getTodayWitaDateString();
@@ -531,7 +530,6 @@
 
             useEffect(() => { loadLogs(); }, [user.id]);
 
-            // Saat modal dibuka: jika belum ada input, default ke jam WITA saat ini (format 24 jam)
             const handleCardClick = (habit) => {
                 const existing = logs[habit.id] || {};
                 setModalTime(existing.timeValue || getNowWitaTimeString());
@@ -1221,7 +1219,7 @@
                                                                 <span>{h.icon}</span> {h.name}
                                                             </span>
                                                             <span className={isDone ? 'text-green-600 font-extrabold' : 'text-gray-400 font-normal'}>
-                                                                {isDone ? `Pkl ${log.timeValue || '-'} WITA` : 'Belum'}
+                                                                {isDone ? `Pkl ${log.timeValue || '-'}` : 'Belum'}
                                                             </span>
                                                         </div>
                                                         {isDone && (
@@ -2156,7 +2154,7 @@
         };
 
         // ==========================================
-        // 10. LOGIN & LANDING
+        // 10. LOGIN & LANDING (SELEKSI PERAN DROPDOWN)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -2247,20 +2245,23 @@
                             <h2 className="text-lg font-black text-brand-dark">{SCHOOL_IDENTITY.name}</h2>
                             <p className="text-xs text-gray-400 font-bold">Masuk dengan Akun & Password</p>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            {[
-                                { role: ROLES.SISWA, label: 'Siswa', icon: '👦' },
-                                { role: ROLES.GURU, label: 'Guru', icon: '👨‍🏫' },
-                                { role: ROLES.ADMIN, label: 'Admin', icon: '⚙️' }
-                            ].map(r => (
-                                <button key={r.role} type="button" onClick={() => setSelectedRole(r.role)} className={`p-3 rounded-xl flex flex-col items-center border-2 text-xs font-bold transition-all ${selectedRole === r.role ? 'border-brand-red bg-red-50 text-brand-red' : 'border-gray-100 text-gray-500'}`}>
-                                    <span className="text-xl mb-1">{r.icon}</span>
-                                    {r.label}
-                                </button>
-                            ))}
-                        </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Pemilihan Peran Berbasis Dropdown Vertikal */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Peran / Role Akses:</label>
+                                <select 
+                                    value={selectedRole} 
+                                    onChange={e => setSelectedRole(e.target.value)} 
+                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-brand-dark focus:ring-2 focus:ring-brand-red outline-none transition-all cursor-pointer"
+                                >
+                                    <option value={ROLES.SISWA}>👦 Siswa (Pelajar)</option>
+                                    <option value={ROLES.GURU}>👨‍🏫 Guru (Wali Kelas / Pembimbing)</option>
+                                    <option value={ROLES.ADMIN}>⚙️ Administrator Sekolah</option>
+                                </select>
+                            </div>
+
+                            {/* Pemilihan Nama Pengguna */}
                             <div>
                                 <div className="flex justify-between items-center mb-1">
                                     <label className="block text-xs font-bold text-gray-600">Pilih Nama Pengguna:</label>
@@ -2283,6 +2284,7 @@
                                 )}
                             </div>
 
+                            {/* Input Password */}
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Kata Sandi / Password:</label>
                                 <input 
