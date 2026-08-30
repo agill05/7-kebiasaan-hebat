@@ -1,3 +1,138 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: index.html, manifest.json, sw.js, vercel.json
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+manifest.json
+sw.js
+vercel.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="manifest.json">
+{
+    "name": "7 Kebiasaan Anak Indonesia Hebat",
+    "short_name": "7 Kebiasaan",
+    "description": "Aplikasi Pembiasaan Karakter Positif Siswa SMP Negeri 1 Talaga Jaya",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F9FAFB",
+    "theme_color": "#EF4444",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇮🇩</text></svg>",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+</file>
+
+<file path="sw.js">
+const CACHE_NAME = "7kebiasaan-cache-v1";
+const ASSETS_TO_CACHE = [
+    "/",
+    "/index.html",
+    "/manifest.json",
+    "https://unpkg.com/react@18/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone/babel.min.js",
+    "https://cdn.tailwindcss.com",
+    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                }),
+            ),
+        ),
+    );
+    self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Jangan cache permintaan POST/GET API Google Apps Script
+    if (event.request.url.includes("script.google.com")) {
+        return;
+    }
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            return (
+                cachedResponse ||
+                fetch(event.request).catch(() => caches.match("/index.html"))
+            );
+        }),
+    );
+});
+</file>
+
+<file path="vercel.json">
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -85,12 +220,12 @@
         // ==========================================
         // 2. DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
-        const db = new Dexie('SevenHabitsDetailDB');
+        const db = new Dexie('SevenHabitsCleanDB');
         db.version(1).stores({
             users: 'id, username, role, classId, nisn, nip, status',
             classes: 'id, name, teacherId',
             habits: 'id, name, active',
-            habitLogs: 'id, userId, habitId, date, completed, timeValue, detailValue, studentName, className, syncStatus',
+            habitLogs: 'id, userId, habitId, date, completed, syncStatus',
             points: 'id, userId, totalPoints',
             streaks: 'userId, currentStreak, longestStreak',
             journals: 'id, userId, date, syncStatus',
@@ -104,94 +239,25 @@
             academicYear: "2026/2027"
         };
 
+        // HANYA 3 ROLE (Kepsek Dihapus)
         const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
 
-        // Definisi 7 Kebiasaan beserta panduan input rincinya
-        const HABITS_CONFIG = [
-            {
-                id: 'h1',
-                name: 'Bangun Pagi',
-                description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat',
-                icon: '🌅',
-                color: 'bg-blue-100 text-blue-600',
-                timeLabel: 'Jam Bangun Pagi',
-                detailLabel: 'Catatan / Kondisi Saat Bangun',
-                detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur',
-                defaultTime: '04:30'
-            },
-            {
-                id: 'h2',
-                name: 'Beribadah',
-                description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan',
-                icon: '🙏',
-                color: 'bg-indigo-100 text-indigo-600',
-                timeLabel: 'Waktu / Jam Ibadah Utama',
-                detailLabel: 'Ibadah yang Dikerjakan',
-                detailPlaceholder: 'Contoh: Salat Subuh berjamaah & membaca Al-Qur\'an',
-                defaultTime: '05:00'
-            },
-            {
-                id: 'h3',
-                name: 'Berolahraga',
-                description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit',
-                icon: '🏃',
-                color: 'bg-green-100 text-green-600',
-                timeLabel: 'Waktu Olahraga',
-                detailLabel: 'Jenis Olahraga & Durasi',
-                detailPlaceholder: 'Contoh: Senam pagi dan jogging ringan selama 20 menit',
-                defaultTime: '06:00'
-            },
-            {
-                id: 'h4',
-                name: 'Makan Sehat & Bergizi',
-                description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang',
-                icon: '🍎',
-                color: 'bg-red-100 text-red-600',
-                timeLabel: 'Waktu Sarapan / Makan',
-                detailLabel: 'Menu Makanan & Minuman Sehat',
-                detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan segelas air putih',
-                defaultTime: '06:30'
-            },
-            {
-                id: 'h5',
-                name: 'Gemar Belajar',
-                description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi',
-                icon: '📚',
-                color: 'bg-yellow-100 text-yellow-600',
-                timeLabel: 'Waktu Mulai Belajar',
-                detailLabel: 'Mata Pelajaran / Buku yang Dipelajari',
-                detailPlaceholder: 'Contoh: Belajar Matematika & membaca buku cerita 30 menit',
-                defaultTime: '19:00'
-            },
-            {
-                id: 'h6',
-                name: 'Bermasyarakat',
-                description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan',
-                icon: '🤝',
-                color: 'bg-teal-100 text-teal-600',
-                timeLabel: 'Waktu Beraktivitas',
-                detailLabel: 'Bentuk Bantuan / Kebaikan yang Dilakukan',
-                detailPlaceholder: 'Contoh: Membantu ibu mencuci piring dan menyapu halaman',
-                defaultTime: '16:00'
-            },
-            {
-                id: 'h7',
-                name: 'Tidur Cepat',
-                description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari',
-                icon: '😴',
-                color: 'bg-purple-100 text-purple-600',
-                timeLabel: 'Jam Masuk Tidur Malam',
-                detailLabel: 'Aktivitas Sebelum Tidur',
-                detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai',
-                defaultTime: '21:15'
-            },
+        const HABITS_LIST = [
+            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan semangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', points: 10 },
+            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', points: 10 },
+            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam, atau peregangan tubuh minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', points: 10 },
+            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih berserat', icon: '🍎', color: 'bg-red-100 text-red-600', points: 10 },
+            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku dan mengerjakan tugas dengan tekun', icon: '📚', color: 'bg-yellow-100 text-yellow-600', points: 10 },
+            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah dan menjaga kesantunan sosial', icon: '🤝', color: 'bg-teal-100 text-teal-600', points: 10 },
+            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat dan tidur malam teratur sebelum pukul 21.30', icon: '😴', color: 'bg-purple-100 text-purple-600', points: 10 },
         ];
 
+        // Inisialisasi Bersih: Hanya Master Habit & 1 Admin Setup
         async function seedDatabaseClean() {
             try {
                 const habitCount = await db.habits.count();
                 if (habitCount === 0) {
-                    await db.habits.bulkPut(HABITS_CONFIG);
+                    await db.habits.bulkPut(HABITS_LIST);
                 }
 
                 const adminCount = await db.users.where('role').equals(ROLES.ADMIN).count();
@@ -212,7 +278,7 @@
         }
 
         // ==========================================
-        // 3. ENGINE SINKRONISASI CLOUD
+        // 3. SERVICE SINKRONISASI ONLINE - OFFLINE
         // ==========================================
         function useOnlineSyncEngine() {
             const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -226,7 +292,7 @@
 
                 setSyncStatus('syncing');
                 try {
-                    // Sync Habit Logs
+                    // Batch Sync Habit Logs
                     const habitLogIds = pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId);
                     if (habitLogIds.length > 0) {
                         const logsToSync = await db.habitLogs.where('id').anyOf(habitLogIds).toArray();
@@ -238,7 +304,7 @@
                         });
                     }
 
-                    // Sync Journals
+                    // Sync Jurnal
                     const journalIds = pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId);
                     if (journalIds.length > 0) {
                         for (let jId of journalIds) {
@@ -312,7 +378,7 @@
         }
 
         // ==========================================
-        // 4. ATOM UI
+        // 4. UI ATOMS
         // ==========================================
         const Card = ({ children, className = '' }) => (
             <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
@@ -342,7 +408,7 @@
         );
 
         // ==========================================
-        // 5. LAYOUT UTAMA
+        // 5. LAYOUT UTAMA (Hanya 3 Role)
         // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerSync, children }) => {
             const navItems = {
@@ -441,28 +507,17 @@
         };
 
         // ==========================================
-        // 6. MODUL SISWA (Pengisian Rinci 7 Kebiasaan)
+        // 6. MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [logs, setLogs] = useState({});
             const [points, setPoints] = useState(0);
-            
-            // Modal state untuk mengisi jam & rincian kebiasaan
-            const [activeHabitModal, setActiveHabitModal] = useState(null);
-            const [modalTime, setModalTime] = useState('');
-            const [modalDetail, setModalDetail] = useState('');
 
             const loadLogs = async (dateStr) => {
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === dateStr).toArray();
                 const logMap = {};
-                userLogs.forEach(l => { 
-                    logMap[l.habitId] = {
-                        completed: l.completed,
-                        timeValue: l.timeValue,
-                        detailValue: l.detailValue
-                    }; 
-                });
+                userLogs.forEach(l => { logMap[l.habitId] = l.completed; });
                 setLogs(logMap);
 
                 const p = await db.points.where('userId').equals(user.id).first();
@@ -471,32 +526,17 @@
 
             useEffect(() => { loadLogs(selectedDate); }, [user.id, selectedDate]);
 
-            const handleCardClick = (habit) => {
-                const existing = logs[habit.id] || {};
-                setModalTime(existing.timeValue || habit.defaultTime || '06:00');
-                setModalDetail(existing.detailValue || '');
-                setActiveHabitModal(habit);
-            };
-
-            const handleSaveHabitDetail = async (e) => {
-                e.preventDefault();
-                if (!activeHabitModal) return;
-
-                const habit = activeHabitModal;
-                const logId = `${user.id}_${habit.id}_${selectedDate}`;
-                const wasCompleted = logs[habit.id]?.completed;
+            const toggleHabit = async (habitId) => {
+                const currentStatus = !!logs[habitId];
+                const newStatus = !currentStatus;
+                const logId = `${user.id}_${habitId}_${selectedDate}`;
 
                 await db.habitLogs.put({
                     id: logId,
                     userId: user.id,
-                    studentName: user.name,
-                    className: user.className || '',
-                    habitId: habit.id,
-                    habitName: habit.name,
+                    habitId: habitId,
                     date: selectedDate,
-                    completed: true,
-                    timeValue: modalTime,
-                    detailValue: modalDetail,
+                    completed: newStatus,
                     syncStatus: 'pending',
                     updatedAt: new Date()
                 });
@@ -510,78 +550,41 @@
                     createdAt: new Date()
                 });
 
-                setLogs(prev => ({
-                    ...prev,
-                    [habit.id]: {
-                        completed: true,
-                        timeValue: modalTime,
-                        detailValue: modalDetail
-                    }
-                }));
+                setLogs(prev => ({ ...prev, [habitId]: newStatus }));
 
-                if (!wasCompleted) {
-                    const pRecord = await db.points.where('userId').equals(user.id).first();
-                    const newTotal = (pRecord ? pRecord.totalPoints : 0) + 10;
-                    await db.points.put({ id: `p_${user.id}`, userId: user.id, totalPoints: newTotal, updatedAt: new Date() });
-                    setPoints(newTotal);
-                }
+                const pointDiff = newStatus ? 10 : -10;
+                const pRecord = await db.points.where('userId').equals(user.id).first();
+                const newTotal = Math.max(0, (pRecord ? pRecord.totalPoints : 0) + pointDiff);
+                await db.points.put({ id: `p_${user.id}`, userId: user.id, totalPoints: newTotal, updatedAt: new Date() });
+                setPoints(newTotal);
 
-                setActiveHabitModal(null);
-
-                const updatedCompleted = Object.values({ ...logs, [habit.id]: { completed: true } }).filter(l => l.completed).length;
-                if (updatedCompleted === 7) {
+                const updatedLogs = { ...logs, [habitId]: newStatus };
+                if (Object.values(updatedLogs).filter(Boolean).length === 7) {
                     confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
                 }
 
                 triggerSync();
             };
 
-            const handleCancelHabit = async (habitId) => {
-                const logId = `${user.id}_${habitId}_${selectedDate}`;
-                await db.habitLogs.delete(logId);
-                await db.syncQueue.put({
-                    id: `sync_${Date.now()}_${Math.random()}`,
-                    tableName: 'habitLogs',
-                    recordId: logId,
-                    action: 'upsert',
-                    status: 'pending',
-                    createdAt: new Date()
-                });
-
-                setLogs(prev => {
-                    const copy = { ...prev };
-                    delete copy[habitId];
-                    return copy;
-                });
-
-                const pRecord = await db.points.where('userId').equals(user.id).first();
-                const newTotal = Math.max(0, (pRecord ? pRecord.totalPoints : 0) - 10);
-                await db.points.put({ id: `p_${user.id}`, userId: user.id, totalPoints: newTotal, updatedAt: new Date() });
-                setPoints(newTotal);
-
-                setActiveHabitModal(null);
-                triggerSync();
-            };
-
-            const completedCount = Object.values(logs).filter(l => l.completed).length;
+            const completedCount = Object.values(logs).filter(Boolean).length;
 
             return (
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
-                            <p className="text-gray-500 font-medium text-sm">Klik kebiasaan untuk mengisi waktu dan rincian harianmu.</p>
+                            <p className="text-gray-500 font-medium text-sm">Mari amalkan 7 kebiasaan anak hebat hari ini.</p>
                         </div>
                         <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl shadow-soft border">
-                            <span className="text-xs font-bold text-gray-500">Tanggal:</span>
+                            <span className="text-xs font-bold text-gray-500">Pilih Tanggal:</span>
                             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="font-bold text-sm text-brand-red bg-transparent outline-none cursor-pointer" />
                         </div>
                     </div>
 
                     <Card className="bg-gradient-to-r from-brand-red to-red-600 text-white flex justify-between items-center shadow-lg">
                         <div>
-                            <h3 className="font-black text-lg">Progres Pembiasaan: {selectedDate}</h3>
-                            <p className="text-xs opacity-90">Setiap kebiasaan bernilai 10 poin karakter hebat.</p>
+                            <h3 className="font-black text-lg">Progres: {selectedDate}</h3>
+                            <p className="text-xs opacity-90">Setiap kebiasaan bernilai 10 poin karakter.</p>
                         </div>
                         <div className="text-right">
                             <span className="text-4xl font-black">{completedCount}/7</span>
@@ -590,108 +593,24 @@
                     </Card>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {HABITS_CONFIG.map(habit => {
-                            const entry = logs[habit.id];
-                            const isDone = !!entry?.completed;
-
+                        {HABITS_LIST.map(habit => {
+                            const isDone = !!logs[habit.id];
                             return (
-                                <div key={habit.id} onClick={() => handleCardClick(habit)} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${isDone ? 'bg-green-50/70 border-brand-green shadow-sm' : 'bg-white border-gray-100 hover:border-gray-300'}`}>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-start gap-3">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${habit.color}`}>{habit.icon}</div>
-                                            <div>
-                                                <h3 className="font-bold text-gray-800 text-sm md:text-base flex items-center gap-2">
-                                                    {habit.name}
-                                                    {isDone && <span className="text-[10px] px-2 py-0.5 bg-green-200 text-green-800 rounded-full font-extrabold">Terisi</span>}
-                                                </h3>
-                                                <p className="text-xs text-gray-500 leading-snug mt-0.5">{habit.description}</p>
-                                            </div>
-                                        </div>
-                                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-brand-green border-brand-green text-white scale-110' : 'border-gray-300'}`}>
-                                            {isDone ? <i className="fas fa-check text-xs"></i> : <i className="fas fa-pen text-[10px] text-gray-400"></i>}
+                                <div key={habit.id} onClick={() => toggleHabit(habit.id)} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${isDone ? 'bg-green-50 border-brand-green shadow-sm' : 'bg-white border-gray-100 hover:border-gray-300'}`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${habit.color}`}>{habit.icon}</div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 text-sm md:text-base">{habit.name}</h3>
+                                            <p className="text-xs text-gray-500 leading-snug">{habit.description}</p>
                                         </div>
                                     </div>
-
-                                    {/* Tampilan rincian yang sudah diisi siswa */}
-                                    {isDone && (
-                                        <div className="mt-3 pt-3 border-t border-green-200/60 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl space-y-1">
-                                            <div className="flex items-center gap-1 font-bold text-brand-dark">
-                                                <i className="far fa-clock text-brand-blue"></i>
-                                                <span>Pukul: {entry.timeValue || '-'} WIB</span>
-                                            </div>
-                                            <p className="text-gray-600 italic line-clamp-2">"{entry.detailValue || '-'}"</p>
-                                        </div>
-                                    )}
+                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isDone ? 'bg-brand-green border-brand-green text-white scale-110' : 'border-gray-300'}`}>
+                                        {isDone && <i className="fas fa-check text-xs"></i>}
+                                    </div>
                                 </div>
                             );
                         })}
                     </div>
-
-                    {/* MODAL INPUT DETAIL KEBIASAAN */}
-                    {activeHabitModal && (
-                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                            <Card className="w-full max-w-md shadow-2xl animate-fade-in">
-                                <div className="flex items-center justify-between border-b pb-3 mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-3xl">{activeHabitModal.icon}</span>
-                                        <div>
-                                            <h3 className="font-black text-lg text-brand-dark">{activeHabitModal.name}</h3>
-                                            <p className="text-xs text-gray-400 font-bold">{selectedDate}</p>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setActiveHabitModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                                        <i className="fas fa-times text-lg"></i>
-                                    </button>
-                                </div>
-
-                                <form onSubmit={handleSaveHabitDetail} className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                                            <i className="far fa-clock mr-1 text-brand-red"></i> {activeHabitModal.timeLabel}
-                                        </label>
-                                        <input 
-                                            type="time" 
-                                            value={modalTime} 
-                                            onChange={e => setModalTime(e.target.value)} 
-                                            className="w-full p-2.5 bg-gray-50 border rounded-xl font-extrabold text-brand-red text-sm" 
-                                            required 
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-700 mb-1">
-                                            <i className="fas fa-align-left mr-1 text-brand-blue"></i> {activeHabitModal.detailLabel}
-                                        </label>
-                                        <textarea 
-                                            rows="3" 
-                                            value={modalDetail} 
-                                            onChange={e => setModalDetail(e.target.value)} 
-                                            placeholder={activeHabitModal.detailPlaceholder} 
-                                            className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-red outline-none" 
-                                            required
-                                        ></textarea>
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-2">
-                                        {logs[activeHabitModal.id]?.completed ? (
-                                            <button 
-                                                type="button" 
-                                                onClick={() => handleCancelHabit(activeHabitModal.id)} 
-                                                className="text-xs font-bold text-brand-red hover:underline"
-                                            >
-                                                <i className="fas fa-trash-alt mr-1"></i> Batalkan Kebiasaan
-                                            </button>
-                                        ) : <div></div>}
-                                        
-                                        <div className="flex gap-2">
-                                            <Button variant="white" onClick={() => setActiveHabitModal(null)} className="py-2.5 px-4 text-xs">Tutup</Button>
-                                            <Button variant="primary" type="submit" className="py-2.5 px-5 text-xs">Simpan Kebiasaan</Button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </Card>
-                        </div>
-                    )}
                 </div>
             );
         };
@@ -777,7 +696,7 @@
                 e.preventDefault();
                 const jId = `j_${user.id}_${selectedDate}`;
                 await db.journals.put({
-                    id: jId, userId: user.id, studentName: user.name, className: user.className || '', date: selectedDate, mood: mood, content: content, syncStatus: 'pending', updatedAt: new Date()
+                    id: jId, userId: user.id, date: selectedDate, mood: mood, content: content, syncStatus: 'pending', updatedAt: new Date()
                 });
                 await db.syncQueue.put({
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
@@ -850,15 +769,12 @@
         );
 
         // ==========================================
-        // 7. MODUL GURU (Detail Monitoring Siswa)
+        // 7. MODUL GURU
         // ==========================================
         const TeacherDashboard = ({ user }) => {
             const [classes, setClasses] = useState([]);
             const [selectedClassId, setSelectedClassId] = useState('');
-            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [students, setStudents] = useState([]);
-            const [classLogs, setClassLogs] = useState([]);
-            const [isFetchingCloud, setIsFetchingCloud] = useState(false);
 
             useEffect(() => {
                 db.classes.toArray().then(res => {
@@ -867,138 +783,77 @@
                 });
             }, []);
 
-            const loadLocalData = async () => {
-                if (selectedClassId) {
-                    const stds = await db.users.where('classId').equals(selectedClassId).toArray();
-                    setStudents(stds);
-
-                    const logs = await db.habitLogs.where('date').equals(selectedDate).toArray();
-                    setClassLogs(logs);
-                }
-            };
-
             useEffect(() => {
-                loadLocalData();
-            }, [selectedClassId, selectedDate]);
-
-            // Tarik data terbaru dari Google Sheets jika online
-            const fetchCloudData = async () => {
-                if (!navigator.onLine || !GAS_API_URL) {
-                    alert("Harap hubungkan perangkat ke internet untuk mengambil data cloud terbaru.");
-                    return;
+                if (selectedClassId) {
+                    db.users.where('classId').equals(selectedClassId).toArray().then(setStudents);
+                } else {
+                    setStudents([]);
                 }
-                setIsFetchingCloud(true);
-                try {
-                    const res = await fetch(`${GAS_API_URL}?action=getHabitLogs`);
-                    const json = await res.json();
-                    if (json.status === 'success' && json.data) {
-                        const formatted = json.data.map(item => ({
-                            id: item['ID Log'],
-                            userId: item['User ID'],
-                            studentName: item['Nama Siswa'],
-                            className: item['Kelas'],
-                            habitId: item['Habit ID'],
-                            habitName: item['Nama Kebiasaan'],
-                            date: String(item['Tanggal']).split('T')[0],
-                            completed: item['Status Selesai'] === 'Selesai',
-                            timeValue: item['Jam / Waktu'],
-                            detailValue: item['Detail / Keterangan'],
-                            syncStatus: 'synced'
-                        }));
-                        await db.habitLogs.bulkPut(formatted);
-                        await loadLocalData();
-                        alert("✅ Data habit siswa berhasil diperbarui dari Google Sheets!");
-                    }
-                } catch (e) {
-                    console.error("Gagal menarik data cloud:", e);
-                    alert("Terjadi kendala saat menghubungi Google Sheets.");
-                } finally {
-                    setIsFetchingCloud(false);
-                }
-            };
+            }, [selectedClassId]);
 
             return (
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Monitoring 7 Kebiasaan Siswa</h1>
-                            <p className="text-gray-500 font-medium text-sm">Lihat rincian jam dan kegiatan yang diisi siswa setiap hari.</p>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Guru & Wali Kelas</h1>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan siswa secara berkala.</p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Button variant="white" onClick={fetchCloudData} disabled={isFetchingCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
-                                <i className={`fas fa-sync-alt ${isFetchingCloud ? 'fa-spin' : ''}`}></i>
-                                <span>Tarik Data Cloud</span>
-                            </Button>
-                            {classes.length > 0 && (
-                                <div className="flex items-center gap-2 bg-white p-2 px-3 rounded-xl border text-xs font-bold">
-                                    <span className="text-gray-500">Kelas:</span>
-                                    <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="font-bold text-brand-red bg-transparent outline-none cursor-pointer">
-                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                            )}
-                            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="p-2 border rounded-xl text-xs font-bold text-brand-red bg-white" />
-                        </div>
+                        {classes.length > 0 && (
+                            <div className="flex items-center gap-2 bg-white p-2 px-4 rounded-xl border">
+                                <span className="text-xs font-bold text-gray-500">Pilih Kelas:</span>
+                                <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="font-bold text-sm text-brand-red bg-transparent outline-none cursor-pointer">
+                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {classes.length === 0 ? (
-                        <Card><EmptyState icon="🏫" title="Belum Ada Kelas" description="Admin belum menambahkan data kelas pada sistem." /></Card>
-                    ) : students.length === 0 ? (
-                        <Card><EmptyState icon="👦" title="Belum Ada Siswa di Kelas Ini" description="Belum ada data siswa terdaftar pada kelas yang dipilih." /></Card>
+                        <Card><EmptyState icon="🏫" title="Belum Ada Kelas Terdaftar" description="Admin belum menambahkan data kelas pada sistem." /></Card>
                     ) : (
-                        <div className="space-y-4">
-                            {students.map(student => {
-                                const studentLogs = classLogs.filter(l => l.userId === student.id && l.completed);
-                                const count = studentLogs.length;
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <Card className="text-center">
+                                    <i className="fas fa-users text-3xl text-brand-blue mb-1"></i>
+                                    <div className="text-2xl font-black">{students.length}</div>
+                                    <div className="text-xs text-gray-400 font-bold">Total Siswa di Kelas</div>
+                                </Card>
+                                <Card className="text-center">
+                                    <i className="fas fa-check-circle text-3xl text-brand-green mb-1"></i>
+                                    <div className="text-2xl font-black">{students.filter(s => s.status === 'Aktif').length}</div>
+                                    <div className="text-xs text-gray-400 font-bold">Siswa Aktif</div>
+                                </Card>
+                                <Card className="text-center col-span-2 md:col-span-1">
+                                    <i className="fas fa-calendar-check text-3xl text-brand-yellow mb-1"></i>
+                                    <div className="text-2xl font-black">{new Date().toISOString().split('T')[0]}</div>
+                                    <div className="text-xs text-gray-400 font-bold">Tanggal Pemantauan</div>
+                                </Card>
+                            </div>
 
-                                return (
-                                    <Card key={student.id} className="space-y-3 hover:border-brand-red/40 transition-all">
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-brand-yellow/20 text-brand-dark flex items-center justify-center font-black text-lg">
-                                                    {student.avatar || '👦'}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-extrabold text-brand-dark text-base">{student.name}</h3>
-                                                    <p className="text-xs text-gray-400 font-bold">NISN: {student.nisn || '-'} • Kelas: {student.className || '-'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                    {count} / 7 Kebiasaan Terisi
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Grid 7 Kebiasaan Siswa */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
-                                            {HABITS_CONFIG.map(h => {
-                                                const log = studentLogs.find(l => l.habitId === h.id);
-                                                const isDone = !!log;
-
-                                                return (
-                                                    <div key={h.id} className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between ${isDone ? 'bg-green-50/50 border-green-200' : 'bg-gray-50/60 border-gray-100 opacity-60'}`}>
-                                                        <div className="flex items-center justify-between font-bold mb-1">
-                                                            <span className="flex items-center gap-1.5 text-gray-800">
-                                                                <span>{h.icon}</span> {h.name}
-                                                            </span>
-                                                            <span className={isDone ? 'text-green-600 font-extrabold' : 'text-gray-400 font-normal'}>
-                                                                {isDone ? `Pkl ${log.timeValue || '-'}` : 'Belum'}
-                                                            </span>
-                                                        </div>
-                                                        {isDone && (
-                                                            <p className="text-gray-600 text-[11px] bg-white p-1.5 rounded-lg border border-green-100 mt-1 line-clamp-2">
-                                                                {log.detailValue || '-'}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </Card>
-                                );
-                            })}
-                        </div>
+                            <Card>
+                                <h3 className="font-bold text-base mb-3 text-gray-800">Daftar Siswa</h3>
+                                {students.length === 0 ? (
+                                    <EmptyState icon="👦" title="Belum Ada Siswa di Kelas Ini" description="Admin belum mendaftarkan siswa untuk kelas yang dipilih." />
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-gray-50 text-gray-500 font-bold">
+                                                <tr><th className="p-3">Nama Siswa</th><th className="p-3">NISN</th><th className="p-3">Status</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {students.map(s => (
+                                                    <tr key={s.id} className="border-b border-gray-50">
+                                                        <td className="p-3 font-semibold">{s.name}</td>
+                                                        <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
+                                                        <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-brand-green">Aktif</span></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </Card>
+                        </>
                     )}
                 </div>
             );
@@ -1016,7 +871,7 @@
         );
 
         // ==========================================
-        // 8. MODUL ADMIN
+        // 8. MODUL ADMIN LENGKAP (CRUD Master Data)
         // ==========================================
         const AdminDashboard = () => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1375,7 +1230,7 @@
         };
 
         // ==========================================
-        // 9. LOGIN & LANDING
+        // 9. LOGIN & LANDING (Hanya 3 Role)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -1447,7 +1302,7 @@
         };
 
         // ==========================================
-        // 10. ROOT CONTROLLER
+        // 10. ROOT APPLICATION CONTROLLER
         // ==========================================
         const App = () => {
             const [currentPath, setCurrentPath] = useState('/');
@@ -1478,14 +1333,17 @@
 
             let content = null;
             switch (currentPath) {
+                // Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} />; break;
 
+                // Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} />; break;
 
+                // Admin
                 case '/admin/dashboard': content = <AdminDashboard />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} />; break;
@@ -1505,3 +1363,6 @@
     </script>
 </body>
 </html>
+</file>
+
+</files>
