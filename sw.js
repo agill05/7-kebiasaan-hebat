@@ -1,49 +1,2555 @@
-const CACHE_NAME = "7kebiasaan-cache-v1";
-const ASSETS_TO_CACHE = [
-    "/",
-    "/index.html",
-    "/manifest.json",
-    "https://unpkg.com/react@18/umd/react.production.min.js",
-    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
-    "https://unpkg.com/@babel/standalone/babel.min.js",
-    "https://cdn.tailwindcss.com",
-    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
-    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
-    "https://cdn.jsdelivr.net/npm/sweetalert2@11",
-    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
-];
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>7 Kebiasaan Anak Indonesia Hebat — SMP Negeri 1 Talaga Jaya</title>
+    
+    <!-- PWA Settings -->
+    <meta name="theme-color" content="#EF4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Dexie.js for IndexedDB -->
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-self.addEventListener("install", (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
-    );
-    self.skipWaiting();
-});
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-self.addEventListener("activate", (event) => {
-    event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(
-                keys.map((key) => {
-                    if (key !== CACHE_NAME) return caches.delete(key);
-                }),
-            ),
-        ),
-    );
-    self.clients.claim();
-});
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-self.addEventListener("fetch", (event) => {
-    // Jangan cache permintaan POST/GET API Google Apps Script
-    if (event.request.url.includes("script.google.com")) {
-        return;
-    }
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #F9FAFB;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            red: '#EF4444',
+                            white: '#FFFFFF',
+                            blue: '#3B82F6',
+                            green: '#10B981',
+                            yellow: '#FBBF24',
+                            dark: '#1F2937',
+                        }
+                    },
+                    boxShadow: { 'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)' }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // ==========================================
+        // SWEETALERT2 HELPER WRAPPER
+        // ==========================================
+        const showAlert = {
+            success: (title, text = '') => {
+                return Swal.fire({
+                    icon: 'success',
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#EF4444',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            },
+            error: (title, text = '') => {
+                return Swal.fire({
+                    icon: 'error',
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#EF4444',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            },
+            warning: (title, text = '') => {
+                return Swal.fire({
+                    icon: 'warning',
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#EF4444',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            },
+            confirm: async (title, text = '', confirmText = 'Ya, Lanjutkan') => {
+                return await Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF4444',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: confirmText,
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl font-bold px-5 py-2.5',
+                        cancelButton: 'rounded-xl font-bold px-5 py-2.5'
+                    }
+                });
+            }
+        };
+
+        // ==========================================
+        // 1. KONFIGURASI API GOOGLE APPS SCRIPT
+        // ==========================================
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzD1Um1d0AC60Z39p_WS7u5Dwgs_CjrC7FDTX9GYojRtilomyB0hY9hkSKfqyw_yWpJ/exec";
+
+        // Helper Tanggal & Waktu 24-Jam Zona WITA (Gorontalo / UTC+8)
+        const getTodayWitaDateString = () => {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Makassar',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            return formatter.format(new Date()); // Format YYYY-MM-DD
+        };
+
+        const getNowWitaTimeString = () => {
+            const formatter = new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Makassar',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            return formatter.format(new Date()).replace('.', ':');
+        };
+
+        const formatDisplayDate = (dateStr) => {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
+        };
+
+        // ==========================================
+        // 2. HELPER KRIPTOGRAFI (SHA-256 HASH)
+        // ==========================================
+        async function hashPassword(text) {
+            if (!text) return '';
+            const msgBuffer = new TextEncoder().encode(String(text).trim());
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // ==========================================
+        // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
+        // ==========================================
+        const db = new Dexie('SevenHabitsWitaDB');
+        db.version(1).stores({
+            users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
+            classes: 'id, name, teacherId',
+            habits: 'id, name, active',
+            habitLogs: 'id, userId, habitId, date, completed, timeValue, detailValue, studentName, className, syncStatus',
+            points: 'id, userId, totalPoints',
+            streaks: 'userId, currentStreak, longestStreak',
+            journals: 'id, userId, date, syncStatus',
+            syncQueue: 'id, tableName, recordId, action, status, createdAt'
+        });
+
+        const SCHOOL_IDENTITY = {
+            name: "SMP NEGERI 1 TALAGA JAYA",
+            district: "Kabupaten Gorontalo",
+            level: "SMP",
+            academicYear: "2026/2027"
+        };
+
+        const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
+
+        const HABITS_CONFIG = [
+            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi (WITA)', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur' },
+            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama (WITA)', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an' },
+            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga (WITA)', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit' },
+            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan (WITA)', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih' },
+            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar (WITA)', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit' },
+            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas (WITA)', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga' },
+            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
+        ];
+
+        // ==========================================
+        // 4. ENGINE SINKRONISASI (PUSH DULU, LALU REKONSILIASI PULL)
+        // ==========================================
+        async function pushPendingQueue() {
+            if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+
+            const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
+            if (pendingQueue.length === 0) return;
+
+            // 1. Sync Habit Logs (Delete & Upsert)
+            const habitSyncs = pendingQueue.filter(q => q.tableName === 'habitLogs');
+            for (let item of habitSyncs) {
+                if (item.action === 'delete') {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteHabitLog', payload: { id: item.recordId } })
+                    });
+                } else {
+                    const logData = await db.habitLogs.get(item.recordId);
+                    if (logData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: [logData] })
+                        });
+                    }
+                }
+            }
+
+            // 2. Sync Journals (Delete & Upsert)
+            const journalSyncs = pendingQueue.filter(q => q.tableName === 'journals');
+            for (let item of journalSyncs) {
+                if (item.action === 'delete') {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteJournal', payload: { id: item.recordId } })
+                    });
+                } else {
+                    const jData = await db.journals.get(item.recordId);
+                    if (jData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncJournal', payload: jData })
+                        });
+                    }
+                }
+            }
+
+            // 3. Sync Users
+            const userSyncs = pendingQueue.filter(q => q.tableName === 'users');
+            for (let uItem of userSyncs) {
+                if (uItem.action === 'delete') {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteUser', payload: { id: uItem.recordId } })
+                    });
+                } else {
+                    const uData = await db.users.get(uItem.recordId);
+                    if (uData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncUser', payload: uData })
+                        });
+                    }
+                }
+            }
+
+            // 4. Sync Classes
+            const classSyncs = pendingQueue.filter(q => q.tableName === 'classes');
+            for (let cItem of classSyncs) {
+                if (cItem.action === 'delete') {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteClass', payload: { id: cItem.recordId } })
+                    });
+                } else {
+                    const cData = await db.classes.get(cItem.recordId);
+                    if (cData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncClass', payload: cData })
+                        });
+                    }
+                }
+            }
+
+            for (let item of pendingQueue) {
+                await db.syncQueue.update(item.id, { status: 'synced' });
+            }
+        }
+
+        // FUNGSI PULL LENGKAP DENGAN AUTO-CLEANUP DATA TERHAPUS
+        async function pullAllCloudData() {
+            if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
+            try {
+                const res = await fetch(`${GAS_API_URL}?action=getAllData`);
+                const json = await res.json();
+                
+                if (json.status === 'success') {
+                    const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
+                    const pendingUserIds = new Set(pendingQueue.filter(q => q.tableName === 'users').map(q => q.recordId));
+                    const pendingClassIds = new Set(pendingQueue.filter(q => q.tableName === 'classes').map(q => q.recordId));
+                    const pendingLogIds = new Set(pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId));
+                    const pendingJournalIds = new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId));
+
+                    // 1. Rekonsiliasi Classes
+                    if (Array.isArray(json.classes)) {
+                        const formattedClasses = json.classes.map(c => ({
+                            id: String(c['Class ID'] || c['id'] || '').trim(),
+                            name: String(c['Nama Kelas'] || c['name'] || '').trim(),
+                            teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || '').trim(),
+                            teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '').trim()
+                        })).filter(c => c.id);
+
+                        const cloudClassIds = new Set(formattedClasses.map(c => c.id));
+                        const localClasses = await db.classes.toArray();
+                        const classesToDelete = localClasses
+                            .filter(c => !cloudClassIds.has(c.id) && !pendingClassIds.has(c.id))
+                            .map(c => c.id);
+
+                        if (classesToDelete.length > 0) await db.classes.bulkDelete(classesToDelete);
+                        if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
+                    }
+
+                    // 2. Rekonsiliasi Users
+                    if (Array.isArray(json.users)) {
+                        const formattedUsers = json.users.map(u => ({
+                            id: String(u['User ID'] || u['id'] || '').trim(),
+                            username: String(u['Username'] || u['username'] || '').trim(),
+                            name: String(u['Nama Lengkap'] || u['name'] || '').trim(),
+                            role: String(u['Role'] || u['role'] || 'siswa').trim().toLowerCase(),
+                            password: String(u['Password'] || u['password'] || '').trim(),
+                            phone: String(u['Nomor Telepon'] || u['Nomor WhatsApp'] || u['phone'] || '').trim(),
+                            className: String(u['Kelas'] || u['className'] || '').trim(),
+                            classId: String(u['Class ID'] || u['classId'] || '').trim(),
+                            nisn: String(u['NISN'] || u['nisn'] || '').trim(),
+                            nip: String(u['NIP'] || u['nip'] || '').trim(),
+                            subject: String(u['Mata Pelajaran'] || u['subject'] || '').trim(),
+                            homeroomClassId: String(u['Homeroom Class ID'] || u['homeroomClassId'] || '').trim(),
+                            mentorId: String(u['Mentor ID'] || u['mentorId'] || '').trim(),
+                            mentorName: String(u['Mentor Name'] || u['mentorName'] || '').trim(),
+                            createdBy: String(u['Created By'] || u['createdBy'] || 'admin').trim(),
+                            status: String(u['Status'] || u['status'] || 'Aktif').trim(),
+                            avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
+                        })).filter(u => u.id);
+
+                        const cloudUserIds = new Set(formattedUsers.map(u => u.id));
+                        const localUsers = await db.users.toArray();
+                        const usersToDelete = localUsers
+                            .filter(u => !cloudUserIds.has(u.id) && !pendingUserIds.has(u.id) && u.id !== 'u_admin_default')
+                            .map(u => u.id);
+
+                        if (usersToDelete.length > 0) await db.users.bulkDelete(usersToDelete);
+                        if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
+                    }
+
+                    // 3. Rekonsiliasi Habit Logs
+                    if (Array.isArray(json.habitLogs)) {
+                        const formattedLogs = json.habitLogs.map(l => ({
+                            id: String(l['ID Log'] || l['id'] || '').trim(),
+                            userId: String(l['User ID'] || l['userId'] || '').trim(),
+                            studentName: String(l['Nama Siswa'] || l['studentName'] || '').trim(),
+                            className: String(l['Kelas'] || l['className'] || '').trim(),
+                            habitId: String(l['Habit ID'] || l['habitId'] || '').trim(),
+                            habitName: String(l['Nama Kebiasaan'] || l['habitName'] || '').trim(),
+                            date: String(l['Tanggal'] || l['date'] || '').trim().split('T')[0],
+                            completed: String(l['Status Selesai'] || l['completed']).trim() === 'Selesai' || l['completed'] === true,
+                            timeValue: String(l['Jam / Waktu'] || l['timeValue'] || '').trim(),
+                            detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || '').trim(),
+                            syncStatus: 'synced'
+                        })).filter(l => l.id);
+
+                        const cloudLogIds = new Set(formattedLogs.map(l => l.id));
+                        const localLogs = await db.habitLogs.toArray();
+                        const logsToDelete = localLogs
+                            .filter(l => !cloudLogIds.has(l.id) && !pendingLogIds.has(l.id))
+                            .map(l => l.id);
+
+                        if (logsToDelete.length > 0) await db.habitLogs.bulkDelete(logsToDelete);
+                        if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
+                    }
+
+                    // 4. Rekonsiliasi Journals
+                    if (Array.isArray(json.journals)) {
+                        const formattedJournals = json.journals.map(j => ({
+                            id: String(j['ID Jurnal'] || j['id'] || '').trim(),
+                            userId: String(j['User ID'] || j['userId'] || '').trim(),
+                            studentName: String(j['Nama Siswa'] || j['studentName'] || '').trim(),
+                            className: String(j['Kelas'] || j['className'] || '').trim(),
+                            date: String(j['Tanggal'] || j['date'] || '').trim().split('T')[0],
+                            mood: String(j['Mood'] || j['mood'] || '').trim(),
+                            content: String(j['Isi Jurnal'] || j['content'] || '').trim(),
+                            syncStatus: 'synced'
+                        })).filter(j => j.id);
+
+                        const cloudJournalIds = new Set(formattedJournals.map(j => j.id));
+                        const localJournals = await db.journals.toArray();
+                        const journalsToDelete = localJournals
+                            .filter(j => !cloudJournalIds.has(j.id) && !pendingJournalIds.has(j.id))
+                            .map(j => j.id);
+
+                        if (journalsToDelete.length > 0) await db.journals.bulkDelete(journalsToDelete);
+                        if (formattedJournals.length > 0) await db.journals.bulkPut(formattedJournals);
+                    }
+
+                    return true;
+                }
+            } catch (err) {
+                console.warn("Pull data notice:", err);
+            }
+            return false;
+        }
+
+        async function seedDatabaseClean() {
+            try {
+                const habitCount = await db.habits.count();
+                if (habitCount === 0) await db.habits.bulkPut(HABITS_CONFIG);
+
+                const adminCount = await db.users.where('role').equals(ROLES.ADMIN).count();
+                if (adminCount === 0) {
+                    await db.users.put({
+                        id: 'u_admin_default',
+                        username: 'admin',
+                        name: 'Administrator Talaga Jaya',
+                        role: ROLES.ADMIN,
+                        password: 'admin',
+                        phone: '',
+                        avatar: '⚙️',
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    });
+                }
+            } catch (err) {
+                console.error("Master DB Seed notice:", err);
+            }
+        }
+
+        function useOnlineSyncEngine() {
+            const [isOnline, setIsOnline] = useState(navigator.onLine);
+            const [syncStatus, setSyncStatus] = useState('idle');
+
+            const fullSynchronize = async () => {
+                if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+                setSyncStatus('syncing');
+                try {
+                    await pushPendingQueue();
+                    await pullAllCloudData();
+                    setSyncStatus('synced');
+                    setTimeout(() => setSyncStatus('idle'), 3000);
+                } catch (e) {
+                    setSyncStatus('error');
+                    setTimeout(() => setSyncStatus('idle'), 4000);
+                }
+            };
+
+            useEffect(() => {
+                const handleOnline = () => { setIsOnline(true); fullSynchronize(); };
+                const handleOffline = () => { setIsOnline(false); setSyncStatus('idle'); };
+
+                window.addEventListener('online', handleOnline);
+                window.addEventListener('offline', handleOffline);
+
+                const interval = setInterval(() => {
+                    if (navigator.onLine) fullSynchronize();
+                }, 30000);
+
+                return () => {
+                    window.removeEventListener('online', handleOnline);
+                    window.removeEventListener('offline', handleOffline);
+                    clearInterval(interval);
+                };
+            }, []);
+
+            return { isOnline, syncStatus, triggerSync: fullSynchronize, triggerManualPull: fullSynchronize };
+        }
+
+        // ==========================================
+        // 5. ATOM UI
+        // ==========================================
+        const Card = ({ children, className = '' }) => (
+            <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
+        );
+
+        const Button = ({ children, onClick, variant = 'primary', className = '', fullWidth = false, disabled = false, type = 'button' }) => {
+            const variants = {
+                primary: 'bg-brand-red text-white hover:bg-red-600 shadow-md hover:shadow-lg',
+                secondary: 'bg-brand-blue text-white hover:bg-blue-600 shadow-md',
+                outline: 'border-2 border-brand-red text-brand-red hover:bg-red-50',
+                white: 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50',
+                green: 'bg-brand-green text-white hover:bg-emerald-600 shadow-md'
+            };
             return (
-                cachedResponse ||
-                fetch(event.request).catch(() => caches.match("/index.html"))
+                <button type={type} disabled={disabled} onClick={onClick} className={`font-bold py-3 px-6 rounded-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${fullWidth ? 'w-full' : ''} ${className}`}>
+                    {children}
+                </button>
             );
-        }),
-    );
-});
+        };
+
+        const EmptyState = ({ icon = '📂', title = 'Belum Ada Data', description = 'Data akan muncul setelah ditambahkan atau ditarik dari Google Sheets.' }) => (
+            <div className="text-center py-12 px-4 space-y-3">
+                <div className="text-5xl opacity-80 mb-2">{icon}</div>
+                <h4 className="text-base font-extrabold text-gray-700">{title}</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">{description}</p>
+            </div>
+        );
+
+        // ==========================================
+        // 6. LAYOUT UTAMA
+        // ==========================================
+        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, children }) => {
+            const navItems = {
+                [ROLES.SISWA]: [
+                    { path: '/student/habits', label: '7 Kebiasaan', icon: 'fas fa-check-circle' },
+                    { path: '/student/calendar', label: 'Kalender', icon: 'fas fa-calendar-alt' },
+                    { path: '/student/journal', label: 'Jurnal Refleksi', icon: 'fas fa-book' },
+                    { path: '/student/profile', label: 'Profil Saya', icon: 'fas fa-user-graduate' },
+                ],
+                [ROLES.GURU]: [
+                    { path: '/teacher/dashboard', label: 'Siswa Binaan', icon: 'fas fa-chart-line' },
+                    { path: '/teacher/profile', label: 'Profil Saya', icon: 'fas fa-chalkboard-teacher' },
+                ],
+                [ROLES.ADMIN]: [
+                    { path: '/admin/dashboard', label: 'Ringkasan Sistem', icon: 'fas fa-home' },
+                    { path: '/admin/classes', label: 'Data Kelas', icon: 'fas fa-door-open' },
+                    { path: '/admin/teachers', label: 'Data Guru', icon: 'fas fa-chalkboard-teacher' },
+                    { path: '/admin/students', label: 'Data Siswa', icon: 'fas fa-user-graduate' },
+                    { path: '/admin/profile', label: 'Profil Admin', icon: 'fas fa-user-shield' },
+                ]
+            }[user.role] || [];
+
+            return (
+                <div className="flex h-screen bg-gray-50 overflow-hidden">
+                    <aside className="hidden md:flex flex-col w-64 bg-white shadow-xl z-20 no-print">
+                        <div className="p-6 text-center border-b border-gray-100">
+                            <div className="text-3xl mb-1">🇮🇩</div>
+                            <h2 className="font-extrabold text-brand-red text-xs uppercase leading-tight">7 Kebiasaan Siswa Hebat</h2>
+                            <p className="text-[10px] text-gray-400 font-bold mt-1">{SCHOOL_IDENTITY.name}</p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+                            {navItems.map(item => (
+                                <button key={item.path} onClick={() => navigate(item.path)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left font-semibold transition-colors ${currentPath === item.path ? 'bg-brand-red text-white shadow-md' : 'text-gray-500 hover:bg-red-50 hover:text-brand-red'}`}>
+                                    <i className={`${item.icon} w-5 text-center`}></i>
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="p-4 border-t border-gray-100 space-y-3">
+                            <div className="flex items-center gap-3 px-2">
+                                <div className="w-10 h-10 rounded-full bg-brand-yellow flex items-center justify-center text-white font-bold">{user.avatar || '👤'}</div>
+                                <div className="overflow-hidden">
+                                    <p className="font-bold text-gray-800 text-sm truncate">{user.name}</p>
+                                    <p className="text-xs text-gray-400 capitalize">{user.role}</p>
+                                </div>
+                            </div>
+                            <Button variant="white" fullWidth onClick={onLogout} className="text-xs py-2">
+                                <i className="fas fa-sign-out-alt mr-2"></i> Keluar
+                            </Button>
+                        </div>
+                    </aside>
+
+                    <main className="flex-1 relative overflow-y-auto pb-20 md:pb-0">
+                        <header className="bg-white shadow-sm p-4 sticky top-0 z-10 flex justify-between items-center no-print">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl md:hidden">🇮🇩</span>
+                                <div>
+                                    <h1 className="font-extrabold text-brand-dark text-sm md:text-base leading-tight">{SCHOOL_IDENTITY.name}</h1>
+                                    <p className="text-[10px] text-gray-400">Tahun Pelajaran {SCHOOL_IDENTITY.academicYear}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={triggerManualPull} title="Tarik & Perbarui Data dari Google Sheets" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
+                                    !isOnline ? 'bg-orange-100 text-orange-600' :
+                                    syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
+                                    syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
+                                    'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}>
+                                    <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
+                                    <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
+                                </button>
+                                <button onClick={onLogout} className="md:hidden w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+                                    <i className="fas fa-power-off text-xs"></i>
+                                </button>
+                            </div>
+                        </header>
+
+                        {!isOnline && (
+                            <div className="bg-orange-500 text-white text-center py-1 text-xs font-bold shadow-sm">
+                                🛡️ Mode Offline Aktif. Data tersimpan lokal di browser/HP dan akan diunggah saat online.
+                            </div>
+                        )}
+
+                        <div className="p-4 md:p-8 max-w-5xl mx-auto">{children}</div>
+                    </main>
+
+                    <nav className="md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 flex justify-around items-center px-2 py-2 no-print">
+                        {navItems.map(item => (
+                            <button key={item.path} onClick={() => navigate(item.path)} className={`flex flex-col items-center p-1.5 min-w-[65px] ${currentPath === item.path ? 'text-brand-red' : 'text-gray-400'}`}>
+                                <i className={`${item.icon} text-lg mb-1`}></i>
+                                <span className="text-[10px] font-bold">{item.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 7. MODUL SISWA
+        // ==========================================
+        const StudentHabitsPage = ({ user, triggerSync }) => {
+            const todayStr = getTodayWitaDateString();
+            const [logs, setLogs] = useState({});
+            const [points, setPoints] = useState(0);
+            const [activeHabitModal, setActiveHabitModal] = useState(null);
+            const [modalTime, setModalTime] = useState('');
+            const [modalDetail, setModalDetail] = useState('');
+
+            const loadLogs = async () => {
+                const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
+                const logMap = {};
+                userLogs.forEach(l => { 
+                    logMap[l.habitId] = {
+                        completed: l.completed,
+                        timeValue: l.timeValue,
+                        detailValue: l.detailValue
+                    }; 
+                });
+                setLogs(logMap);
+
+                const p = await db.points.where('userId').equals(user.id).first();
+                setPoints(p ? p.totalPoints : 0);
+            };
+
+            useEffect(() => { loadLogs(); }, [user.id]);
+
+            const handleCardClick = (habit) => {
+                const existing = logs[habit.id] || {};
+                setModalTime(existing.timeValue || getNowWitaTimeString());
+                setModalDetail(existing.detailValue || '');
+                setActiveHabitModal(habit);
+            };
+
+            const handleSaveHabitDetail = async (e) => {
+                e.preventDefault();
+                if (!activeHabitModal) return;
+
+                const habit = activeHabitModal;
+                const logId = `${user.id}_${habit.id}_${todayStr}`;
+                const wasCompleted = logs[habit.id]?.completed;
+
+                await db.habitLogs.put({
+                    id: logId,
+                    userId: user.id,
+                    studentName: user.name,
+                    className: user.className || '',
+                    habitId: habit.id,
+                    habitName: habit.name,
+                    date: todayStr,
+                    completed: true,
+                    timeValue: modalTime,
+                    detailValue: modalDetail,
+                    syncStatus: 'pending',
+                    updatedAt: new Date()
+                });
+
+                await db.syncQueue.put({
+                    id: `sync_${Date.now()}_${Math.random()}`,
+                    tableName: 'habitLogs',
+                    recordId: logId,
+                    action: 'upsert',
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+
+                setLogs(prev => ({
+                    ...prev,
+                    [habit.id]: { completed: true, timeValue: modalTime, detailValue: modalDetail }
+                }));
+
+                if (!wasCompleted) {
+                    const pRecord = await db.points.where('userId').equals(user.id).first();
+                    const newTotal = (pRecord ? pRecord.totalPoints : 0) + 10;
+                    await db.points.put({ id: `p_${user.id}`, userId: user.id, totalPoints: newTotal, updatedAt: new Date() });
+                    setPoints(newTotal);
+                }
+
+                setActiveHabitModal(null);
+                showAlert.success('Kebiasaan Tercatat!', `${habit.name} berhasil disimpan.`);
+
+                const updatedCompleted = Object.values({ ...logs, [habit.id]: { completed: true } }).filter(l => l.completed).length;
+                if (updatedCompleted === 7) {
+                    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                }
+
+                triggerSync();
+            };
+
+            const handleCancelHabit = async (habitId) => {
+                const confirmRes = await showAlert.confirm(
+                    'Batalkan Kebiasaan?',
+                    'Catatan kebiasaan ini akan dihapus dan poin akan dikurangi 10 poin.',
+                    'Ya, Batalkan'
+                );
+                if (!confirmRes.isConfirmed) return;
+
+                const logId = `${user.id}_${habitId}_${todayStr}`;
+                await db.habitLogs.delete(logId);
+                await db.syncQueue.put({
+                    id: `sync_${Date.now()}_${Math.random()}`,
+                    tableName: 'habitLogs',
+                    recordId: logId,
+                    action: 'delete',
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+
+                setLogs(prev => {
+                    const copy = { ...prev };
+                    delete copy[habitId];
+                    return copy;
+                });
+
+                const pRecord = await db.points.where('userId').equals(user.id).first();
+                const newTotal = Math.max(0, (pRecord ? pRecord.totalPoints : 0) - 10);
+                await db.points.put({ id: `p_${user.id}`, userId: user.id, totalPoints: newTotal, updatedAt: new Date() });
+                setPoints(newTotal);
+
+                setActiveHabitModal(null);
+                showAlert.success('Dibatalkan', 'Catatan pembiasaan telah dihapus.');
+                triggerSync();
+            };
+
+            const completedCount = Object.values(logs).filter(l => l.completed).length;
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
+                            <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan anak hebat hari ini.</p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-4 py-2 rounded-2xl">
+                            <i className="fas fa-calendar-day text-brand-red text-sm"></i>
+                            <span className="text-xs font-black text-brand-red tracking-wide">Hari Ini: {formatDisplayDate(todayStr)} (WITA)</span>
+                        </div>
+                    </div>
+
+                    <Card className="bg-gradient-to-r from-brand-red to-red-600 text-white flex justify-between items-center shadow-lg">
+                        <div>
+                            <h3 className="font-black text-lg">Progres Pembiasaan Hari Ini</h3>
+                            <p className="text-xs opacity-90">Setiap kebiasaan bernilai 10 poin karakter hebat.</p>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-4xl font-black">{completedCount}/7</span>
+                            <p className="text-xs font-bold uppercase opacity-90">{points} Poin Akumulasi</p>
+                        </div>
+                    </Card>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {HABITS_CONFIG.map(habit => {
+                            const entry = logs[habit.id];
+                            const isDone = !!entry?.completed;
+
+                            return (
+                                <div key={habit.id} onClick={() => handleCardClick(habit)} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${isDone ? 'bg-green-50/70 border-brand-green shadow-sm' : 'bg-white border-gray-100 hover:border-gray-300'}`}>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-start gap-3">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${habit.color}`}>{habit.icon}</div>
+                                            <div>
+                                                <h3 className="font-bold text-gray-800 text-sm md:text-base flex items-center gap-2">
+                                                    {habit.name}
+                                                    {isDone && <span className="text-[10px] px-2 py-0.5 bg-green-200 text-green-800 rounded-full font-extrabold">Terisi</span>}
+                                                </h3>
+                                                <p className="text-xs text-gray-500 leading-snug mt-0.5">{habit.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-brand-green border-brand-green text-white scale-110' : 'border-gray-300'}`}>
+                                            {isDone ? <i className="fas fa-check text-xs"></i> : <i className="fas fa-pen text-[10px] text-gray-400"></i>}
+                                        </div>
+                                    </div>
+
+                                    {isDone && (
+                                        <div className="mt-3 pt-3 border-t border-green-200/60 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl space-y-1">
+                                            <div className="flex items-center gap-1 font-bold text-brand-dark">
+                                                <i className="far fa-clock text-brand-blue"></i>
+                                                <span>Pukul: {entry.timeValue || '-'} WITA</span>
+                                            </div>
+                                            <p className="text-gray-600 italic line-clamp-2">"{entry.detailValue || '-'}"</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {activeHabitModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md shadow-2xl">
+                                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-3xl">{activeHabitModal.icon}</span>
+                                        <div>
+                                            <h3 className="font-black text-lg text-brand-dark">{activeHabitModal.name}</h3>
+                                            <p className="text-xs text-gray-400 font-bold">{formatDisplayDate(todayStr)} (WITA)</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setActiveHabitModal(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                                        <i className="fas fa-times text-lg"></i>
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleSaveHabitDetail} className="space-y-4">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-xs font-bold text-gray-700">
+                                                <i className="far fa-clock mr-1 text-brand-red"></i> {activeHabitModal.timeLabel}
+                                            </label>
+                                            <span className="text-[10px] text-gray-400 font-semibold">Format 24 Jam (WITA)</span>
+                                        </div>
+                                        <input 
+                                            type="time" 
+                                            value={modalTime} 
+                                            onChange={e => setModalTime(e.target.value)} 
+                                            className="w-full p-2.5 bg-gray-50 border rounded-xl font-extrabold text-brand-red text-sm" 
+                                            required 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                                            <i className="fas fa-align-left mr-1 text-brand-blue"></i> {activeHabitModal.detailLabel}
+                                        </label>
+                                        <textarea 
+                                            rows="3" 
+                                            value={modalDetail} 
+                                            onChange={e => setModalDetail(e.target.value)} 
+                                            placeholder={activeHabitModal.detailPlaceholder} 
+                                            className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-red" 
+                                            required
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2">
+                                        {logs[activeHabitModal.id]?.completed ? (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => handleCancelHabit(activeHabitModal.id)} 
+                                                className="text-xs font-bold text-brand-red hover:underline"
+                                            >
+                                                <i className="fas fa-trash-alt mr-1"></i> Batalkan
+                                            </button>
+                                        ) : <div></div>}
+                                        
+                                        <div className="flex gap-2">
+                                            <Button variant="white" onClick={() => setActiveHabitModal(null)} className="py-2.5 px-4 text-xs">Tutup</Button>
+                                            <Button variant="primary" type="submit" className="py-2.5 px-5 text-xs">Simpan Kebiasaan</Button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const StudentCalendarPage = ({ user }) => {
+            const [currentMonth, setCurrentMonth] = useState(new Date());
+            const [logsMap, setLogsMap] = useState({});
+
+            useEffect(() => {
+                async function loadMonthLogs() {
+                    const allLogs = await db.habitLogs.where('userId').equals(user.id).toArray();
+                    const map = {};
+                    allLogs.forEach(l => {
+                        if (!map[l.date]) map[l.date] = 0;
+                        if (l.completed) map[l.date] += 1;
+                    });
+                    setLogsMap(map);
+                }
+                loadMonthLogs();
+            }, [user.id, currentMonth]);
+
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-black text-brand-dark">📅 Kalender Pembiasaan</h1>
+                        <div className="flex items-center gap-2">
+                            <Button variant="white" onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} className="py-2 px-3"><i className="fas fa-chevron-left"></i></Button>
+                            <span className="font-extrabold text-brand-dark min-w-[130px] text-center text-sm">{monthNames[month]} {year}</span>
+                            <Button variant="white" onClick={() => setCurrentMonth(new Date(year, month + 1, 1))} className="py-2 px-3"><i className="fas fa-chevron-right"></i></Button>
+                        </div>
+                    </div>
+
+                    <Card>
+                        <div className="grid grid-cols-7 gap-2 text-center font-bold text-xs text-gray-400 mb-2">
+                            <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
+                        </div>
+                        <div className="grid grid-cols-7 gap-2">
+                            {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`}></div>)}
+                            {Array.from({ length: daysInMonth }).map((_, i) => {
+                                const day = i + 1;
+                                const dayStr = String(day).padStart(2, '0');
+                                const mStr = String(month + 1).padStart(2, '0');
+                                const dateKey = `${year}-${mStr}-${dayStr}`;
+                                const count = logsMap[dateKey] || 0;
+
+                                let style = 'bg-gray-50 border-gray-100 text-gray-700';
+                                if (count === 7) style = 'bg-green-100 border-brand-green text-brand-green font-black';
+                                else if (count > 0) style = 'bg-yellow-50 border-yellow-300 text-yellow-700 font-bold';
+
+                                return (
+                                    <div key={day} className={`p-2.5 rounded-xl border-2 flex flex-col items-center justify-center ${style}`}>
+                                        <span className="text-xs font-bold">{day}</span>
+                                        <span className="text-[9px] mt-0.5">{count}/7</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                </div>
+            );
+        };
+
+        const StudentJournalPage = ({ user, triggerSync }) => {
+            const todayStr = getTodayWitaDateString();
+            const [mood, setMood] = useState('😊 Senang');
+            const [content, setContent] = useState('');
+            const [savedJournals, setSavedJournals] = useState([]);
+
+            const loadJournals = async () => {
+                const list = await db.journals.where('userId').equals(user.id).toArray();
+                setSavedJournals(list);
+            };
+
+            useEffect(() => { loadJournals(); }, [user.id]);
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const jId = `j_${user.id}_${todayStr}`;
+                await db.journals.put({
+                    id: jId, userId: user.id, studentName: user.name, className: user.className || '', date: todayStr, mood: mood, content: content, syncStatus: 'pending', updatedAt: new Date()
+                });
+                await db.syncQueue.put({
+                    id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
+                });
+                
+                showAlert.success('Jurnal Tersimpan!', 'Catatan refleksi harianmu berhasil disimpan.');
+                setContent('');
+                loadJournals();
+                triggerSync();
+            };
+
+            return (
+                <div className="space-y-6">
+                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <Card className="lg:col-span-2">
+                            <form onSubmit={handleSave} className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-xs font-bold text-gray-600">Tanggal Refleksi:</label>
+                                    <span className="px-3 py-1.5 bg-red-50 border border-red-200 text-brand-red rounded-xl text-xs font-black">
+                                        {formatDisplayDate(todayStr)} (WITA)
+                                    </span>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Perasaan / Suasana Hati Hari Ini:</label>
+                                    <select value={mood} onChange={e => setMood(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-sm">
+                                        <option value="😀 Sangat Senang">😀 Sangat Senang</option>
+                                        <option value="😊 Senang">😊 Senang</option>
+                                        <option value="💪 Semangat">💪 Semangat</option>
+                                        <option value="😐 Biasa Saja">😐 Biasa Saja</option>
+                                        <option value="😔 Butuh Semangat">😔 Butuh Semangat</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Kebaikan & Pembelajaran Hari Ini:</label>
+                                    <textarea rows="5" value={content} onChange={e => setContent(e.target.value)} placeholder="Tuliskan pengalaman atau kebaikan yang kamu lakukan hari ini..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm" required></textarea>
+                                </div>
+                                <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi Hari Ini</Button>
+                            </form>
+                        </Card>
+                        <Card className="space-y-3">
+                            <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal</h3>
+                            {savedJournals.length === 0 ? (
+                                <EmptyState icon="📝" title="Belum Ada Jurnal" description="Tulis refleksi harian pertamamu hari ini." />
+                            ) : (
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                    {savedJournals.map(j => (
+                                        <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                                            <div className="flex justify-between font-bold text-brand-red mb-1">
+                                                <span>{formatDisplayDate(j.date)}</span>
+                                                <span>{j.mood}</span>
+                                            </div>
+                                            <p className="text-gray-600 line-clamp-2">{j.content}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const StudentProfilePage = ({ user, triggerSync }) => {
+            const [oldPass, setOldPass] = useState('');
+            const [newPass, setNewPass] = useState('');
+            const [confirmPass, setConfirmPass] = useState('');
+
+            const handleChangePassword = async (e) => {
+                e.preventDefault();
+                if (newPass !== confirmPass) {
+                    showAlert.warning('Perhatian', 'Password baru dan konfirmasi tidak cocok!');
+                    return;
+                }
+                const oldHash = await hashPassword(oldPass);
+                const currentHash = user.password || await hashPassword('siswa123');
+
+                if (oldHash !== currentHash) {
+                    showAlert.error('Gagal', 'Password lama yang Anda masukkan salah!');
+                    return;
+                }
+
+                const newHashed = await hashPassword(newPass);
+                const updated = { ...user, password: newHashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                showAlert.success('Berhasil!', 'Password akun Anda berhasil diubah.');
+                setOldPass('');
+                setNewPass('');
+                setConfirmPass('');
+                triggerSync();
+            };
+
+            return (
+                <div className="max-w-md mx-auto space-y-6">
+                    <Card className="text-center space-y-4 py-8">
+                        <div className="w-20 h-20 rounded-full bg-brand-yellow text-white text-3xl flex items-center justify-center mx-auto shadow-md">{user.avatar || '👦'}</div>
+                        <div>
+                            <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                            <p className="text-xs font-bold text-gray-400">Username: @{user.username} • NISN: {user.nisn || '-'}</p>
+                            <div className="mt-3 flex justify-center gap-2 flex-wrap">
+                                <span className="px-3 py-1 bg-red-100 text-brand-red rounded-full text-xs font-bold">Kelas: {user.className || 'Belum Diatur'}</span>
+                                {user.mentorName && <span className="px-3 py-1 bg-blue-100 text-brand-blue rounded-full text-xs font-bold">Guru Mentor: {user.mentorName}</span>}
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-key text-brand-red mr-1.5"></i> Ganti Password Siswa</h3>
+                        <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Lama</label>
+                                <input type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Baru</label>
+                                <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Ulangi Password Baru</label>
+                                <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Password Baru</Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 8. MODUL GURU
+        // ==========================================
+        const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
+            const [classes, setClasses] = useState([]);
+            const [allStudents, setAllStudents] = useState([]);
+            const [selectedTab, setSelectedTab] = useState('all');
+            const [selectedDate, setSelectedDate] = useState(getTodayWitaDateString());
+            const [classLogs, setClassLogs] = useState([]);
+            
+            const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+            const [editingStudent, setEditingStudent] = useState(null);
+            const [studentFormData, setStudentFormData] = useState({
+                name: '',
+                username: '',
+                password: '',
+                nisn: '',
+                gender: 'Laki-laki',
+                classId: user.homeroomClassId || ''
+            });
+
+            const [resetModalStudent, setResetModalStudent] = useState(null);
+            const [newResetPassword, setNewResetPassword] = useState('siswa123');
+
+            const loadData = async () => {
+                const cls = await db.classes.toArray();
+                setClasses(cls);
+
+                const stds = await db.users.where('role').equals(ROLES.SISWA).toArray();
+                setAllStudents(stds);
+
+                const logs = await db.habitLogs.where('date').equals(selectedDate).toArray();
+                setClassLogs(logs);
+            };
+
+            useEffect(() => { loadData(); }, [selectedDate]);
+
+            const myStudents = useMemo(() => {
+                return allStudents.filter(s => {
+                    const isHomeroom = user.homeroomClassId && s.classId === user.homeroomClassId;
+                    const isMentor = s.mentorId === user.id;
+
+                    if (selectedTab === 'homeroom') return isHomeroom;
+                    if (selectedTab === 'mentor') return isMentor;
+                    return isHomeroom || isMentor;
+                });
+            }, [allStudents, user, selectedTab]);
+
+            const handleOpenAddModal = () => {
+                setEditingStudent(null);
+                setStudentFormData({
+                    name: '',
+                    username: '',
+                    password: '',
+                    nisn: '',
+                    gender: 'Laki-laki',
+                    classId: user.homeroomClassId || (classes[0] ? classes[0].id : '')
+                });
+                setIsStudentModalOpen(true);
+            };
+
+            const handleOpenEditModal = (student) => {
+                setEditingStudent(student);
+                setStudentFormData({
+                    name: student.name || '',
+                    username: student.username || '',
+                    password: '',
+                    nisn: student.nisn || '',
+                    gender: student.gender || 'Laki-laki',
+                    classId: student.classId || ''
+                });
+                setIsStudentModalOpen(true);
+            };
+
+            const handleTeacherSaveStudent = async (e) => {
+                e.preventDefault();
+                const selectedClass = classes.find(c => c.id === studentFormData.classId);
+
+                if (editingStudent) {
+                    const updatedStudent = {
+                        ...editingStudent,
+                        name: studentFormData.name.trim(),
+                        username: studentFormData.username.trim(),
+                        nisn: studentFormData.nisn.trim(),
+                        gender: studentFormData.gender,
+                        classId: studentFormData.classId,
+                        className: selectedClass ? selectedClass.name : editingStudent.className,
+                        avatar: studentFormData.gender === 'Laki-laki' ? '👦' : '👧',
+                        updatedAt: new Date()
+                    };
+
+                    await db.users.put(updatedStudent);
+                    await db.syncQueue.put({
+                        id: `sync_${Date.now()}`,
+                        tableName: 'users',
+                        recordId: editingStudent.id,
+                        action: 'update',
+                        status: 'pending',
+                        createdAt: new Date()
+                    });
+
+                    showAlert.success('Berhasil Diperbarui', `Data siswa "${studentFormData.name}" berhasil diperbarui.`);
+                } else {
+                    const newId = `u_siswa_${Date.now()}`;
+                    const defaultPass = studentFormData.password.trim() || 'siswa123';
+                    const hashedPassword = await hashPassword(defaultPass);
+
+                    const createdStudent = {
+                        id: newId,
+                        username: studentFormData.username.trim(),
+                        password: hashedPassword,
+                        name: studentFormData.name.trim(),
+                        nisn: studentFormData.nisn.trim(),
+                        classId: studentFormData.classId || '',
+                        className: selectedClass ? selectedClass.name : '',
+                        mentorId: user.id,
+                        mentorName: user.name,
+                        gender: studentFormData.gender,
+                        role: ROLES.SISWA,
+                        avatar: studentFormData.gender === 'Laki-laki' ? '👦' : '👧',
+                        createdBy: user.name,
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    };
+
+                    await db.users.put(createdStudent);
+                    await db.syncQueue.put({
+                        id: `sync_${Date.now()}`,
+                        tableName: 'users',
+                        recordId: newId,
+                        action: 'create',
+                        status: 'pending',
+                        createdAt: new Date()
+                    });
+
+                    showAlert.success('Siswa Ditambahkan', `Siswa "${studentFormData.name}" berhasil didaftarkan dengan password awal: ${defaultPass}`);
+                }
+
+                setIsStudentModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleExecuteResetPassword = async (e) => {
+                e.preventDefault();
+                if (!resetModalStudent) return;
+
+                const hashed = await hashPassword(newResetPassword.trim());
+                const updated = { ...resetModalStudent, password: hashed };
+                
+                await db.users.put(updated);
+                await db.syncQueue.put({
+                    id: `sync_rst_${Date.now()}`,
+                    tableName: 'users',
+                    recordId: resetModalStudent.id,
+                    action: 'update',
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+
+                showAlert.success('Password Direset', `Password siswa ${resetModalStudent.name} berhasil di-reset menjadi: "${newResetPassword}".`);
+                setResetModalStudent(null);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleRefreshFromCloud = async () => {
+                await triggerManualPull();
+                await loadData();
+                showAlert.success('Data Terkini', 'Data siswa berhasil diselaraskan dari Google Sheets.');
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, edit profil, dan reset password siswa binaan Anda.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                                <i className="fas fa-user-plus"></i> + Tambah Siswa
+                            </Button>
+                            <Button variant="white" onClick={handleRefreshFromCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="p-2 border rounded-xl text-xs font-bold text-brand-red bg-white" />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 border-b border-gray-200 pb-2 overflow-x-auto text-xs font-bold">
+                        <button onClick={() => setSelectedTab('all')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'all' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
+                            Semua Siswa Binaan ({allStudents.filter(s => (user.homeroomClassId && s.classId === user.homeroomClassId) || s.mentorId === user.id).length})
+                        </button>
+                        <button onClick={() => setSelectedTab('homeroom')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'homeroom' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
+                            Kelas Binaan (Wali Kelas) ({allStudents.filter(s => user.homeroomClassId && s.classId === user.homeroomClassId).length})
+                        </button>
+                        <button onClick={() => setSelectedTab('mentor')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'mentor' ? 'bg-brand-red text-white shadow-sm' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>
+                            Kelompok Mentoring ({allStudents.filter(s => s.mentorId === user.id).length})
+                        </button>
+                    </div>
+
+                    {myStudents.length === 0 ? (
+                        <Card><EmptyState icon="👦" title="Belum Ada Siswa Binaan" description="Anda belum memiliki siswa di tab ini. Klik tombol '+ Tambah Siswa' atau 'Tarik Cloud' untuk memperbarui data." /></Card>
+                    ) : (
+                        <div className="space-y-4">
+                            {myStudents.map(student => {
+                                const studentLogs = classLogs.filter(l => l.userId === student.id && l.completed);
+                                const count = studentLogs.length;
+                                const isMyMentee = student.mentorId === user.id;
+
+                                return (
+                                    <Card key={student.id} className="space-y-3 hover:border-brand-red/40 transition-all">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-brand-yellow/20 text-brand-dark flex items-center justify-center font-black text-lg">
+                                                    {student.avatar || '👦'}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-extrabold text-brand-dark text-base flex items-center gap-2">
+                                                        {student.name}
+                                                        {isMyMentee && <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-brand-blue rounded-full font-bold">Mentee</span>}
+                                                    </h3>
+                                                    <p className="text-xs text-gray-400 font-bold">@{student.username} • NISN: {student.nisn || '-'} • Kelas: {student.className || '-'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                    {count} / 7 Selesai
+                                                </span>
+                                                <button 
+                                                    onClick={() => handleOpenEditModal(student)} 
+                                                    className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all"
+                                                >
+                                                    <i className="fas fa-edit"></i> Edit
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setResetModalStudent(student); setNewResetPassword('siswa123'); }} 
+                                                    className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 flex items-center gap-1 transition-all"
+                                                >
+                                                    <i className="fas fa-key"></i> Reset Password
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                                            {HABITS_CONFIG.map(h => {
+                                                const log = studentLogs.find(l => l.habitId === h.id);
+                                                const isDone = !!log;
+
+                                                return (
+                                                    <div key={h.id} className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between ${isDone ? 'bg-green-50/50 border-green-200' : 'bg-gray-50/60 border-gray-100 opacity-60'}`}>
+                                                        <div className="flex items-center justify-between font-bold mb-1">
+                                                            <span className="flex items-center gap-1.5 text-gray-800">
+                                                                <span>{h.icon}</span> {h.name}
+                                                            </span>
+                                                            <span className={isDone ? 'text-green-600 font-extrabold' : 'text-gray-400 font-normal'}>
+                                                                {isDone ? `Pkl ${log.timeValue || '-'} WITA` : 'Belum'}
+                                                            </span>
+                                                        </div>
+                                                        {isDone && (
+                                                            <p className="text-gray-600 text-[11px] bg-white p-1.5 rounded-lg border border-green-100 mt-1 line-clamp-2">
+                                                                {log.detailValue || '-'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* MODAL GURU: TAMBAH / EDIT SISWA BINAAN */}
+                    {isStudentModalOpen && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md shadow-2xl">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark">{editingStudent ? 'Edit Profil Siswa Binaan' : 'Tambah Siswa Binaan'}</h3>
+                                <p className="text-xs text-gray-500 mb-4">{editingStudent ? 'Perbarui informasi siswa binaan Anda.' : 'Siswa yang Anda tambahkan otomatis masuk ke binaan Anda.'}</p>
+                                
+                                <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
+                                        <input type="text" value={studentFormData.name} onChange={e => setStudentFormData({...studentFormData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
+                                            <input type="text" value={studentFormData.username} onChange={e => setStudentFormData({...studentFormData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
+                                            <input type="text" value={studentFormData.nisn} onChange={e => setStudentFormData({...studentFormData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    {!editingStudent && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal Siswa (Default: siswa123)</label>
+                                            <input type="text" value={studentFormData.password} onChange={e => setStudentFormData({...studentFormData, password: e.target.value})} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
+                                            <select value={studentFormData.classId} onChange={e => setStudentFormData({...studentFormData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                                <option value="">-- Pilih Kelas --</option>
+                                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
+                                            <select value={studentFormData.gender} onChange={e => setStudentFormData({...studentFormData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                                <option value="Laki-laki">Laki-laki</option>
+                                                <option value="Perempuan">Perempuan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
+                                        ℹ️ Guru Pembimbing: <strong>{user.name}</strong>.
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => setIsStudentModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">{editingStudent ? 'Simpan Perubahan' : 'Simpan Siswa'}</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* MODAL RESET PASSWORD SISWA */}
+                    {resetModalStudent && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm shadow-2xl">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Siswa</h3>
+                                <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetModalStudent.name}</strong>.</p>
+                                <form onSubmit={handleExecuteResetPassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Siswa</label>
+                                        <input type="text" value={newResetPassword} onChange={e => setNewResetPassword(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold text-brand-red" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setResetModalStudent(null)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Reset Password</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const TeacherProfilePage = ({ user, triggerSync }) => {
+            const [phone, setPhone] = useState(user.phone || '');
+            const [oldPass, setOldPass] = useState('');
+            const [newPass, setNewPass] = useState('');
+            const [confirmPass, setConfirmPass] = useState('');
+
+            const handleUpdatePhone = async (e) => {
+                e.preventDefault();
+                const updated = { ...user, phone: phone.trim() };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                showAlert.success('Berhasil!', 'Nomor telepon berhasil diperbarui.');
+                triggerSync();
+            };
+
+            const handleChangePassword = async (e) => {
+                e.preventDefault();
+                if (newPass !== confirmPass) {
+                    showAlert.warning('Perhatian', 'Password baru dan konfirmasi tidak cocok!');
+                    return;
+                }
+                const oldHash = await hashPassword(oldPass);
+                const currentHash = user.password || await hashPassword('guru123');
+
+                if (oldHash !== currentHash) {
+                    showAlert.error('Gagal', 'Password lama yang Anda masukkan salah!');
+                    return;
+                }
+
+                const newHashed = await hashPassword(newPass);
+                const updated = { ...user, password: newHashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                showAlert.success('Berhasil!', 'Password akun Guru Anda berhasil diubah.');
+                setOldPass('');
+                setNewPass('');
+                setConfirmPass('');
+                triggerSync();
+            };
+
+            return (
+                <div className="max-w-md mx-auto space-y-6">
+                    <Card className="text-center space-y-4 py-8">
+                        <div className="w-20 h-20 rounded-full bg-brand-red text-white text-3xl flex items-center justify-center mx-auto">{user.avatar || '👨‍🏫'}</div>
+                        <div>
+                            <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                            <p className="text-xs font-bold text-gray-400">NIP: {user.nip || '-'} • Mapel: {user.subject || 'Umum'}</p>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-2"><i className="fas fa-phone text-blue-500 mr-1.5"></i> Nomor Telepon Guru</h3>
+                        <form onSubmit={handleUpdatePhone} className="space-y-3">
+                            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Contoh: 081234567890" className="w-full p-2.5 border rounded-xl text-xs font-bold" required />
+                            <Button type="submit" fullWidth variant="secondary" className="py-2 text-xs">Simpan Nomor Telepon</Button>
+                        </form>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-key text-brand-red mr-1.5"></i> Ganti Password Guru</h3>
+                        <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Lama</label>
+                                <input type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Baru</label>
+                                <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Ulangi Password Baru</label>
+                                <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
+                            </div>
+                            <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Password Baru</Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 9. MODUL ADMIN: FULL CRUD + SWEETALERT
+        // ==========================================
+        const AdminDashboard = ({ triggerManualPull }) => {
+            const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
+
+            const loadStats = async () => {
+                const t = await db.users.where('role').equals(ROLES.GURU).count();
+                const s = await db.users.where('role').equals(ROLES.SISWA).count();
+                const c = await db.classes.count();
+                setStats({ teachers: t, students: s, classes: c });
+            };
+
+            useEffect(() => { loadStats(); }, []);
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadStats();
+                showAlert.success('Sinkronisasi Selesai', 'Data ringkasan sistem telah dimutakhirkan.');
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Ringkasan Sistem Administrator</h1>
+                            <p className="text-gray-500 font-medium text-sm">Dashboard master kontrol data {SCHOOL_IDENTITY.name}.</p>
+                        </div>
+                        <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                            <i className="fas fa-sync-alt"></i> Tarik Cloud Sheets
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="text-center">
+                            <i className="fas fa-chalkboard-teacher text-3xl text-brand-blue mb-1"></i>
+                            <div className="text-3xl font-black">{stats.teachers}</div>
+                            <div className="text-xs text-gray-400 font-bold uppercase">Total Guru</div>
+                        </Card>
+                        <Card className="text-center">
+                            <i className="fas fa-user-graduate text-3xl text-brand-green mb-1"></i>
+                            <div className="text-3xl font-black">{stats.students}</div>
+                            <div className="text-xs text-gray-400 font-bold uppercase">Total Siswa</div>
+                        </Card>
+                        <Card className="text-center">
+                            <i className="fas fa-door-open text-3xl text-brand-yellow mb-1"></i>
+                            <div className="text-3xl font-black">{stats.classes}</div>
+                            <div className="text-xs text-gray-400 font-bold uppercase">Total Kelas</div>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminClassesPage = ({ triggerSync, triggerManualPull }) => {
+            const [classes, setClasses] = useState([]);
+            const [teachers, setTeachers] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingClass, setEditingClass] = useState(null);
+            const [className, setClassName] = useState('');
+            const [teacherId, setTeacherId] = useState('');
+
+            const loadData = async () => {
+                const c = await db.classes.toArray();
+                const t = await db.users.where('role').equals(ROLES.GURU).toArray();
+                setClasses(c);
+                setTeachers(t);
+            };
+
+            useEffect(() => { loadData(); }, []);
+
+            const handleOpenAdd = () => {
+                setEditingClass(null);
+                setClassName('');
+                setTeacherId('');
+                setIsModalOpen(true);
+            };
+
+            const handleOpenEdit = (cls) => {
+                setEditingClass(cls);
+                setClassName(cls.name || '');
+                setTeacherId(cls.teacherId || '');
+                setIsModalOpen(true);
+            };
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const selectedTeacher = teachers.find(t => t.id === teacherId);
+
+                if (editingClass) {
+                    const updated = {
+                        ...editingClass,
+                        name: className.trim(),
+                        teacherId: teacherId || '',
+                        teacherName: selectedTeacher ? selectedTeacher.name : ''
+                    };
+                    await db.classes.put(updated);
+                    await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: editingClass.id, action: 'update', status: 'pending', createdAt: new Date() });
+                    showAlert.success('Berhasil Diperbarui', `Data kelas "${className}" berhasil diperbarui.`);
+                } else {
+                    const newId = `c_${Date.now()}`;
+                    const created = { 
+                        id: newId, 
+                        name: className.trim(), 
+                        teacherId: teacherId || '', 
+                        teacherName: selectedTeacher ? selectedTeacher.name : '' 
+                    };
+                    await db.classes.put(created);
+                    await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                    showAlert.success('Kelas Ditambahkan', `Kelas "${className}" berhasil ditambahkan.`);
+                }
+
+                if (teacherId) {
+                    await db.users.update(teacherId, { homeroomClassId: editingClass ? editingClass.id : `c_${Date.now()}` });
+                    await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: teacherId, action: 'update', status: 'pending', createdAt: new Date() });
+                }
+
+                setIsModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleDelete = async (id) => {
+                const confirmRes = await showAlert.confirm(
+                    'Hapus Kelas Ini?',
+                    'Apakah Anda yakin ingin menghapus rombongan belajar ini secara permanen?',
+                    'Ya, Hapus'
+                );
+
+                if (confirmRes.isConfirmed) {
+                    await db.classes.delete(id);
+                    await db.syncQueue.put({ id: `sync_cdel_${Date.now()}`, tableName: 'classes', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    await loadData();
+                    triggerSync();
+                    showAlert.success('Terhapus', 'Data kelas berhasil dihapus.');
+                }
+            };
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadData();
+                showAlert.success('Data Terkini', 'Daftar kelas berhasil diselaraskan dari cloud.');
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Kelas</h1>
+                            <p className="text-gray-500 font-medium text-sm">Kelola rombel dan penugasan wali kelas.</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Kelas</Button>
+                        </div>
+                    </div>
+
+                    <Card>
+                        {classes.length === 0 ? (
+                            <EmptyState icon="🏫" title="Belum Ada Kelas" description="Silakan klik tombol '+ Tambah Kelas' untuk menambahkan rombel pertama atau 'Tarik Cloud' jika data sudah ada di Google Sheets." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-gray-50 text-gray-500 font-bold">
+                                        <tr><th className="p-3">Nama Kelas</th><th className="p-3">Wali Kelas</th><th className="p-3 text-right">Aksi</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {classes.map(c => (
+                                            <tr key={c.id} className="border-b border-gray-50">
+                                                <td className="p-3 font-semibold">{c.name}</td>
+                                                <td className="p-3 text-brand-blue font-bold">{c.teacherName || '-'}</td>
+                                                <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => handleOpenEdit(c)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
+                                                    <button onClick={() => handleDelete(c.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm">
+                                <h3 className="font-black text-lg mb-4">{editingClass ? 'Edit Data Kelas' : 'Tambah Kelas Baru'}</h3>
+                                <form onSubmit={handleSave} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Kelas (contoh: VII.1)</label>
+                                        <input type="text" value={className} onChange={e => setClassName(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Wali Kelas</label>
+                                        <select value={teacherId} onChange={e => setTeacherId(e.target.value)} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <option value="">-- Belum Ditentukan --</option>
+                                            {teachers.map(t => <option key={t.id} value={t.id}>{t.name} ({t.subject || 'Guru'})</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
+            const [teachers, setTeachers] = useState([]);
+            const [classes, setClasses] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingTeacher, setEditingTeacher] = useState(null);
+            const [formData, setFormData] = useState({ name: '', username: '', password: '', phone: '', nip: '', subject: '', homeroomClassId: '' });
+
+            const [resetTeacherModal, setResetTeacherModal] = useState(null);
+            const [newTeacherPass, setNewTeacherPass] = useState('guru123');
+
+            const loadData = async () => {
+                const t = await db.users.where('role').equals(ROLES.GURU).toArray();
+                const c = await db.classes.toArray();
+                setTeachers(t);
+                setClasses(c);
+            };
+
+            useEffect(() => { loadData(); }, []);
+
+            const handleOpenAdd = () => {
+                setEditingTeacher(null);
+                setFormData({ name: '', username: '', password: '', phone: '', nip: '', subject: '', homeroomClassId: '' });
+                setIsModalOpen(true);
+            };
+
+            const handleOpenEdit = (teacher) => {
+                setEditingTeacher(teacher);
+                setFormData({
+                    name: teacher.name || '',
+                    username: teacher.username || '',
+                    password: '',
+                    phone: teacher.phone || '',
+                    nip: teacher.nip || '',
+                    subject: teacher.subject || '',
+                    homeroomClassId: teacher.homeroomClassId || ''
+                });
+                setIsModalOpen(true);
+            };
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                if (editingTeacher) {
+                    const updated = {
+                        ...editingTeacher,
+                        name: formData.name.trim(),
+                        username: formData.username.trim(),
+                        phone: formData.phone.trim(),
+                        nip: formData.nip.trim(),
+                        subject: formData.subject.trim(),
+                        homeroomClassId: formData.homeroomClassId || '',
+                        updatedAt: new Date()
+                    };
+                    await db.users.put(updated);
+                    await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: editingTeacher.id, action: 'update', status: 'pending', createdAt: new Date() });
+                    showAlert.success('Berhasil Diperbarui', `Data guru "${formData.name}" berhasil diperbarui.`);
+                } else {
+                    const newId = `u_guru_${Date.now()}`;
+                    const defaultPass = formData.password.trim() || 'guru123';
+                    const hashedPassword = await hashPassword(defaultPass);
+
+                    const created = {
+                        id: newId,
+                        username: formData.username.trim(),
+                        password: hashedPassword,
+                        phone: formData.phone.trim(),
+                        name: formData.name.trim(),
+                        nip: formData.nip.trim(),
+                        subject: formData.subject.trim(),
+                        homeroomClassId: formData.homeroomClassId || '',
+                        role: ROLES.GURU,
+                        avatar: '👨‍🏫',
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    };
+                    await db.users.put(created);
+                    await db.syncQueue.put({ id: `sync_t_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                    showAlert.success('Guru Ditambahkan', `Akun guru "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
+                }
+
+                setIsModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleResetPassword = async (e) => {
+                e.preventDefault();
+                if (!resetTeacherModal) return;
+
+                const hashed = await hashPassword(newTeacherPass.trim());
+                const updated = { ...resetTeacherModal, password: hashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_trst_${Date.now()}`, tableName: 'users', recordId: resetTeacherModal.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                showAlert.success('Password Direset', `Password guru ${resetTeacherModal.name} berhasil di-reset menjadi: "${newTeacherPass}"`);
+                setResetTeacherModal(null);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleDelete = async (id) => {
+                const confirmRes = await showAlert.confirm(
+                    'Hapus Akun Guru?',
+                    'Hapus akun guru ini secara permanen dari basis data?',
+                    'Ya, Hapus'
+                );
+
+                if (confirmRes.isConfirmed) {
+                    await db.users.delete(id);
+                    await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    await loadData();
+                    triggerSync();
+                    showAlert.success('Terhapus', 'Akun guru telah dihapus.');
+                }
+            };
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadData();
+                showAlert.success('Data Terkini', 'Daftar guru berhasil disinkronkan.');
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, pembaruan profil, dan reset password guru.</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Guru</Button>
+                        </div>
+                    </div>
+
+                    <Card>
+                        {teachers.length === 0 ? (
+                            <EmptyState icon="👨‍🏫" title="Belum Ada Guru Terdaftar" description="Tambahkan data guru pengajar atau klik 'Tarik Cloud' jika data sudah ada di Google Sheets." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-gray-50 text-gray-500 font-bold">
+                                        <tr>
+                                            <th className="p-3">Nama Guru</th>
+                                            <th className="p-3">Username</th>
+                                            <th className="p-3">No. Telepon</th>
+                                            <th className="p-3">Mata Pelajaran</th>
+                                            <th className="p-3 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {teachers.map(t => (
+                                            <tr key={t.id} className="border-b border-gray-50">
+                                                <td className="p-3 font-semibold">{t.name}</td>
+                                                <td className="p-3 text-gray-500">@{t.username}</td>
+                                                <td className="p-3 text-gray-600 font-bold">{t.phone || '-'}</td>
+                                                <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
+                                                <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => { setResetTeacherModal(t); setNewTeacherPass('guru123'); }} className="text-amber-600 hover:underline font-bold text-xs"><i className="fas fa-key"></i> Reset Pass</button>
+                                                    <button onClick={() => handleOpenEdit(t)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
+                                                    <button onClick={() => handleDelete(t.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md">
+                                <h3 className="font-black text-lg mb-4">{editingTeacher ? 'Edit Data Guru' : 'Tambah Guru Baru'}</h3>
+                                <form onSubmit={handleSave} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap</label>
+                                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
+                                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Nomor Telepon</label>
+                                            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="081234567890" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    {!editingTeacher && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal (Default: guru123)</label>
+                                            <input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="guru123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">NIP / NIK</label>
+                                            <input type="text" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Mata Pelajaran</label>
+                                            <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+
+                    {resetTeacherModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Guru</h3>
+                                <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetTeacherModal.name}</strong>.</p>
+                                <form onSubmit={handleResetPassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Guru</label>
+                                        <input type="text" value={newTeacherPass} onChange={e => setNewTeacherPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold text-brand-red" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setResetTeacherModal(null)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Reset Password</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
+            const [students, setStudents] = useState([]);
+            const [classes, setClasses] = useState([]);
+            const [teachers, setTeachers] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingStudent, setEditingStudent] = useState(null);
+            const [formData, setFormData] = useState({ name: '', username: '', password: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
+
+            const [resetStudentModal, setResetStudentModal] = useState(null);
+            const [newStudentPass, setNewStudentPass] = useState('siswa123');
+
+            const loadData = async () => {
+                const s = await db.users.where('role').equals(ROLES.SISWA).toArray();
+                const c = await db.classes.toArray();
+                const t = await db.users.where('role').equals(ROLES.GURU).toArray();
+                setStudents(s);
+                setClasses(c);
+                setTeachers(t);
+            };
+
+            useEffect(() => { loadData(); }, []);
+
+            const handleOpenAdd = () => {
+                setEditingStudent(null);
+                setFormData({ name: '', username: '', password: '', nisn: '', classId: classes[0] ? classes[0].id : '', mentorId: '', gender: 'Laki-laki' });
+                setIsModalOpen(true);
+            };
+
+            const handleOpenEdit = (student) => {
+                setEditingStudent(student);
+                setFormData({
+                    name: student.name || '',
+                    username: student.username || '',
+                    password: '',
+                    nisn: student.nisn || '',
+                    classId: student.classId || '',
+                    mentorId: student.mentorId || '',
+                    gender: student.gender || 'Laki-laki'
+                });
+                setIsModalOpen(true);
+            };
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const selectedClass = classes.find(c => c.id === formData.classId);
+                const selectedMentor = teachers.find(t => t.id === formData.mentorId);
+
+                if (editingStudent) {
+                    const updated = {
+                        ...editingStudent,
+                        username: formData.username.trim(),
+                        name: formData.name.trim(),
+                        nisn: formData.nisn.trim(),
+                        classId: formData.classId,
+                        className: selectedClass ? selectedClass.name : editingStudent.className,
+                        mentorId: formData.mentorId || '',
+                        mentorName: selectedMentor ? selectedMentor.name : '',
+                        gender: formData.gender,
+                        avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
+                        updatedAt: new Date()
+                    };
+
+                    await db.users.put(updated);
+                    await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: editingStudent.id, action: 'update', status: 'pending', createdAt: new Date() });
+                    showAlert.success('Berhasil Diperbarui', `Data siswa "${formData.name}" berhasil diperbarui.`);
+                } else {
+                    const newId = `u_siswa_${Date.now()}`;
+                    const defaultPass = formData.password.trim() || 'siswa123';
+                    const hashedPassword = await hashPassword(defaultPass);
+
+                    const created = {
+                        id: newId,
+                        username: formData.username.trim(),
+                        password: hashedPassword,
+                        name: formData.name.trim(),
+                        nisn: formData.nisn.trim(),
+                        classId: formData.classId,
+                        className: selectedClass ? selectedClass.name : '',
+                        mentorId: formData.mentorId || '',
+                        mentorName: selectedMentor ? selectedMentor.name : '',
+                        gender: formData.gender,
+                        role: ROLES.SISWA,
+                        avatar: formData.gender === 'Laki-laki' ? '👦' : '👧',
+                        createdBy: 'admin',
+                        status: 'Aktif',
+                        createdAt: new Date()
+                    };
+
+                    await db.users.put(created);
+                    await db.syncQueue.put({ id: `sync_s_${Date.now()}`, tableName: 'users', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
+                    showAlert.success('Siswa Ditambahkan', `Siswa "${formData.name}" berhasil ditambahkan dengan password awal: ${defaultPass}`);
+                }
+
+                setIsModalOpen(false);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleResetPassword = async (e) => {
+                e.preventDefault();
+                if (!resetStudentModal) return;
+
+                const hashed = await hashPassword(newStudentPass.trim());
+                const updated = { ...resetStudentModal, password: hashed };
+                await db.users.put(updated);
+                await db.syncQueue.put({ id: `sync_srst_${Date.now()}`, tableName: 'users', recordId: resetStudentModal.id, action: 'update', status: 'pending', createdAt: new Date() });
+                
+                showAlert.success('Password Direset', `Password siswa ${resetStudentModal.name} berhasil di-reset menjadi: "${newStudentPass}"`);
+                setResetStudentModal(null);
+                await loadData();
+                triggerSync();
+            };
+
+            const handleDelete = async (id) => {
+                const confirmRes = await showAlert.confirm(
+                    'Hapus Akun Siswa?',
+                    'Apakah Anda yakin ingin menghapus akun siswa ini secara permanen?',
+                    'Ya, Hapus'
+                );
+
+                if (confirmRes.isConfirmed) {
+                    await db.users.delete(id);
+                    await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    await loadData();
+                    triggerSync();
+                    showAlert.success('Terhapus', 'Akun siswa berhasil dihapus.');
+                }
+            };
+
+            const handleRefresh = async () => {
+                await triggerManualPull();
+                await loadData();
+                showAlert.success('Data Terkini', 'Daftar siswa berhasil diselaraskan dari cloud.');
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
+                            <p className="text-gray-500 font-medium text-sm">Hak akses penuh mengelola akun, kelas, dan reset password siswa.</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="white" onClick={handleRefresh} className="text-xs py-2 px-3 flex items-center gap-1">
+                                <i className="fas fa-sync-alt"></i> Tarik Cloud
+                            </Button>
+                            <Button variant="primary" onClick={handleOpenAdd} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
+                        </div>
+                    </div>
+
+                    <Card>
+                        {students.length === 0 ? (
+                            <EmptyState icon="👦" title="Belum Ada Siswa Terdaftar" description="Tambahkan data siswa atau klik 'Tarik Cloud' untuk menyelaraskan data dengan Google Sheets." />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-gray-50 text-gray-500 font-bold">
+                                        <tr>
+                                            <th className="p-3">Nama Siswa</th>
+                                            <th className="p-3">Username</th>
+                                            <th className="p-3">NISN</th>
+                                            <th className="p-3">Kelas</th>
+                                            <th className="p-3">Guru Mentor</th>
+                                            <th className="p-3 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {students.map(s => (
+                                            <tr key={s.id} className="border-b border-gray-50">
+                                                <td className="p-3 font-semibold">{s.name}</td>
+                                                <td className="p-3 text-gray-500">@{s.username}</td>
+                                                <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
+                                                <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
+                                                <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
+                                                <td className="p-3 text-right space-x-2">
+                                                    <button onClick={() => { setResetStudentModal(s); setNewStudentPass('siswa123'); }} className="text-amber-600 hover:underline font-bold text-xs"><i className="fas fa-key"></i> Reset</button>
+                                                    <button onClick={() => handleOpenEdit(s)} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
+                                                    <button onClick={() => handleDelete(s.id)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-md">
+                                <h3 className="font-black text-lg mb-4">{editingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Baru'}</h3>
+                                <form onSubmit={handleSave} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
+                                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
+                                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
+                                            <input type="text" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    </div>
+                                    {!editingStudent && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal Siswa (Default: siswa123)</label>
+                                            <input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
+                                            <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                                <option value="">-- Pilih Kelas --</option>
+                                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
+                                            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                                <option value="Laki-laki">Laki-laki</option>
+                                                <option value="Perempuan">Perempuan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Guru Pembimbing / Mentor (Opsional)</label>
+                                        <select value={formData.mentorId} onChange={e => setFormData({...formData, mentorId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <option value="">-- Tidak Ada Mentor Khusus --</option>
+                                            {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+
+                    {resetStudentModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-sm">
+                                <h3 className="font-black text-lg mb-1 text-brand-dark"><i className="fas fa-key text-amber-500 mr-1"></i> Reset Password Siswa</h3>
+                                <p className="text-xs text-gray-500 mb-4">Setel password baru untuk <strong>{resetStudentModal.name}</strong>.</p>
+                                <form onSubmit={handleResetPassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 mb-1">Password Baru Siswa</label>
+                                        <input type="text" value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl text-sm font-bold text-brand-red" required />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="white" onClick={() => setResetStudentModal(null)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Reset Password</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const AdminProfilePage = ({ user, onUpdateAdmin, triggerSync }) => {
+            const [username, setUsername] = useState(user.username || 'admin');
+            const [password, setPassword] = useState(user.password || 'admin');
+            const [phone, setPhone] = useState(user.phone || '');
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                const updated = { 
+                    ...user, 
+                    username: username.trim(), 
+                    password: password.trim(), 
+                    phone: phone.trim() 
+                };
+                
+                await db.users.put(updated);
+                onUpdateAdmin(updated);
+
+                await db.syncQueue.put({ 
+                    id: `sync_adm_${Date.now()}`, 
+                    tableName: 'users', 
+                    recordId: user.id, 
+                    action: 'update', 
+                    status: 'pending', 
+                    createdAt: new Date() 
+                });
+
+                showAlert.success('Berhasil Disimpan!', 'Kredensial Administrator berhasil disimpan.');
+                triggerSync();
+            };
+
+            return (
+                <div className="max-w-md mx-auto space-y-6">
+                    <Card className="text-center space-y-4 py-8">
+                        <div className="w-20 h-20 rounded-full bg-brand-dark text-white text-3xl flex items-center justify-center mx-auto shadow-md">⚙️</div>
+                        <div>
+                            <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
+                            <p className="text-xs font-bold text-brand-red">Super Administrator Sistem</p>
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-user-cog mr-1 text-brand-blue"></i> Pengaturan Akun Admin</h3>
+                        <form onSubmit={handleSave} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Username Admin</label>
+                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full p-2.5 border rounded-xl font-bold" required />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Password Admin (Plaintext)</label>
+                                <input type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded-xl font-bold text-brand-red" required />
+                                <span className="text-[10px] text-gray-400">Password admin tidak di-hash agar mudah dilihat di Google Sheets.</span>
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Nomor Telepon Admin</label>
+                                <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="081234567890" className="w-full p-2.5 border rounded-xl font-bold" />
+                            </div>
+                            <Button type="submit" fullWidth variant="primary" className="py-2.5 text-xs mt-2">Simpan Akun Admin</Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 10. LOGIN & LANDING
+        // ==========================================
+        const LandingPage = ({ onStart }) => (
+            <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
+                <div className="text-6xl mb-3">🇮🇩</div>
+                <h1 className="text-3xl md:text-5xl font-black text-brand-dark mb-3">7 Kebiasaan <span className="text-brand-red">Anak Indonesia Hebat</span></h1>
+                <p className="text-gray-500 max-w-md text-sm md:text-base mb-8">Pencatatan pembiasaan karakter positif siswa {SCHOOL_IDENTITY.name}.</p>
+                <Button onClick={onStart} className="text-base py-3.5 px-8">Masuk ke Aplikasi</Button>
+            </div>
+        );
+
+        const LoginPage = ({ onLogin, onBack, triggerManualPull }) => {
+            const [users, setUsers] = useState([]);
+            const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
+            const [selectedUserId, setSelectedUserId] = useState('');
+            const [inputPassword, setInputPassword] = useState('');
+            const [isLoadingPull, setIsLoadingPull] = useState(true);
+
+            const loadUsers = async () => {
+                const res = await db.users.where('role').equals(selectedRole).toArray();
+                setUsers(res);
+                if (res.length > 0) setSelectedUserId(res[0].id);
+                else setSelectedUserId('');
+            };
+
+            useEffect(() => {
+                loadUsers();
+                setInputPassword('');
+            }, [selectedRole]);
+
+            useEffect(() => {
+                async function syncInit() {
+                    setIsLoadingPull(true);
+                    await triggerManualPull();
+                    await loadUsers();
+                    setIsLoadingPull(false);
+                }
+                syncInit();
+            }, []);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!selectedUserId) {
+                    showAlert.warning('Perhatian', 'Pilih akun Anda terlebih dahulu!');
+                    return;
+                }
+
+                const user = await db.users.get(selectedUserId);
+                if (!user) {
+                    showAlert.error('Gagal', 'Akun tidak ditemukan!');
+                    return;
+                }
+
+                const typedPassword = String(inputPassword).trim();
+
+                if (user.role === ROLES.ADMIN) {
+                    const expected = String(user.password || 'admin').trim();
+                    if (typedPassword !== expected) {
+                        showAlert.error('Akses Ditolak', 'Password Administrator salah!');
+                        return;
+                    }
+                } else {
+                    const inputHashed = await hashPassword(typedPassword);
+                    const defaultPass = user.role === ROLES.GURU ? 'guru123' : 'siswa123';
+                    const expectedHashed = user.password ? String(user.password).trim() : await hashPassword(defaultPass);
+
+                    if (inputHashed !== expectedHashed) {
+                        showAlert.error('Password Salah', 'Password salah! Jika lupa password, silakan hubungi Guru / Wali Kelas Anda.');
+                        return;
+                    }
+                }
+
+                onLogin(user);
+            };
+
+            const handleRefreshManual = async () => {
+                setIsLoadingPull(true);
+                await triggerManualPull();
+                await loadUsers();
+                setIsLoadingPull(false);
+                showAlert.success('Tersinkron', 'Data akun berhasil diperbarui dari cloud Google Sheets!');
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md p-6 space-y-5">
+                        <div className="text-center">
+                            <div className="text-3xl mb-1">🇮🇩</div>
+                            <h2 className="text-lg font-black text-brand-dark">{SCHOOL_IDENTITY.name}</h2>
+                            <p className="text-xs text-gray-400 font-bold">Masuk dengan Akun & Password</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                                { role: ROLES.SISWA, label: 'Siswa', icon: '👦' },
+                                { role: ROLES.GURU, label: 'Guru', icon: '👨‍🏫' },
+                                { role: ROLES.ADMIN, label: 'Admin', icon: '⚙️' }
+                            ].map(r => (
+                                <button key={r.role} type="button" onClick={() => setSelectedRole(r.role)} className={`p-3 rounded-xl flex flex-col items-center border-2 text-xs font-bold transition-all ${selectedRole === r.role ? 'border-brand-red bg-red-50 text-brand-red' : 'border-gray-100 text-gray-500'}`}>
+                                    <span className="text-xl mb-1">{r.icon}</span>
+                                    {r.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-xs font-bold text-gray-600">Pilih Nama Pengguna:</label>
+                                    <button type="button" onClick={handleRefreshManual} disabled={isLoadingPull} className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-1">
+                                        <i className={`fas fa-sync-alt ${isLoadingPull ? 'fa-spin' : ''}`}></i> Perbarui Akun
+                                    </button>
+                                </div>
+                                {isLoadingPull ? (
+                                    <div className="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500 text-center font-bold">
+                                        <i className="fas fa-spinner fa-spin mr-1"></i> Memuat data akun dari Google Sheets...
+                                    </div>
+                                ) : users.length === 0 ? (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
+                                        Belum ada akun {selectedRole}. Masuk sebagai Admin untuk mendaftarkan akun.
+                                    </div>
+                                ) : (
+                                    <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
+                                        {users.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username})</option>)}
+                                    </select>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">Kata Sandi / Password:</label>
+                                <input 
+                                    type="password" 
+                                    value={inputPassword} 
+                                    onChange={e => setInputPassword(e.target.value)} 
+                                    placeholder={selectedRole === ROLES.ADMIN ? "Password admin" : "Masukkan password Anda..."} 
+                                    className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
+                                    required 
+                                />
+                                {selectedRole !== ROLES.ADMIN && (
+                                    <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                                        💡 Password bawaan: <strong>{selectedRole === ROLES.GURU ? 'guru123' : 'siswa123'}</strong>. Jika lupa password, hubungi {selectedRole === ROLES.GURU ? 'Admin Sekolah' : 'Guru / Wali Kelas'} Anda.
+                                    </p>
+                                )}
+                            </div>
+
+                            <Button type="submit" fullWidth disabled={users.length === 0 || isLoadingPull}>Masuk Sistem</Button>
+                        </form>
+                    </Card>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 11. ROOT CONTROLLER
+        // ==========================================
+        const App = () => {
+            const [currentPath, setCurrentPath] = useState('/');
+            const [user, setUser] = useState(null);
+            const { isOnline, syncStatus, triggerSync, triggerManualPull } = useOnlineSyncEngine();
+
+            useEffect(() => {
+                async function init() {
+                    await seedDatabaseClean();
+                    await pullAllCloudData();
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Notice:', err));
+                    }
+                }
+                init();
+            }, []);
+
+            const navigate = (path) => { setCurrentPath(path); window.scrollTo(0, 0); };
+
+            const handleLogin = (u) => {
+                setUser(u);
+                if (u.role === ROLES.SISWA) navigate('/student/habits');
+                else if (u.role === ROLES.GURU) navigate('/teacher/dashboard');
+                else if (u.role === ROLES.ADMIN) navigate('/admin/dashboard');
+            };
+
+            const handleLogout = () => { setUser(null); navigate('/'); };
+
+            if (currentPath === '/') return <LandingPage onStart={() => navigate('/login')} />;
+            if (currentPath === '/login') return <LoginPage onLogin={handleLogin} onBack={() => navigate('/')} triggerManualPull={triggerManualPull} />;
+            if (!user) { navigate('/login'); return null; }
+
+            let content = null;
+            switch (currentPath) {
+                // Siswa
+                case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
+                case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
+                case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
+                case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
+
+                // Guru
+                case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
+
+                // Admin
+                case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
+                case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/admin/profile': content = <AdminProfilePage user={user} onUpdateAdmin={setUser} triggerSync={triggerSync} />; break;
+
+                default: content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
+            }
+
+            return (
+                <AppLayout 
+                    user={user} 
+                    currentPath={currentPath} 
+                    navigate={navigate} 
+                    onLogout={handleLogout} 
+                    isOnline={isOnline} 
+                    syncStatus={syncStatus} 
+                    triggerManualPull={triggerManualPull}
+                >
+                    {content}
+                </AppLayout>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
