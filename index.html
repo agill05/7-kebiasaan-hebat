@@ -250,7 +250,7 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // BATCH SYNC ENGINE (FULL BULK CONSOLIDATION)
+        // AUTO PUSH ENGINE
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
@@ -298,6 +298,7 @@
             }
         }
 
+        // AUTO PULL ENGINE (SAFE UPSERT MERGE)
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -305,29 +306,17 @@
                 const json = await res.json();
 
                 if (json.status === 'success') {
-                    const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
-                    const pendingUserIds = new Set(pendingQueue.filter(q => q.tableName === 'users').map(q => q.recordId));
-                    const pendingClassIds = new Set(pendingQueue.filter(q => q.tableName === 'classes').map(q => q.recordId));
-                    const pendingLogIds = new Set(pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId));
-                    const pendingJournalIds = new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId));
-
-                    if (Array.isArray(json.classes)) {
+                    if (Array.isArray(json.classes) && json.classes.length > 0) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
                             name: String(c['Nama Kelas'] || c['name'] || '').trim(),
                             teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || '').trim(),
                             teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '').trim()
                         })).filter(c => c.id);
-
-                        const cloudClassIds = new Set(formattedClasses.map(c => c.id));
-                        const localClasses = await db.classes.toArray();
-                        const classesToDelete = localClasses.filter(c => !cloudClassIds.has(c.id) && !pendingClassIds.has(c.id)).map(c => c.id);
-
-                        if (classesToDelete.length > 0) await db.classes.bulkDelete(classesToDelete);
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    if (Array.isArray(json.users)) {
+                    if (Array.isArray(json.users) && json.users.length > 0) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || '').trim(),
                             username: String(u['Username'] || u['username'] || '').trim(),
@@ -347,16 +336,10 @@
                             status: String(u['Status'] || u['status'] || 'Aktif').trim(),
                             avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
                         })).filter(u => u.id);
-
-                        const cloudUserIds = new Set(formattedUsers.map(u => u.id));
-                        const localUsers = await db.users.toArray();
-                        const usersToDelete = localUsers.filter(u => !cloudUserIds.has(u.id) && !pendingUserIds.has(u.id) && u.id !== 'u_admin_default').map(u => u.id);
-
-                        if (usersToDelete.length > 0) await db.users.bulkDelete(usersToDelete);
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    if (Array.isArray(json.habitLogs)) {
+                    if (Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
                             userId: String(l['User ID'] || l['userId'] || '').trim(),
@@ -370,16 +353,10 @@
                             detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || '').trim(),
                             syncStatus: 'synced'
                         })).filter(l => l.id);
-
-                        const cloudLogIds = new Set(formattedLogs.map(l => l.id));
-                        const localLogs = await db.habitLogs.toArray();
-                        const logsToDelete = localLogs.filter(l => !cloudLogIds.has(l.id) && !pendingLogIds.has(l.id)).map(l => l.id);
-
-                        if (logsToDelete.length > 0) await db.habitLogs.bulkDelete(logsToDelete);
                         if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
                     }
 
-                    if (Array.isArray(json.journals)) {
+                    if (Array.isArray(json.journals) && json.journals.length > 0) {
                         const formattedJournals = json.journals.map(j => ({
                             id: String(j['ID Jurnal'] || j['id'] || '').trim(),
                             userId: String(j['User ID'] || j['userId'] || '').trim(),
@@ -391,12 +368,6 @@
                             teacherFeedback: String(j['Catatan Guru'] || j['teacherFeedback'] || '').trim(),
                             syncStatus: 'synced'
                         })).filter(j => j.id);
-
-                        const cloudJournalIds = new Set(formattedJournals.map(j => j.id));
-                        const localJournals = await db.journals.toArray();
-                        const journalsToDelete = localJournals.filter(l => !cloudJournalIds.has(l.id) && !pendingJournalIds.has(l.id)).map(l => l.id);
-
-                        if (journalsToDelete.length > 0) await db.journals.bulkDelete(journalsToDelete);
                         if (formattedJournals.length > 0) await db.journals.bulkPut(formattedJournals);
                     }
 
@@ -436,44 +407,55 @@
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [syncStatus, setSyncStatus] = useState('idle');
 
-            const fullSynchronize = useCallback(async () => {
+            const triggerSync = useCallback(async () => {
+                if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+                setSyncStatus('syncing');
+                try {
+                    await pushPendingQueue();
+                    setSyncStatus('synced');
+                    setTimeout(() => setSyncStatus('idle'), 2000);
+                } catch (e) {
+                    setSyncStatus('error');
+                    setTimeout(() => setSyncStatus('idle'), 2500);
+                }
+            }, []);
+
+            const triggerManualPull = useCallback(async () => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
                 setSyncStatus('syncing');
                 try {
                     await pushPendingQueue();
                     await pullAllCloudData();
                     setSyncStatus('synced');
-                    setTimeout(() => setSyncStatus('idle'), 2500);
+                    setTimeout(() => setSyncStatus('idle'), 2000);
                 } catch (e) {
                     setSyncStatus('error');
-                    setTimeout(() => setSyncStatus('idle'), 3000);
+                    setTimeout(() => setSyncStatus('idle'), 2500);
                 }
             }, []);
 
             useEffect(() => {
-                const handleOnline = () => { setIsOnline(true); fullSynchronize(); };
+                const handleOnline = () => { setIsOnline(true); triggerSync(); };
                 const handleOffline = () => { setIsOnline(false); setSyncStatus('idle'); };
 
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
                 const interval = setInterval(() => {
-                    if (navigator.onLine) fullSynchronize();
-                }, 90000);
+                    if (navigator.onLine) triggerSync();
+                }, 60000);
 
                 return () => {
                     window.removeEventListener('online', handleOnline);
                     window.removeEventListener('offline', handleOffline);
                     clearInterval(interval);
                 };
-            }, [fullSynchronize]);
+            }, [triggerSync]);
 
-            return { isOnline, syncStatus, triggerSync: fullSynchronize, triggerManualPull: fullSynchronize };
+            return { isOnline, syncStatus, triggerSync, triggerManualPull };
         }
 
-        // ==========================================
         // UI ATOMS
-        // ==========================================
         const Card = ({ children, className = '', compact = false }) => (
             <div className={`bg-white rounded-2xl shadow-soft border border-gray-100 ${compact ? 'p-3 md:p-4' : 'p-5'} ${className}`}>{children}</div>
         );
@@ -502,9 +484,7 @@
             </div>
         );
 
-        // ==========================================
         // LAYOUT UTAMA & ONBOARDING GUIDE
-        // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, compact, setCompact, children }) => {
             const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -664,9 +644,7 @@
             );
         };
 
-        // ==========================================
         // MODUL SISWA
-        // ==========================================
         const StudentHabitsPage = ({ user, triggerSync, compact }) => {
             const todayStr = getTodayWitaDateString();
             const [logs, setLogs] = useState({});
@@ -1149,9 +1127,7 @@
             );
         };
 
-        // ==========================================
         // MODUL GURU
-        // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
@@ -1528,9 +1504,7 @@
             );
         };
 
-        // ==========================================
         // MODUL ADMIN
-        // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
 
@@ -2428,7 +2402,7 @@
 
                 await db.users.bulkDelete(selectedStudentIds);
                 for (let id of selectedStudentIds) {
-                    await db.syncQueue.put({ id: `sync_sdel_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                    await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
                 }
 
                 await loadData();
@@ -2825,9 +2799,7 @@
             );
         };
 
-        // ==========================================
         // MODUL ARSIP SEMESTER
-        // ==========================================
         const AdminArchivesPage = () => {
             const [archiveList, setArchiveList] = useState([]);
             const [selectedSheetName, setSelectedSheetName] = useState('');
@@ -3141,9 +3113,7 @@
             );
         };
 
-        // ==========================================
         // MODUL LAPORAN
-        // ==========================================
         const ReportsModule = ({ user }) => {
             const today = getTodayWitaDateString();
             const [reportType, setReportType] = useState('habits');
@@ -3443,9 +3413,7 @@
             );
         };
 
-        // ==========================================
-        // LOGIN & ROOT CONTROLLER (LOCAL-FIRST INSTANT LOAD)
-        // ==========================================
+        // LOGIN & ROOT CONTROLLER
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
                 <div className="text-6xl mb-3">🇮🇩</div>
