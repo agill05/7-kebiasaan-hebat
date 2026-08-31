@@ -250,17 +250,17 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // BATCH SYNC ENGINE (OPTIMIZED)
+        // BATCH SYNC ENGINE (FULL BULK CONSOLIDATION - PREVENTS GAS LOCK COLLISION)
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
-            // Batch Push Habit Logs
-            const habitUpserts = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action === 'upsert');
-            if (habitUpserts.length > 0) {
-                const logs = await db.habitLogs.bulkGet(habitUpserts.map(q => q.recordId));
+            // 1. KONSOLIDASI BATCH HABIT LOGS (KIRIM DALAM 1 REQUEST)
+            const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && (q.action === 'upsert' || q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (habitUpsertIds.length > 0) {
+                const logs = await db.habitLogs.bulkGet(habitUpsertIds);
                 const validLogs = logs.filter(Boolean);
                 if (validLogs.length > 0) {
                     await fetch(GAS_API_URL, {
@@ -272,37 +272,74 @@
                 }
             }
 
-            for (let item of pendingQueue) {
-                try {
-                    let endpointAction = '';
-                    let payloadData = null;
-
-                    if (item.tableName === 'habitLogs' && item.action === 'delete') {
-                        endpointAction = 'deleteHabitLog';
-                        payloadData = { id: item.recordId };
-                    } else if (item.tableName === 'journals') {
-                        endpointAction = item.action === 'delete' ? 'deleteJournal' : 'syncJournal';
-                        payloadData = item.action === 'delete' ? { id: item.recordId } : await db.journals.get(item.recordId);
-                    } else if (item.tableName === 'users') {
-                        endpointAction = item.action === 'delete' ? 'deleteUser' : 'syncUser';
-                        payloadData = item.action === 'delete' ? { id: item.recordId } : await db.users.get(item.recordId);
-                    } else if (item.tableName === 'classes') {
-                        endpointAction = item.action === 'delete' ? 'deleteClass' : 'syncClass';
-                        payloadData = item.action === 'delete' ? { id: item.recordId } : await db.classes.get(item.recordId);
-                    }
-
-                    if (endpointAction && payloadData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: endpointAction, payload: payloadData })
-                        });
-                    }
-                    await db.syncQueue.update(item.id, { status: 'synced' });
-                } catch (e) {
-                    console.warn('Sync queue error:', item.recordId, e);
+            // 2. KONSOLIDASI BATCH USERS (SEMUA GURU & SISWA DIKIRIM SEKALIGUS)
+            const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && (q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (userUpsertIds.length > 0) {
+                const users = await db.users.bulkGet(userUpsertIds);
+                const validUsers = users.filter(Boolean);
+                if (validUsers.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncUser', payload: validUsers })
+                    });
                 }
+            }
+
+            // 3. KONSOLIDASI BATCH CLASSES
+            const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && (q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (classUpsertIds.length > 0) {
+                const classes = await db.classes.bulkGet(classUpsertIds);
+                const validClasses = classes.filter(Boolean);
+                if (validClasses.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncClass', payload: validClasses })
+                    });
+                }
+            }
+
+            // 4. KONSOLIDASI BATCH JOURNALS
+            const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && (q.action === 'upsert' || q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (journalUpsertIds.length > 0) {
+                const journals = await db.journals.bulkGet(journalUpsertIds);
+                const validJournals = journals.filter(Boolean);
+                if (validJournals.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncJournal', payload: validJournals })
+                    });
+                }
+            }
+
+            // 5. PROSES DELETE (JIKA ADA)
+            const deleteItems = pendingQueue.filter(q => q.action === 'delete');
+            for (let item of deleteItems) {
+                let endpointAction = '';
+                if (item.tableName === 'habitLogs') endpointAction = 'deleteHabitLog';
+                else if (item.tableName === 'journals') endpointAction = 'deleteJournal';
+                else if (item.tableName === 'users') endpointAction = 'deleteUser';
+                else if (item.tableName === 'classes') endpointAction = 'deleteClass';
+
+                if (endpointAction) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: endpointAction, payload: { id: item.recordId } })
+                    });
+                }
+            }
+
+            // Tandai antrean yang sudah diproses menjadi 'synced'
+            const allPendingIds = pendingQueue.map(q => q.id);
+            for (let id of allPendingIds) {
+                await db.syncQueue.update(id, { status: 'synced' });
             }
         }
 
@@ -465,7 +502,7 @@
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
-                // Polling background setiap 90 detik agar hemat kuota dan tidak spamming
+                // Polling background setiap 90 detik
                 const interval = setInterval(() => {
                     if (navigator.onLine) fullSynchronize();
                 }, 90000);
@@ -1552,6 +1589,62 @@
 
             useEffect(() => { loadStats(); }, []);
 
+            const handleForcePushAllToCloud = async () => {
+                const confirmRes = await showAlert.confirm(
+                    'Unggah Semua Data Lokal ke Cloud?',
+                    'Seluruh data Guru, Siswa, Kelas, dan Log yang ada di perangkat ini akan dikirim utuh ke Google Sheets.',
+                    'Ya, Unggah Sekarang'
+                );
+                if (!confirmRes.isConfirmed) return;
+
+                try {
+                    Swal.fire({
+                        title: 'Mengunggah Data...',
+                        text: 'Mohon tunggu, menyinkronkan seluruh database lokal ke Google Sheets.',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+
+                    const allUsers = await db.users.toArray();
+                    const allClasses = await db.classes.toArray();
+                    const allLogs = await db.habitLogs.toArray();
+
+                    if (allClasses.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncClass', payload: allClasses })
+                        });
+                    }
+
+                    if (allUsers.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncUser', payload: allUsers })
+                        });
+                    }
+
+                    if (allLogs.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: allLogs })
+                        });
+                    }
+
+                    Swal.close();
+                    showAlert.success('Berhasil!', 'Semua data lokal telah terunggah ke Google Sheets.');
+                    await loadStats();
+                } catch (e) {
+                    Swal.close();
+                    showAlert.error('Gagal', 'Terjadi kesalahan jaringan: ' + e.message);
+                }
+            };
+
             const handleArchiveSemester = async () => {
                 const confirmRes = await showAlert.confirm(
                     'Arsipkan Data Semester?',
@@ -1584,6 +1677,9 @@
                             <p className="text-gray-500 font-medium text-sm">Dashboard master kontrol data {SCHOOL_IDENTITY.name}.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
+                            <Button variant="green" onClick={handleForcePushAllToCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                                <i className="fas fa-cloud-upload-alt"></i> Unggah Semua ke Cloud
+                            </Button>
                             <Button variant="secondary" onClick={() => navigate('/admin/archives')} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-folder-open"></i> Buka Arsip Semester
                             </Button>
@@ -3581,7 +3677,6 @@
             useEffect(() => {
                 async function init() {
                     await seedDatabaseClean();
-                    // Jalankan pull background tanpa menahan proses rendering UI
                     pullAllCloudData();
                     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW:', err));
 
