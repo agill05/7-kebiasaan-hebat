@@ -839,25 +839,34 @@
 
                         // FOOTER TANDA TANGAN DI HALAMAN SISWA
                         const finalY = doc.lastAutoTable.finalY + 25;
-                        const sigY = finalY > pageHeight - 75 ? pageHeight - 75 : finalY;
-                        const sigX = pageWidth - 180;
+                        const sigY = finalY > pageHeight - 85 ? pageHeight - 85 : finalY;
+                        const sigX = pageWidth - 190;
 
-                        doc.setFontSize(8);
+                        // Reset Warna Teks & Garis ke Hitam Pekat
+                        doc.setTextColor(0, 0, 0);
+                        doc.setDrawColor(0, 0, 0);
+
+                        // Lokasi & Jabatan
+                        doc.setFontSize(9);
                         doc.setFont('helvetica', 'normal');
                         doc.text(`Talaga Jaya, ${formatDisplayDate(today)}`, sigX, sigY);
-                        doc.text(user.role === ROLES.ADMIN ? 'Administrator Sistem,' : 'Guru Pembimbing / Wali Kelas,', sigX, sigY + 12);
+                        doc.text(user.role === ROLES.ADMIN ? 'Administrator Sistem,' : 'Guru Pembimbing / Wali Kelas,', sigX, sigY + 13);
 
-                        // Nama (Tebal & Garis Bawah Otomatis)
+                        // Nama Siswa / Guru (Ukuran 9.5pt, Bold Hitam Pekat)
+                        doc.setFontSize(9.5);
                         doc.setFont('helvetica', 'bold');
-                        doc.text(user.name, sigX, sigY + 45);
-                        const nameWidth = doc.getTextWidth(user.name);
-                        doc.setLineWidth(0.8);
-                        doc.line(sigX, sigY + 47, sigX + nameWidth, sigY + 47);
+                        doc.text(user.name, sigX, sigY + 48);
 
-                        // NIP
+                        // Garis Bawah Nama (Tebal & Hitam Solid)
+                        const nameWidth = doc.getTextWidth(user.name);
+                        doc.setLineWidth(1.1);
+                        doc.line(sigX, sigY + 50, sigX + nameWidth, sigY + 50);
+
+                        // NIP (Bold Hitam Pekat)
                         if (user.nip) {
+                            doc.setFontSize(9);
                             doc.setFont('helvetica', 'bold');
-                            doc.text(`NIP: ${user.nip}`, sigX, sigY + 58);
+                            doc.text(`NIP: ${user.nip}`, sigX, sigY + 62);
                         }
                     });
 
