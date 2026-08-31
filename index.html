@@ -31,6 +31,13 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- SheetJS (Excel Export) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- jsPDF & AutoTable (PDF Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -78,7 +85,34 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+        // ==========================================
+        // KONSTANTA & KONFIGURASI SISTEM
+        // ==========================================
+        const SESSION_STORAGE_KEY = 'seven_habits_session_v1';
+        const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 Menit Batas Tidak Aktif
+
+        const SCHOOL_IDENTITY = {
+            name: "SMP NEGERI 1 TALAGA JAYA",
+            district: "Kabupaten Gorontalo",
+            level: "SMP",
+            academicYear: "2026/2027"
+        };
+
+        const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
+
+        const HABITS_CONFIG = [
+            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi (WITA)', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur' },
+            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama (WITA)', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an' },
+            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga (WITA)', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit' },
+            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan (WITA)', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih' },
+            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar (WITA)', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit' },
+            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas (WITA)', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga' },
+            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
+        ];
+
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzD1Um1d0AC60Z39p_WS7u5Dwgs_CjrC7FDTX9GYojRtilomyB0hY9hkSKfqyw_yWpJ/exec";
 
         // ==========================================
         // SWEETALERT2 HELPER WRAPPER
@@ -90,10 +124,7 @@
                     title: title,
                     text: text,
                     confirmButtonColor: '#EF4444',
-                    customClass: {
-                        popup: 'rounded-2xl',
-                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
-                    }
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
                 });
             },
             error: (title, text = '') => {
@@ -102,10 +133,7 @@
                     title: title,
                     text: text,
                     confirmButtonColor: '#EF4444',
-                    customClass: {
-                        popup: 'rounded-2xl',
-                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
-                    }
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
                 });
             },
             warning: (title, text = '') => {
@@ -114,10 +142,7 @@
                     title: title,
                     text: text,
                     confirmButtonColor: '#EF4444',
-                    customClass: {
-                        popup: 'rounded-2xl',
-                        confirmButton: 'rounded-xl font-bold px-5 py-2.5'
-                    }
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
                 });
             },
             confirm: async (title, text = '', confirmText = 'Ya, Lanjutkan') => {
@@ -140,10 +165,8 @@
         };
 
         // ==========================================
-        // 1. KONFIGURASI API GOOGLE APPS SCRIPT
+        // DATE & TIME HELPERS
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzD1Um1d0AC60Z39p_WS7u5Dwgs_CjrC7FDTX9GYojRtilomyB0hY9hkSKfqyw_yWpJ/exec";
-
         const getTodayWitaDateString = () => {
             const formatter = new Intl.DateTimeFormat('en-CA', {
                 timeZone: 'Asia/Makassar',
@@ -168,11 +191,11 @@
             if (!dateStr) return '';
             const [y, m, d] = dateStr.split('-');
             const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
+            return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`;
         };
 
         // ==========================================
-        // 2. HELPER KRIPTOGRAFI (SHA-256 HASH)
+        // HELPER KRIPTOGRAFI
         // ==========================================
         async function hashPassword(text) {
             if (!text) return '';
@@ -183,7 +206,7 @@
         }
 
         // ==========================================
-        // 3. DATABASE CLIENT-SIDE (Dexie IndexedDB)
+        // DATABASE CLIENT-SIDE (Dexie IndexedDB)
         // ==========================================
         const db = new Dexie('SevenHabitsWitaDB');
         db.version(1).stores({
@@ -197,27 +220,8 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        const SCHOOL_IDENTITY = {
-            name: "SMP NEGERI 1 TALAGA JAYA",
-            district: "Kabupaten Gorontalo",
-            level: "SMP",
-            academicYear: "2026/2027"
-        };
-
-        const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
-
-        const HABITS_CONFIG = [
-            { id: 'h1', name: 'Bangun Pagi', description: 'Bangun pagi sebelum subuh dengan tubuh segar dan bersemangat', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi (WITA)', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur' },
-            { id: 'h2', name: 'Beribadah', description: 'Melaksanakan salat/ibadah tepat waktu sesuai agama dan keyakinan', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama (WITA)', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an' },
-            { id: 'h3', name: 'Berolahraga', description: 'Aktivitas fisik, senam pagi, atau olahraga ringan minimal 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga (WITA)', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit' },
-            { id: 'h4', name: 'Makan Sehat & Bergizi', description: 'Sarapan dan mengonsumsi makanan bersih, higienis, dan seimbang', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan (WITA)', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih' },
-            { id: 'h5', name: 'Gemar Belajar', description: 'Membaca buku pelajaran, literasi mandiri, atau mengulang materi', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar (WITA)', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit' },
-            { id: 'h6', name: 'Bermasyarakat', description: 'Membantu orang tua di rumah, sopan santun, dan peduli lingkungan', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas (WITA)', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga' },
-            { id: 'h7', name: 'Tidur Cepat', description: 'Istirahat malam tepat waktu sebelum pukul 21.30 agar bugar esok hari', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
-        ];
-
         // ==========================================
-        // 4. ENGINE SINKRONISASI
+        // ENGINE SINKRONISASI
         // ==========================================
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
@@ -225,100 +229,37 @@
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
-            // 1. Sync Habit Logs
-            const habitSyncs = pendingQueue.filter(q => q.tableName === 'habitLogs');
-            for (let item of habitSyncs) {
-                if (item.action === 'delete') {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'deleteHabitLog', payload: { id: item.recordId } })
-                    });
-                } else {
-                    const logData = await db.habitLogs.get(item.recordId);
-                    if (logData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncHabits', payload: [logData] })
-                        });
-                    }
-                }
-            }
-
-            // 2. Sync Journals
-            const journalSyncs = pendingQueue.filter(q => q.tableName === 'journals');
-            for (let item of journalSyncs) {
-                if (item.action === 'delete') {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'deleteJournal', payload: { id: item.recordId } })
-                    });
-                } else {
-                    const jData = await db.journals.get(item.recordId);
-                    if (jData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncJournal', payload: jData })
-                        });
-                    }
-                }
-            }
-
-            // 3. Sync Users
-            const userSyncs = pendingQueue.filter(q => q.tableName === 'users');
-            for (let uItem of userSyncs) {
-                if (uItem.action === 'delete') {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'deleteUser', payload: { id: uItem.recordId } })
-                    });
-                } else {
-                    const uData = await db.users.get(uItem.recordId);
-                    if (uData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncUser', payload: uData })
-                        });
-                    }
-                }
-            }
-
-            // 4. Sync Classes
-            const classSyncs = pendingQueue.filter(q => q.tableName === 'classes');
-            for (let cItem of classSyncs) {
-                if (cItem.action === 'delete') {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'deleteClass', payload: { id: cItem.recordId } })
-                    });
-                } else {
-                    const cData = await db.classes.get(cItem.recordId);
-                    if (cData) {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncClass', payload: cData })
-                        });
-                    }
-                }
-            }
-
             for (let item of pendingQueue) {
-                await db.syncQueue.update(item.id, { status: 'synced' });
+                try {
+                    let endpointAction = '';
+                    let payloadData = null;
+
+                    if (item.tableName === 'habitLogs') {
+                        endpointAction = item.action === 'delete' ? 'deleteHabitLog' : 'syncHabits';
+                        payloadData = item.action === 'delete' ? { id: item.recordId } : [await db.habitLogs.get(item.recordId)].filter(Boolean);
+                    } else if (item.tableName === 'journals') {
+                        endpointAction = item.action === 'delete' ? 'deleteJournal' : 'syncJournal';
+                        payloadData = item.action === 'delete' ? { id: item.recordId } : await db.journals.get(item.recordId);
+                    } else if (item.tableName === 'users') {
+                        endpointAction = item.action === 'delete' ? 'deleteUser' : 'syncUser';
+                        payloadData = item.action === 'delete' ? { id: item.recordId } : await db.users.get(item.recordId);
+                    } else if (item.tableName === 'classes') {
+                        endpointAction = item.action === 'delete' ? 'deleteClass' : 'syncClass';
+                        payloadData = item.action === 'delete' ? { id: item.recordId } : await db.classes.get(item.recordId);
+                    }
+
+                    if (endpointAction && payloadData) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: endpointAction, payload: payloadData })
+                        });
+                        await db.syncQueue.update(item.id, { status: 'synced' });
+                    }
+                } catch (e) {
+                    console.warn('Queue push error for record:', item.recordId, e);
+                }
             }
         }
 
@@ -335,7 +276,6 @@
                     const pendingLogIds = new Set(pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId));
                     const pendingJournalIds = new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId));
 
-                    // Rekonsiliasi Classes
                     if (Array.isArray(json.classes)) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
@@ -354,7 +294,6 @@
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
                     }
 
-                    // Rekonsiliasi Users
                     if (Array.isArray(json.users)) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || '').trim(),
@@ -362,7 +301,7 @@
                             name: String(u['Nama Lengkap'] || u['name'] || '').trim(),
                             role: String(u['Role'] || u['role'] || 'siswa').trim().toLowerCase(),
                             password: String(u['Password'] || u['password'] || '').trim(),
-                            phone: String(u['Nomor Telepon'] || u['Nomor WhatsApp'] || u['phone'] || '').trim(),
+                            phone: String(u['Nomor Telepon'] || u['phone'] || '').trim(),
                             className: String(u['Kelas'] || u['className'] || '').trim(),
                             classId: String(u['Class ID'] || u['classId'] || '').trim(),
                             nisn: String(u['NISN'] || u['nisn'] || '').trim(),
@@ -386,7 +325,6 @@
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
                     }
 
-                    // Rekonsiliasi Habit Logs
                     if (Array.isArray(json.habitLogs)) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
@@ -412,7 +350,6 @@
                         if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
                     }
 
-                    // Rekonsiliasi Journals
                     if (Array.isArray(json.journals)) {
                         const formattedJournals = json.journals.map(j => ({
                             id: String(j['ID Jurnal'] || j['id'] || '').trim(),
@@ -471,7 +408,7 @@
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [syncStatus, setSyncStatus] = useState('idle');
 
-            const fullSynchronize = async () => {
+            const fullSynchronize = useCallback(async () => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
                 setSyncStatus('syncing');
                 try {
@@ -483,7 +420,7 @@
                     setSyncStatus('error');
                     setTimeout(() => setSyncStatus('idle'), 4000);
                 }
-            };
+            }, []);
 
             useEffect(() => {
                 const handleOnline = () => { setIsOnline(true); fullSynchronize(); };
@@ -494,20 +431,20 @@
 
                 const interval = setInterval(() => {
                     if (navigator.onLine) fullSynchronize();
-                }, 30000);
+                }, 35000);
 
                 return () => {
                     window.removeEventListener('online', handleOnline);
                     window.removeEventListener('offline', handleOffline);
                     clearInterval(interval);
                 };
-            }, []);
+            }, [fullSynchronize]);
 
             return { isOnline, syncStatus, triggerSync: fullSynchronize, triggerManualPull: fullSynchronize };
         }
 
         // ==========================================
-        // 5. ATOM UI
+        // ATOM UI
         // ==========================================
         const Card = ({ children, className = '' }) => (
             <div className={`bg-white rounded-2xl shadow-soft p-5 border border-gray-100 ${className}`}>{children}</div>
@@ -522,7 +459,7 @@
                 green: 'bg-brand-green text-white hover:bg-emerald-600 shadow-md'
             };
             return (
-                <button type={type} disabled={disabled} onClick={onClick} className={`font-bold py-3 px-6 rounded-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${fullWidth ? 'w-full' : ''} ${className}`}>
+                <button type={type} disabled={disabled} onClick={onClick} className={`font-bold py-2.5 px-5 rounded-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${fullWidth ? 'w-full' : ''} ${className}`}>
                     {children}
                 </button>
             );
@@ -537,7 +474,7 @@
         );
 
         // ==========================================
-        // 6. LAYOUT UTAMA
+        // LAYOUT UTAMA
         // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, children }) => {
             const navItems = {
@@ -548,7 +485,8 @@
                     { path: '/student/profile', label: 'Profil Saya', icon: 'fas fa-user-graduate' },
                 ],
                 [ROLES.GURU]: [
-                    { path: '/teacher/dashboard', label: 'Siswa Binaan', icon: 'fas fa-chart-line' },
+                    { path: '/teacher/dashboard', label: 'Siswa Binaan', icon: 'fas fa-users' },
+                    { path: '/teacher/reports', label: 'Laporan & Rekap', icon: 'fas fa-file-invoice' },
                     { path: '/teacher/profile', label: 'Profil Saya', icon: 'fas fa-chalkboard-teacher' },
                 ],
                 [ROLES.ADMIN]: [
@@ -556,6 +494,7 @@
                     { path: '/admin/classes', label: 'Data Kelas', icon: 'fas fa-door-open' },
                     { path: '/admin/teachers', label: 'Data Guru', icon: 'fas fa-chalkboard-teacher' },
                     { path: '/admin/students', label: 'Data Siswa', icon: 'fas fa-user-graduate' },
+                    { path: '/admin/reports', label: 'Pusat Laporan', icon: 'fas fa-file-invoice' },
                     { path: '/admin/profile', label: 'Profil Admin', icon: 'fas fa-user-shield' },
                 ]
             }[user.role] || [];
@@ -584,7 +523,7 @@
                                     <p className="text-xs text-gray-400 capitalize">{user.role}</p>
                                 </div>
                             </div>
-                            <Button variant="white" fullWidth onClick={onLogout} className="text-xs py-2">
+                            <Button variant="white" fullWidth onClick={() => onLogout(false)} className="text-xs py-2">
                                 <i className="fas fa-sign-out-alt mr-2"></i> Keluar
                             </Button>
                         </div>
@@ -609,24 +548,24 @@
                                     <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
                                     <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
                                 </button>
-                                <button onClick={onLogout} className="md:hidden w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+                                <button onClick={() => onLogout(false)} className="md:hidden w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
                                     <i className="fas fa-power-off text-xs"></i>
                                 </button>
                             </div>
                         </header>
 
                         {!isOnline && (
-                            <div className="bg-orange-500 text-white text-center py-1 text-xs font-bold shadow-sm">
-                                🛡️ Mode Offline Aktif. Data tersimpan lokal di browser/HP dan akan diunggah saat online.
+                            <div className="bg-orange-500 text-white text-center py-1 text-xs font-bold shadow-sm no-print">
+                                🛡️ Mode Offline Aktif. Data tersimpan lokal di HP/komputer dan akan diunggah otomatis saat tersambung internet.
                             </div>
                         )}
 
-                        <div className="p-4 md:p-8 max-w-5xl mx-auto">{children}</div>
+                        <div className="p-4 md:p-8 max-w-6xl mx-auto">{children}</div>
                     </main>
 
                     <nav className="md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 flex justify-around items-center px-2 py-2 no-print">
                         {navItems.map(item => (
-                            <button key={item.path} onClick={() => navigate(item.path)} className={`flex flex-col items-center p-1.5 min-w-[65px] ${currentPath === item.path ? 'text-brand-red' : 'text-gray-400'}`}>
+                            <button key={item.path} onClick={() => navigate(item.path)} className={`flex flex-col items-center p-1.5 min-w-[60px] ${currentPath === item.path ? 'text-brand-red' : 'text-gray-400'}`}>
                                 <i className={`${item.icon} text-lg mb-1`}></i>
                                 <span className="text-[10px] font-bold">{item.label}</span>
                             </button>
@@ -637,7 +576,441 @@
         };
 
         // ==========================================
-        // 7. MODUL SISWA
+        // MODUL LAPORAN & EKSPOR (GURU & ADMIN)
+        // ==========================================
+        const ReportsModule = ({ user }) => {
+            const today = getTodayWitaDateString();
+            const [reportType, setReportType] = useState('habits'); // 'habits' | 'journals'
+            const [startDate, setStartDate] = useState(today);
+            const [endDate, setEndDate] = useState(today);
+            const [selectedClassId, setSelectedClassId] = useState('all');
+            const [selectedStudentId, setSelectedStudentId] = useState('all');
+            const [selectedScope, setSelectedScope] = useState('all'); // for teacher: 'all' | 'homeroom' | 'mentor'
+
+            const [classes, setClasses] = useState([]);
+            const [students, setStudents] = useState([]);
+            const [habitLogs, setHabitLogs] = useState([]);
+            const [journals, setJournals] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            const loadReportData = async () => {
+                setLoading(true);
+                const c = await db.classes.toArray();
+                const s = await db.users.where('role').equals(ROLES.SISWA).toArray();
+                const hl = await db.habitLogs.toArray();
+                const j = await db.journals.toArray();
+
+                setClasses(c);
+                setStudents(s);
+                setHabitLogs(hl);
+                setJournals(j);
+                setLoading(false);
+            };
+
+            useEffect(() => { loadReportData(); }, []);
+
+            // Siswa yang dapat diakses berdasarkan Role
+            const accessibleStudents = useMemo(() => {
+                if (user.role === ROLES.ADMIN) return students;
+                return students.filter(s => {
+                    const isHomeroom = user.homeroomClassId && s.classId === user.homeroomClassId;
+                    const isMentor = s.mentorId === user.id;
+                    if (selectedScope === 'homeroom') return isHomeroom;
+                    if (selectedScope === 'mentor') return isMentor;
+                    return isHomeroom || isMentor;
+                });
+            }, [students, user, selectedScope]);
+
+            // Data Siswa Terfilter Berdasarkan Kelas & Pilihan Siswa
+            const filteredStudentIds = useMemo(() => {
+                let list = accessibleStudents;
+                if (user.role === ROLES.ADMIN && selectedClassId !== 'all') {
+                    list = list.filter(s => s.classId === selectedClassId);
+                }
+                if (selectedStudentId !== 'all') {
+                    list = list.filter(s => s.id === selectedStudentId);
+                }
+                return new Set(list.map(s => s.id));
+            }, [accessibleStudents, selectedClassId, selectedStudentId, user.role]);
+
+            // Data Laporan Terfilter Berdasarkan Rentang Tanggal
+            const filteredHabitLogs = useMemo(() => {
+                return habitLogs.filter(l => {
+                    return filteredStudentIds.has(l.userId) &&
+                        l.date >= startDate &&
+                        l.date <= endDate;
+                }).sort((a, b) => b.date.localeCompare(a.date) || a.studentName.localeCompare(b.studentName));
+            }, [habitLogs, filteredStudentIds, startDate, endDate]);
+
+            const filteredJournals = useMemo(() => {
+                return journals.filter(j => {
+                    return filteredStudentIds.has(j.userId) &&
+                        j.date >= startDate &&
+                        j.date <= endDate;
+                }).sort((a, b) => b.date.localeCompare(a.date) || a.studentName.localeCompare(b.studentName));
+            }, [journals, filteredStudentIds, startDate, endDate]);
+
+            // STATISTIK RINGKASAN LAPORAN
+            const reportStats = useMemo(() => {
+                if (reportType === 'habits') {
+                    const totalRecords = filteredHabitLogs.length;
+                    const completedCount = filteredHabitLogs.filter(l => l.completed).length;
+                    const completionRate = totalRecords > 0 ? Math.round((completedCount / totalRecords) * 100) : 0;
+                    return { total: totalRecords, completed: completedCount, rate: completionRate };
+                } else {
+                    return { total: filteredJournals.length };
+                }
+            }, [reportType, filteredHabitLogs, filteredJournals]);
+
+            // EKSPOR EXCEL MENGGUNAKAN SHEETJS
+            const handleExportExcel = () => {
+                if (reportType === 'habits') {
+                    if (filteredHabitLogs.length === 0) {
+                        showAlert.warning('Data Kosong', 'Tidak ada data log kebiasaan pada periode dan filter yang dipilih.');
+                        return;
+                    }
+
+                    const excelData = filteredHabitLogs.map((l, index) => {
+                        const std = students.find(s => s.id === l.userId);
+                        return {
+                            'No': index + 1,
+                            'Tanggal': l.date,
+                            'NISN': std?.nisn || '-',
+                            'Nama Siswa': l.studentName,
+                            'Kelas': l.className || std?.className || '-',
+                            'Guru Mentor': std?.mentorName || '-',
+                            'Pilar Kebiasaan': l.habitName,
+                            'Status': l.completed ? 'Selesai' : 'Belum Selesai',
+                            'Jam Pelaksanaan (WITA)': l.timeValue || '-',
+                            'Keterangan Aktivitas': l.detailValue || '-'
+                        };
+                    });
+
+                    const worksheet = XLSX.utils.json_to_sheet(excelData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap 7 Kebiasaan");
+
+                    const fileName = `Rekap_7Kebiasaan_${SCHOOL_IDENTITY.name.replace(/\s+/g, '_')}_${startDate}_sd_${endDate}.xlsx`;
+                    XLSX.writeFile(workbook, fileName);
+                    showAlert.success('Berhasil Diunduh', `File Excel ${fileName} berhasil diekspor.`);
+                } else {
+                    if (filteredJournals.length === 0) {
+                        showAlert.warning('Data Kosong', 'Tidak ada data jurnal refleksi pada periode dan filter yang dipilih.');
+                        return;
+                    }
+
+                    const excelData = filteredJournals.map((j, index) => {
+                        const std = students.find(s => s.id === j.userId);
+                        return {
+                            'No': index + 1,
+                            'Tanggal Refleksi': j.date,
+                            'NISN': std?.nisn || '-',
+                            'Nama Siswa': j.studentName,
+                            'Kelas': j.className || std?.className || '-',
+                            'Guru Mentor': std?.mentorName || '-',
+                            'Suasana Hati (Mood)': j.mood,
+                            'Catatan Refleksi & Pembelajaran': j.content
+                        };
+                    });
+
+                    const worksheet = XLSX.utils.json_to_sheet(excelData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Jurnal");
+
+                    const fileName = `Rekap_Jurnal_${SCHOOL_IDENTITY.name.replace(/\s+/g, '_')}_${startDate}_sd_${endDate}.xlsx`;
+                    XLSX.writeFile(workbook, fileName);
+                    showAlert.success('Berhasil Diunduh', `File Excel ${fileName} berhasil diekspor.`);
+                }
+            };
+
+            // EKSPOR PDF MENGGUNAKAN JSPDF + AUTOTABLE
+            const handleExportPDF = () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('landscape', 'pt', 'a4');
+
+                // Header Resmi Dokumen Sekolah
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.text(SCHOOL_IDENTITY.name.toUpperCase(), doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`LAPORAN REKAPITULASI PROGRAM 7 KEBIASAAN ANAK INDONESIA HEBAT`, doc.internal.pageSize.getWidth() / 2, 56, { align: 'center' });
+                doc.text(`Periode: ${formatDisplayDate(startDate)} s.d. ${formatDisplayDate(endDate)} • Tahun Ajaran ${SCHOOL_IDENTITY.academicYear}`, doc.internal.pageSize.getWidth() / 2, 70, { align: 'center' });
+
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(1);
+                doc.line(40, 80, doc.internal.pageSize.getWidth() - 40, 80);
+
+                if (reportType === 'habits') {
+                    if (filteredHabitLogs.length === 0) {
+                        showAlert.warning('Data Kosong', 'Tidak ada data log kebiasaan untuk dicetak.');
+                        return;
+                    }
+
+                    const tableRows = filteredHabitLogs.map((l, index) => {
+                        const std = students.find(s => s.id === l.userId);
+                        return [
+                            index + 1,
+                            l.date,
+                            l.studentName,
+                            l.className || std?.className || '-',
+                            l.habitName,
+                            l.completed ? 'Selesai' : 'Belum',
+                            l.timeValue || '-',
+                            l.detailValue || '-'
+                        ];
+                    });
+
+                    doc.autoTable({
+                        startY: 90,
+                        head: [['No', 'Tanggal', 'Nama Siswa', 'Kelas', 'Kebiasaan', 'Status', 'Jam', 'Keterangan Aktivitas']],
+                        body: tableRows,
+                        theme: 'grid',
+                        headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                        styles: { fontSize: 8, cellPadding: 4, valign: 'middle' },
+                        columnStyles: {
+                            0: { halign: 'center', cellWidth: 25 },
+                            1: { halign: 'center', cellWidth: 55 },
+                            2: { cellWidth: 110 },
+                            3: { halign: 'center', cellWidth: 45 },
+                            4: { cellWidth: 95 },
+                            5: { halign: 'center', cellWidth: 45 },
+                            6: { halign: 'center', cellWidth: 40 },
+                            7: { cellWidth: 'auto' }
+                        }
+                    });
+                } else {
+                    if (filteredJournals.length === 0) {
+                        showAlert.warning('Data Kosong', 'Tidak ada data jurnal untuk dicetak.');
+                        return;
+                    }
+
+                    const tableRows = filteredJournals.map((j, index) => {
+                        const std = students.find(s => s.id === j.userId);
+                        return [
+                            index + 1,
+                            j.date,
+                            j.studentName,
+                            j.className || std?.className || '-',
+                            j.mood,
+                            j.content
+                        ];
+                    });
+
+                    doc.autoTable({
+                        startY: 90,
+                        head: [['No', 'Tanggal', 'Nama Siswa', 'Kelas', 'Suasana Hati (Mood)', 'Isi Refleksi Harian']],
+                        body: tableRows,
+                        theme: 'grid',
+                        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                        styles: { fontSize: 8, cellPadding: 5, valign: 'middle' },
+                        columnStyles: {
+                            0: { halign: 'center', cellWidth: 25 },
+                            1: { halign: 'center', cellWidth: 65 },
+                            2: { cellWidth: 120 },
+                            3: { halign: 'center', cellWidth: 50 },
+                            4: { halign: 'center', cellWidth: 90 },
+                            5: { cellWidth: 'auto' }
+                        }
+                    });
+                }
+
+                // Footer Tanda Tangan
+                const finalY = (doc.lastAutoTable.finalY || 100) + 30;
+                if (finalY < doc.internal.pageSize.getHeight() - 80) {
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    doc.setFontSize(9);
+                    doc.text(`Talaga Jaya, ${formatDisplayDate(today)}`, pageWidth - 180, finalY);
+                    doc.text(user.role === ROLES.ADMIN ? 'Administrator Sistem,' : 'Guru Pembimbing / Wali Kelas,', pageWidth - 180, finalY + 15);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(user.name, pageWidth - 180, finalY + 55);
+                    if (user.nip) doc.text(`NIP: ${user.nip}`, pageWidth - 180, finalY + 67);
+                }
+
+                const fileName = `Laporan_${reportType === 'habits' ? '7Kebiasaan' : 'Jurnal'}_${startDate}_sd_${endDate}.pdf`;
+                doc.save(fileName);
+                showAlert.success('Berhasil Diunduh', `File PDF ${fileName} siap dicetak.`);
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">📊 Pusat Laporan & Rekapitulasi</h1>
+                            <p className="text-gray-500 font-medium text-sm">Rekapitulasi pencatatan pembiasaan karakter dan jurnal refleksi siswa.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="green" onClick={handleExportExcel} className="text-xs py-2 px-3.5 flex items-center gap-1.5">
+                                <i className="fas fa-file-excel"></i> Ekspor Excel (.xlsx)
+                            </Button>
+                            <Button variant="primary" onClick={handleExportPDF} className="text-xs py-2 px-3.5 flex items-center gap-1.5">
+                                <i className="fas fa-file-pdf"></i> Cetak / Unduh PDF
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* FILTER PANEL */}
+                    <Card className="no-print space-y-4">
+                        <div className="flex gap-2 border-b border-gray-100 pb-3 overflow-x-auto text-xs font-extrabold">
+                            <button onClick={() => setReportType('habits')} className={`px-4 py-2 rounded-xl transition-all ${reportType === 'habits' ? 'bg-brand-red text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
+                                <i className="fas fa-check-circle mr-1.5"></i> Rekap 7 Kebiasaan Siswa
+                            </button>
+                            <button onClick={() => setReportType('journals')} className={`px-4 py-2 rounded-xl transition-all ${reportType === 'journals' ? 'bg-brand-blue text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
+                                <i className="fas fa-book mr-1.5"></i> Rekap Jurnal Refleksi
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Mulai Tanggal</label>
+                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark" />
+                            </div>
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Sampai Tanggal</label>
+                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark" />
+                            </div>
+
+                            {user.role === ROLES.ADMIN ? (
+                                <div>
+                                    <label className="block font-bold text-gray-600 mb-1">Filter Kelas</label>
+                                    <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark">
+                                        <option value="all">-- Semua Rombel / Kelas --</option>
+                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block font-bold text-gray-600 mb-1">Kategori Binaan Guru</label>
+                                    <select value={selectedScope} onChange={e => setSelectedScope(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark">
+                                        <option value="all">Semua Siswa Binaan Saya</option>
+                                        <option value="homeroom">Kelas Binaan (Wali Kelas)</option>
+                                        <option value="mentor">Kelompok Mentoring</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Pilih Siswa Spesifik</label>
+                                <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark">
+                                    <option value="all">-- Semua Siswa Terkait --</option>
+                                    {accessibleStudents.map(s => <option key={s.id} value={s.id}>{s.name} ({s.className || '-'})</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* STATISTIK RINGKAS */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="text-center py-4 bg-gradient-to-br from-red-50 to-white border-red-100">
+                            <span className="text-2xl font-black text-brand-red">{reportStats.total}</span>
+                            <p className="text-xs font-bold text-gray-500 uppercase mt-1">Total Catatan Tercatat</p>
+                        </Card>
+                        {reportType === 'habits' ? (
+                            <>
+                                <Card className="text-center py-4 bg-gradient-to-br from-green-50 to-white border-green-100">
+                                    <span className="text-2xl font-black text-brand-green">{reportStats.completed}</span>
+                                    <p className="text-xs font-bold text-gray-500 uppercase mt-1">Kebiasaan Selesai</p>
+                                </Card>
+                                <Card className="text-center py-4 bg-gradient-to-br from-blue-50 to-white border-blue-100">
+                                    <span className="text-2xl font-black text-brand-blue">{reportStats.rate}%</span>
+                                    <p className="text-xs font-bold text-gray-500 uppercase mt-1">Tingkat Kepatuhan</p>
+                                </Card>
+                            </>
+                        ) : (
+                            <Card className="text-center py-4 bg-gradient-to-br from-blue-50 to-white border-blue-100 md:col-span-2">
+                                <span className="text-2xl font-black text-brand-blue">{reportStats.total} Siswa</span>
+                                <p className="text-xs font-bold text-gray-500 uppercase mt-1">Refleksi Terkumpul</p>
+                            </Card>
+                        )}
+                    </div>
+
+                    {/* PRATINJAU TABEL DATA */}
+                    <Card>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-extrabold text-sm text-brand-dark">
+                                Pratinjau Tabel Laporan ({reportType === 'habits' ? `${filteredHabitLogs.length} Baris` : `${filteredJournals.length} Baris`})
+                            </h3>
+                        </div>
+
+                        {loading ? (
+                            <div className="text-center py-10 text-xs font-bold text-gray-400">
+                                <i className="fas fa-spinner fa-spin mr-2"></i> Memuat data laporan...
+                            </div>
+                        ) : reportType === 'habits' ? (
+                            filteredHabitLogs.length === 0 ? (
+                                <EmptyState icon="📋" title="Tidak Ada Log Kebiasaan" description="Coba ubah rentang tanggal atau filter siswa untuk melihat data." />
+                            ) : (
+                                <div className="overflow-x-auto max-h-[450px] overflow-y-auto">
+                                    <table className="w-full text-left text-xs whitespace-nowrap">
+                                        <thead className="bg-gray-50 text-gray-500 font-bold sticky top-0">
+                                            <tr>
+                                                <th className="p-3">Tanggal</th>
+                                                <th className="p-3">Nama Siswa</th>
+                                                <th className="p-3">Kelas</th>
+                                                <th className="p-3">Kebiasaan</th>
+                                                <th className="p-3">Jam (WITA)</th>
+                                                <th className="p-3">Keterangan</th>
+                                                <th className="p-3 text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredHabitLogs.map(l => (
+                                                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/60">
+                                                    <td className="p-3 font-semibold text-gray-600">{l.date}</td>
+                                                    <td className="p-3 font-extrabold text-brand-dark">{l.studentName}</td>
+                                                    <td className="p-3 font-bold text-brand-red">{l.className || '-'}</td>
+                                                    <td className="p-3 font-semibold text-gray-700">{l.habitName}</td>
+                                                    <td className="p-3 font-bold text-brand-blue">{l.timeValue || '-'}</td>
+                                                    <td className="p-3 text-gray-600 max-w-xs truncate">{l.detailValue || '-'}</td>
+                                                    <td className="p-3 text-center">
+                                                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${l.completed ? 'bg-green-100 text-brand-green' : 'bg-gray-100 text-gray-500'}`}>
+                                                            {l.completed ? 'Selesai' : 'Belum'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )
+                        ) : (
+                            filteredJournals.length === 0 ? (
+                                <EmptyState icon="📖" title="Tidak Ada Jurnal Refleksi" description="Coba ubah rentang tanggal atau filter siswa untuk melihat data." />
+                            ) : (
+                                <div className="overflow-x-auto max-h-[450px] overflow-y-auto">
+                                    <table className="w-full text-left text-xs whitespace-nowrap">
+                                        <thead className="bg-gray-50 text-gray-500 font-bold sticky top-0">
+                                            <tr>
+                                                <th className="p-3">Tanggal</th>
+                                                <th className="p-3">Nama Siswa</th>
+                                                <th className="p-3">Kelas</th>
+                                                <th className="p-3">Suasana Hati</th>
+                                                <th className="p-3">Isi Refleksi Harian</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredJournals.map(j => (
+                                                <tr key={j.id} className="border-b border-gray-50 hover:bg-gray-50/60">
+                                                    <td className="p-3 font-semibold text-gray-600">{j.date}</td>
+                                                    <td className="p-3 font-extrabold text-brand-dark">{j.studentName}</td>
+                                                    <td className="p-3 font-bold text-brand-red">{j.className || '-'}</td>
+                                                    <td className="p-3 font-bold">{j.mood}</td>
+                                                    <td className="p-3 text-gray-700 whitespace-normal max-w-md">{j.content}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )
+                        )}
+                    </Card>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync }) => {
             const todayStr = getTodayWitaDateString();
@@ -1109,7 +1482,7 @@
         };
 
         // ==========================================
-        // 8. MODUL GURU
+        // MODUL GURU
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
@@ -1191,7 +1564,6 @@
 
                 const allExistingUsers = await db.users.toArray();
                 
-                // 1. Cek Duplikasi Username
                 const duplicateUsername = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.username.toLowerCase() === targetUsername.toLowerCase()
@@ -1204,7 +1576,6 @@
                     return;
                 }
 
-                // 2. Cek Duplikasi Nama Lengkap
                 const duplicateName = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.name.toLowerCase() === targetName.toLowerCase()
@@ -1217,7 +1588,6 @@
                     return;
                 }
 
-                // 3. Cek Duplikasi NISN
                 if (targetNisn !== '' && targetNisn !== '-') {
                     const duplicateNisn = allExistingUsers.find(u => 
                         u.id !== currentId && 
@@ -1594,7 +1964,7 @@
         };
 
         // ==========================================
-        // 9. MODUL ADMIN
+        // MODUL ADMIN
         // ==========================================
         const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1871,7 +2241,6 @@
 
                 const allExistingUsers = await db.users.toArray();
                 
-                // 1. Cek Duplikasi Username
                 const duplicateUsername = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.username.toLowerCase() === targetUsername.toLowerCase()
@@ -1884,7 +2253,6 @@
                     return;
                 }
 
-                // 2. Cek Duplikasi Nama Lengkap
                 const duplicateName = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.name.toLowerCase() === targetName.toLowerCase()
@@ -1897,7 +2265,6 @@
                     return;
                 }
 
-                // 3. Cek Duplikasi NIP / NIK
                 if (targetNip !== '' && targetNip !== '-') {
                     const duplicateNip = allExistingUsers.find(u => 
                         u.id !== currentId && 
@@ -2159,7 +2526,6 @@
 
                 const allExistingUsers = await db.users.toArray();
                 
-                // 1. Cek Duplikasi Username
                 const duplicateUsername = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.username.toLowerCase() === targetUsername.toLowerCase()
@@ -2172,7 +2538,6 @@
                     return;
                 }
 
-                // 2. Cek Duplikasi Nama Lengkap
                 const duplicateName = allExistingUsers.find(u => 
                     u.id !== currentId && 
                     u.name.toLowerCase() === targetName.toLowerCase()
@@ -2185,7 +2550,6 @@
                     return;
                 }
 
-                // 3. Cek Duplikasi NISN
                 if (targetNisn !== '' && targetNisn !== '-') {
                     const duplicateNisn = allExistingUsers.find(u => 
                         u.id !== currentId && 
@@ -2486,7 +2850,7 @@
         };
 
         // ==========================================
-        // 10. LOGIN & LANDING
+        // LOGIN & LANDING
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -2638,13 +3002,29 @@
         };
 
         // ==========================================
-        // 11. ROOT CONTROLLER
+        // ROOT CONTROLLER (DENGAN SESI & INACTIVITY LOGOUT)
         // ==========================================
         const App = () => {
             const [currentPath, setCurrentPath] = useState('/');
             const [user, setUser] = useState(null);
             const { isOnline, syncStatus, triggerSync, triggerManualPull } = useOnlineSyncEngine();
+            const lastActivityRef = useRef(Date.now());
 
+            // Helper Update Timestamp Aktivitas Sesi
+            const recordUserActivity = useCallback(() => {
+                const now = Date.now();
+                lastActivityRef.current = now;
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.lastActive = now;
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (err) {}
+                }
+            }, []);
+
+            // Inisialisasi & Restore Sesi dari LocalStorage
             useEffect(() => {
                 async function init() {
                     await seedDatabaseClean();
@@ -2652,20 +3032,109 @@
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW Notice:', err));
                     }
+
+                    // Cek Sesi yang Ada
+                    const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                    if (sessionRaw) {
+                        try {
+                            const session = JSON.parse(sessionRaw);
+                            const now = Date.now();
+                            if (session.user && (now - session.lastActive < INACTIVITY_TIMEOUT_MS)) {
+                                setUser(session.user);
+                                setCurrentPath(session.path || (session.user.role === ROLES.SISWA ? '/student/habits' : session.user.role === ROLES.GURU ? '/teacher/dashboard' : '/admin/dashboard'));
+                                recordUserActivity();
+                            } else {
+                                localStorage.removeItem(SESSION_STORAGE_KEY);
+                            }
+                        } catch (e) {
+                            localStorage.removeItem(SESSION_STORAGE_KEY);
+                        }
+                    }
                 }
                 init();
-            }, []);
+            }, [recordUserActivity]);
 
-            const navigate = (path) => { setCurrentPath(path); window.scrollTo(0, 0); };
+            // Deteksi Aktivitas Pengguna (Mouse, Keyboard, Touch, Scroll)
+            useEffect(() => {
+                const handleActivity = () => recordUserActivity();
+
+                const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+                events.forEach(ev => window.addEventListener(ev, handleActivity, { passive: true }));
+
+                // Pengecekan Timer Idle Setiap 10 Detik
+                const interval = setInterval(() => {
+                    const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                    if (sessionRaw) {
+                        try {
+                            const session = JSON.parse(sessionRaw);
+                            const now = Date.now();
+                            if (now - session.lastActive >= INACTIVITY_TIMEOUT_MS) {
+                                handleLogout(true);
+                            }
+                        } catch (e) {}
+                    }
+                }, 10000);
+
+                return () => {
+                    events.forEach(ev => window.removeEventListener(ev, handleActivity));
+                    clearInterval(interval);
+                };
+            }, [recordUserActivity]);
+
+            const navigate = (path) => {
+                setCurrentPath(path);
+                window.scrollTo(0, 0);
+                // Simpan Path Terakhir ke Sesi
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.path = path;
+                        session.lastActive = Date.now();
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (e) {}
+                }
+            };
 
             const handleLogin = (u) => {
                 setUser(u);
-                if (u.role === ROLES.SISWA) navigate('/student/habits');
-                else if (u.role === ROLES.GURU) navigate('/teacher/dashboard');
-                else if (u.role === ROLES.ADMIN) navigate('/admin/dashboard');
+                let defaultPath = '/student/habits';
+                if (u.role === ROLES.GURU) defaultPath = '/teacher/dashboard';
+                else if (u.role === ROLES.ADMIN) defaultPath = '/admin/dashboard';
+
+                // Simpan Sesi Baru ke LocalStorage
+                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+                    user: u,
+                    lastActive: Date.now(),
+                    path: defaultPath
+                }));
+
+                navigate(defaultPath);
             };
 
-            const handleLogout = () => { setUser(null); navigate('/'); };
+            const handleLogout = (isTimeout = false) => {
+                localStorage.removeItem(SESSION_STORAGE_KEY);
+                setUser(null);
+                navigate('/');
+                if (isTimeout) {
+                    showAlert.warning(
+                        'Sesi Berakhir',
+                        'Anda telah otomatis keluar karena tidak ada aktivitas selama 15 menit.'
+                    );
+                }
+            };
+
+            const handleUpdateAdminProfile = (updatedUser) => {
+                setUser(updatedUser);
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.user = updatedUser;
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (e) {}
+                }
+            };
 
             if (currentPath === '/') return <LandingPage onStart={() => navigate('/login')} />;
             if (currentPath === '/login') return <LoginPage onLogin={handleLogin} onBack={() => navigate('/')} triggerManualPull={triggerManualPull} />;
@@ -2673,19 +3142,24 @@
 
             let content = null;
             switch (currentPath) {
+                // Rute Siswa
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Rute Guru
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
+                case '/teacher/reports': content = <ReportsModule user={user} />; break;
                 case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
 
+                // Rute Admin
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
-                case '/admin/profile': content = <AdminProfilePage user={user} onUpdateAdmin={setUser} triggerSync={triggerSync} />; break;
+                case '/admin/reports': content = <ReportsModule user={user} />; break;
+                case '/admin/profile': content = <AdminProfilePage user={user} onUpdateAdmin={handleUpdateAdminProfile} triggerSync={triggerSync} />; break;
 
                 default: content = <StudentHabitsPage user={user} triggerSync={triggerSync} />; break;
             }
