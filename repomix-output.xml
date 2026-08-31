@@ -1,3 +1,139 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: index.html, manifest.json, sw.js, vercel.json
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+manifest.json
+sw.js
+vercel.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="manifest.json">
+{
+    "name": "7 Kebiasaan Anak Indonesia Hebat",
+    "short_name": "7 Kebiasaan",
+    "description": "Aplikasi Pembiasaan Karakter Positif Siswa SMP Negeri 1 Talaga Jaya",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F9FAFB",
+    "theme_color": "#EF4444",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇮🇩</text></svg>",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+</file>
+
+<file path="vercel.json">
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
+</file>
+
+<file path="sw.js">
+const CACHE_NAME = "7kebiasaan-cache-v1";
+const ASSETS_TO_CACHE = [
+    "/",
+    "/index.html",
+    "/manifest.json",
+    "https://unpkg.com/react@18/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone/babel.min.js",
+    "https://cdn.tailwindcss.com",
+    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdn.jsdelivr.net/npm/sweetalert2@11",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                }),
+            ),
+        ),
+    );
+    self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Jangan cache permintaan POST/GET API Google Apps Script
+    if (event.request.url.includes("script.google.com")) {
+        return;
+    }
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            return (
+                cachedResponse ||
+                fetch(event.request).catch(() => caches.match("/index.html"))
+            );
+        }),
+    );
+});
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -160,7 +296,7 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // BATCH SYNC ENGINE
+        // BATCH SYNC ENGINE (OPTIMASI POINT 1)
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
@@ -527,7 +663,7 @@
 
                         {!isOnline && (
                             <div className="bg-orange-500 text-white text-center py-1 text-xs font-bold shadow-sm no-print">
-                                🛡️ Mode Offline Aktif. Data tersimpan lokal di HP/komputer dan otomatis tersinkron saat tersambung internet.
+                                🛡️ Mode Offline Aktif. Data tersimpan lokal di perangkat dan otomatis tersinkron saat tersambung internet.
                             </div>
                         )}
 
@@ -610,6 +746,7 @@
 
             useEffect(() => { loadLogs(); }, [user.id]);
 
+            // FITUR 2.A: TOMBOL TANDAI RUTINITAS PAGI (QUICK FILL)
             const handleQuickFillMorning = async () => {
                 const confirmRes = await showAlert.confirm(
                     'Tandai Rutinitas Pagi?',
@@ -726,6 +863,7 @@
 
             const completedCount = Object.values(logs).filter(l => l.completed).length;
 
+            // GAMIFIKASI: LENCANA PENCAPAIAN SISWA
             const badges = useMemo(() => [
                 { id: 'b1', name: 'Pejuang Fajar', desc: 'Rutinitas Pagi', icon: '🌅', unlocked: !!logs['h1']?.completed },
                 { id: 'b2', name: 'Karakter Hebat', desc: '7/7 Hari Ini', icon: '🌟', unlocked: completedCount === 7 },
@@ -751,6 +889,7 @@
                         </div>
                     </div>
 
+                    {/* KARTU PROGRES & LENCANA KARAKTER */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <Card className="lg:col-span-2 bg-gradient-to-r from-brand-red to-red-600 text-white flex justify-between items-center shadow-lg">
                             <div>
@@ -776,6 +915,7 @@
                         </Card>
                     </div>
 
+                    {/* KISI 7 KEBIASAAN */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {HABITS_CONFIG.map(habit => {
                             const entry = logs[habit.id];
@@ -1073,8 +1213,8 @@
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
             const [selectedTab, setSelectedTab] = useState('all');
-            const [filterAlphaOnly, setFilterAlphaOnly] = useState(false);
-            const [searchQuery, setSearchQuery] = useState('');
+            const [filterAlphaOnly, setFilterAlphaOnly] = useState(false); // FITUR 2.B: ALPHA TRACKER
+            const [searchQuery, setSearchQuery] = useState(''); // FITUR 3: SMART SEARCH
             const [selectedDate, setSelectedDate] = useState(getTodayWitaDateString());
             const [classLogs, setClassLogs] = useState([]);
 
@@ -1223,6 +1363,7 @@
                         </div>
                     </div>
 
+                    {/* SMART SEARCH BAR & FILTER TABS */}
                     <Card className="space-y-3 p-4">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
                             <div className="relative w-full md:w-80">
@@ -1250,6 +1391,7 @@
                         </div>
                     </Card>
 
+                    {/* DAFTAR SISWA */}
                     {filteredStudents.length === 0 ? (
                         <Card><EmptyState icon="👦" title="Tidak Ada Siswa Ditemukan" description="Coba sesuaikan pencarian atau nonaktifkan filter siswa belum mengisi." /></Card>
                     ) : (
@@ -1307,6 +1449,7 @@
                         </div>
                     )}
 
+                    {/* MODAL APRESIASI JURNAL GURU */}
                     {feedbackModalJournal && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md shadow-2xl space-y-3">
@@ -1326,6 +1469,7 @@
                         </div>
                     )}
 
+                    {/* MODAL TAMBAH/EDIT SISWA */}
                     {isStudentModalOpen && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md shadow-2xl">
@@ -1431,6 +1575,7 @@
 
             useEffect(() => { loadStats(); }, []);
 
+            // FITUR 2.C: ALAT PENGARSIPAN SEMESTER
             const handleArchiveSemester = async () => {
                 const confirmRes = await showAlert.confirm(
                     'Arsipkan Data Semester?',
@@ -1639,6 +1784,7 @@
                 return teachers.filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.username.toLowerCase().includes(searchQuery.toLowerCase()) || (t.nip && t.nip.includes(searchQuery)));
             }, [teachers, searchQuery]);
 
+            // FITUR 2.C: IMPORT MASSAL EXCEL GURU
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1664,11 +1810,18 @@
                             const id = `u_guru_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
                             const teacherObj = {
-                                id, username, password: hashedPassword, name,
+                                id,
+                                username,
+                                password: hashedPassword,
+                                name,
                                 phone: String(row['Telepon'] || row['Nomor Telepon'] || '').trim(),
                                 nip: String(row['NIP'] || '').trim(),
                                 subject: String(row['Mapel'] || row['Mata Pelajaran'] || 'Umum').trim(),
-                                homeroomClassId: '', role: ROLES.GURU, avatar: '👨‍🏫', status: 'Aktif', createdAt: new Date()
+                                homeroomClassId: '',
+                                role: ROLES.GURU,
+                                avatar: '👨‍🏫',
+                                status: 'Aktif',
+                                createdAt: new Date()
                             };
 
                             newTeachers.push(teacherObj);
@@ -1813,6 +1966,7 @@
                 return students.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.username.toLowerCase().includes(searchQuery.toLowerCase()) || (s.nisn && s.nisn.includes(searchQuery)));
             }, [students, searchQuery]);
 
+            // FITUR 2.C: IMPORT MASSAL SISWA VIA EXCEL
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1840,15 +1994,21 @@
 
                             const id = `u_siswa_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
                             const stdObj = {
-                                id, username, password: hashedPassword, name,
+                                id,
+                                username,
+                                password: hashedPassword,
+                                name,
                                 nisn: String(row['NISN'] || '').trim(),
                                 classId: matchingClass ? matchingClass.id : '',
                                 className: matchingClass ? matchingClass.name : classNameVal,
-                                mentorId: '', mentorName: '',
+                                mentorId: '',
+                                mentorName: '',
                                 gender: String(row['Gender'] || row['Jenis Kelamin'] || 'Laki-laki').trim(),
                                 role: ROLES.SISWA,
                                 avatar: String(row['Gender'] || '').toLowerCase().includes('perempuan') ? '👧' : '👦',
-                                createdBy: 'admin', status: 'Aktif', createdAt: new Date()
+                                createdBy: 'admin',
+                                status: 'Aktif',
+                                createdAt: new Date()
                             };
 
                             newStudents.push(stdObj);
@@ -1869,11 +2029,13 @@
                 e.target.value = null;
             };
 
+            // FITUR 2.C: CETAK KARTU KREDENSIAL AKUN SISWA (PDF GRID SIAP GUNTING)
             const handlePrintAccountCards = () => {
                 if (students.length === 0) return showAlert.warning('Data Kosong', 'Tidak ada siswa untuk dicetak kartu akun.');
 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('portrait', 'pt', 'a4');
+                const pageWidth = doc.internal.pageSize.getWidth();
                 const cardW = 250;
                 const cardH = 130;
                 const marginX = 40;
@@ -1885,10 +2047,12 @@
                     const x = marginX + (col * (cardW + 15));
                     const y = marginY + (row * (cardH + 15));
 
+                    // Border Kartu Gunting
                     doc.setDrawColor(200, 200, 200);
                     doc.setLineDashPattern([3, 3], 0);
                     doc.roundedRect(x, y, cardW, cardH, 8, 8);
 
+                    // Header Kartu
                     doc.setFillColor(239, 68, 68);
                     doc.roundedRect(x, y, cardW, 28, 8, 8, 'F');
                     doc.setFontSize(8);
@@ -1896,6 +2060,7 @@
                     doc.setTextColor(255, 255, 255);
                     doc.text("KARTU AKSES SISWA — 7 KEBIASAAN", x + (cardW / 2), y + 18, { align: 'center' });
 
+                    // Detail Kredensial
                     doc.setTextColor(0, 0, 0);
                     doc.setFontSize(8.5);
                     doc.text(`Nama     : ${s.name}`, x + 12, y + 48);
@@ -2067,7 +2232,7 @@
         };
 
         // ==========================================
-        // MODUL LAPORAN & EKSPOR
+        // MODUL LAPORAN & EKSPOR (OPSI 2: TABEL RINCI PER SISWA)
         // ==========================================
         const ReportsModule = ({ user }) => {
             const today = getTodayWitaDateString();
@@ -2161,6 +2326,7 @@
                 });
             }, [filteredStudentList, journals, startDate, endDate]);
 
+            // EKSPOR EXCEL RINCI
             const handleExportExcel = () => {
                 if (reportType === 'habits') {
                     if (studentDetailedHabits.length === 0) return showAlert.warning('Data Kosong', 'Tidak ada data log kebiasaan.');
@@ -2194,6 +2360,7 @@
                 }
             };
 
+            // EKSPOR PDF RINCI (PAGE BREAK PER SISWA & SOLID SIGNATURE)
             const handleExportPDF = () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('landscape', 'pt', 'a4');
@@ -2240,6 +2407,7 @@
                         columnStyles: { 0: { halign: 'center', cellWidth: 30 }, 1: { halign: 'center', cellWidth: 70 }, 2: { cellWidth: 120, fontStyle: 'bold' }, 3: { halign: 'center', cellWidth: 70 }, 4: { halign: 'center', cellWidth: 60 }, 5: { cellWidth: 'auto' } }
                     });
 
+                    // FOOTER TANDA TANGAN (HITAM PEKAT & GARIS BAWAH SOLID)
                     const finalY = doc.lastAutoTable.finalY + 25;
                     const sigY = finalY > pageHeight - 85 ? pageHeight - 85 : finalY;
                     const sigX = pageWidth - 190;
@@ -2379,23 +2547,23 @@
         };
 
         // ==========================================
-        // LOGIN PAGE & FITUR 1: LUPA PASSWORD MANDIRI
+        // LOGIN & ROOT CONTROLLER
         // ==========================================
+        const LandingPage = ({ onStart }) => (
+            <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
+                <div className="text-6xl mb-3">🇮🇩</div>
+                <h1 className="text-3xl md:text-5xl font-black text-brand-dark mb-3">7 Kebiasaan <span className="text-brand-red">Anak Indonesia Hebat</span></h1>
+                <p className="text-gray-500 max-w-md text-sm md:text-base mb-8">Pencatatan pembiasaan karakter positif siswa {SCHOOL_IDENTITY.name}.</p>
+                <Button onClick={onStart} className="text-base py-3.5 px-8">Masuk ke Aplikasi</Button>
+            </div>
+        );
+
         const LoginPage = ({ onLogin, triggerManualPull }) => {
             const [users, setUsers] = useState([]);
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
             const [inputPassword, setInputPassword] = useState('');
             const [isLoadingPull, setIsLoadingPull] = useState(true);
-
-            // STATE FITUR 1: RESET PASSWORD MANDIRI
-            const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-            const [forgotRole, setForgotRole] = useState(ROLES.SISWA);
-            const [forgotUsername, setForgotUsername] = useState('');
-            const [forgotSecretId, setForgotSecretId] = useState(''); // NISN untuk Siswa, NIP untuk Guru
-            const [forgotPhone, setForgotPhone] = useState('');
-            const [forgotNewPass, setForgotNewPass] = useState('');
-            const [forgotConfirmPass, setForgotConfirmPass] = useState('');
 
             const loadUsers = async () => {
                 const res = await db.users.where('role').equals(selectedRole).toArray();
@@ -2431,63 +2599,6 @@
                     if (inputHashed !== expectedHashed) return showAlert.error('Password Salah', 'Password salah!');
                 }
                 onLogin(user);
-            };
-
-            // HANDLER VERIFIKASI & RESET MANDIRI
-            const handleExecuteSelfResetPassword = async (e) => {
-                e.preventDefault();
-                const uName = forgotUsername.trim().toLowerCase();
-                const secret = forgotSecretId.trim();
-                const phoneInput = forgotPhone.trim().replace(/\D/g, '');
-
-                if (forgotNewPass !== forgotConfirmPass) {
-                    return showAlert.warning('Perhatian', 'Password baru dan konfirmasi tidak cocok!');
-                }
-
-                const targetUser = await db.users.where('role').equals(forgotRole).and(u => u.username.toLowerCase() === uName).first();
-
-                if (!targetUser) {
-                    return showAlert.error('Verifikasi Gagal', `Akun dengan username "@${forgotUsername}" tidak ditemukan.`);
-                }
-
-                // 1. Verifikasi NISN / NIP
-                const expectedSecret = String(forgotRole === ROLES.SISWA ? targetUser.nisn : targetUser.nip || '').trim();
-                if (!expectedSecret || expectedSecret === '-' || expectedSecret !== secret) {
-                    return showAlert.error('Verifikasi Gagal', `${forgotRole === ROLES.SISWA ? 'NISN' : 'NIP'} yang Anda masukkan tidak cocok dengan data akun!`);
-                }
-
-                // 2. Verifikasi Nomor Telepon (Jika di akun terdapat nomor telepon terdaftar)
-                const registeredPhone = String(targetUser.phone || '').trim().replace(/\D/g, '');
-                if (registeredPhone && registeredPhone !== phoneInput) {
-                    return showAlert.error('Verifikasi Gagal', 'Nomor telepon yang Anda masukkan tidak cocok dengan nomor terdaftar!');
-                }
-
-                // 3. Simpan Password Baru
-                const hashedNew = await hashPassword(forgotNewPass.trim());
-                const updated = { ...targetUser, password: hashedNew, updatedAt: new Date() };
-                await db.users.put(updated);
-
-                await db.syncQueue.put({
-                    id: `sync_pwd_self_${Date.now()}`,
-                    tableName: 'users',
-                    recordId: targetUser.id,
-                    action: 'update',
-                    status: 'pending',
-                    createdAt: new Date()
-                });
-
-                showAlert.success('Password Berhasil Diubah!', `Password akun "${targetUser.name}" telah diperbarui. Silakan login kembali.`);
-                setIsForgotModalOpen(false);
-                setForgotUsername('');
-                setForgotSecretId('');
-                setForgotPhone('');
-                setForgotNewPass('');
-                setForgotConfirmPass('');
-                
-                // Refresh list & select user
-                setSelectedRole(forgotRole);
-                await loadUsers();
-                setSelectedUserId(targetUser.id);
             };
 
             return (
@@ -2527,80 +2638,12 @@
                                 )}
                             </div>
                             <div>
-                                <div className="flex justify-between items-center mb-1">
-                                    <label className="block text-xs font-bold text-gray-600">Kata Sandi:</label>
-                                    {selectedRole !== ROLES.ADMIN && (
-                                        <button type="button" onClick={() => { setForgotRole(selectedRole); setIsForgotModalOpen(true); }} className="text-[11px] font-bold text-brand-blue hover:underline">
-                                            Lupa Kata Sandi?
-                                        </button>
-                                    )}
-                                </div>
+                                <label className="block text-xs font-bold text-gray-600 mb-1">Kata Sandi:</label>
                                 <input type="password" value={inputPassword} onChange={e => setInputPassword(e.target.value)} placeholder="Masukkan kata sandi..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" required />
                             </div>
                             <Button type="submit" fullWidth disabled={users.length === 0 || isLoadingPull}>Masuk Sistem</Button>
                         </form>
                     </Card>
-
-                    {/* MODAL FITUR 1: LUPA PASSWORD MANDIRI */}
-                    {isForgotModalOpen && (
-                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                            <Card className="w-full max-w-md shadow-2xl space-y-4">
-                                <div className="flex items-center justify-between border-b pb-3">
-                                    <div>
-                                        <h3 className="font-black text-base text-brand-dark flex items-center gap-1.5">
-                                            <i className="fas fa-user-shield text-brand-red"></i> Pemulihan Password Mandiri
-                                        </h3>
-                                        <p className="text-xs text-gray-400 font-bold mt-0.5">Verifikasi identitas resmi {forgotRole === ROLES.SISWA ? 'Siswa' : 'Guru'}</p>
-                                    </div>
-                                    <button onClick={() => setIsForgotModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-                                        <i className="fas fa-times text-lg"></i>
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button type="button" onClick={() => setForgotRole(ROLES.SISWA)} className={`p-2 rounded-xl text-xs font-extrabold border ${forgotRole === ROLES.SISWA ? 'bg-red-50 border-brand-red text-brand-red' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
-                                        Akun Siswa
-                                    </button>
-                                    <button type="button" onClick={() => setForgotRole(ROLES.GURU)} className={`p-2 rounded-xl text-xs font-extrabold border ${forgotRole === ROLES.GURU ? 'bg-red-50 border-brand-red text-brand-red' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
-                                        Akun Guru
-                                    </button>
-                                </div>
-
-                                <form onSubmit={handleExecuteSelfResetPassword} className="space-y-3 text-xs">
-                                    <div>
-                                        <label className="block font-bold text-gray-600 mb-1">Username Akun Anda</label>
-                                        <input type="text" placeholder="Contoh: agung12" value={forgotUsername} onChange={e => setForgotUsername(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold" required />
-                                    </div>
-                                    <div>
-                                        <label className="block font-bold text-gray-600 mb-1">
-                                            {forgotRole === ROLES.SISWA ? 'Nomor Induk Siswa Nasional (NISN)' : 'Nomor Induk Pegawai (NIP / NIK)'}
-                                        </label>
-                                        <input type="text" placeholder={forgotRole === ROLES.SISWA ? "Masukkan NISN resmi..." : "Masukkan NIP resmi..."} value={forgotSecretId} onChange={e => setForgotSecretId(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold" required />
-                                    </div>
-                                    <div>
-                                        <label className="block font-bold text-gray-600 mb-1">Nomor Telepon / WhatsApp Terdaftar</label>
-                                        <input type="text" placeholder="Contoh: 081234567890" value={forgotPhone} onChange={e => setForgotPhone(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold" />
-                                        <span className="text-[10px] text-gray-400">Verifikasi tambahan jika nomor telepon telah disimpan di akun.</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 pt-1 border-t">
-                                        <div>
-                                            <label className="block font-bold text-gray-600 mb-1">Password Baru</label>
-                                            <input type="password" value={forgotNewPass} onChange={e => setForgotNewPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
-                                        </div>
-                                        <div>
-                                            <label className="block font-bold text-gray-600 mb-1">Ulangi Password</label>
-                                            <input type="password" value={forgotConfirmPass} onChange={e => setForgotConfirmPass(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl" required minLength="4" />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-end gap-2 pt-2">
-                                        <Button variant="white" onClick={() => setIsForgotModalOpen(false)}>Batal</Button>
-                                        <Button variant="primary" type="submit">Verifikasi & Ganti Password</Button>
-                                    </div>
-                                </form>
-                            </Card>
-                        </div>
-                    )}
                 </div>
             );
         };
@@ -2739,3 +2782,6 @@
     </script>
 </body>
 </html>
+</file>
+
+</files>
