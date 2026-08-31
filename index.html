@@ -250,13 +250,14 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // BATCH SYNC ENGINE
+        // BATCH SYNC ENGINE (OPTIMIZED)
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
+            // Batch Push Habit Logs
             const habitUpserts = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action === 'upsert');
             if (habitUpserts.length > 0) {
                 const logs = await db.habitLogs.bulkGet(habitUpserts.map(q => q.recordId));
@@ -401,7 +402,7 @@
 
                         const cloudJournalIds = new Set(formattedJournals.map(j => j.id));
                         const localJournals = await db.journals.toArray();
-                        const journalsToDelete = localJournals.filter(j => !cloudJournalIds.has(j.id) && !pendingJournalIds.has(j.id)).map(j => j.id);
+                        const journalsToDelete = localJournals.filter(l => !cloudJournalIds.has(l.id) && !pendingJournalIds.has(l.id)).map(l => l.id);
 
                         if (journalsToDelete.length > 0) await db.journals.bulkDelete(journalsToDelete);
                         if (formattedJournals.length > 0) await db.journals.bulkPut(formattedJournals);
@@ -450,10 +451,10 @@
                     await pushPendingQueue();
                     await pullAllCloudData();
                     setSyncStatus('synced');
-                    setTimeout(() => setSyncStatus('idle'), 3000);
+                    setTimeout(() => setSyncStatus('idle'), 2500);
                 } catch (e) {
                     setSyncStatus('error');
-                    setTimeout(() => setSyncStatus('idle'), 4000);
+                    setTimeout(() => setSyncStatus('idle'), 3000);
                 }
             }, []);
 
@@ -464,9 +465,10 @@
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
+                // Polling background setiap 90 detik agar hemat kuota dan tidak spamming
                 const interval = setInterval(() => {
                     if (navigator.onLine) fullSynchronize();
-                }, 35000);
+                }, 90000);
 
                 return () => {
                     window.removeEventListener('online', handleOnline);
@@ -733,7 +735,7 @@
 
                         await db.habitLogs.put(logData);
                         await db.syncQueue.put({
-                            id: `sync_${Date.now()}_${Math.random()}`,
+                            id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                             tableName: 'habitLogs',
                             recordId: logId,
                             action: 'upsert',
@@ -789,7 +791,7 @@
                 });
 
                 await db.syncQueue.put({
-                    id: `sync_${Date.now()}_${Math.random()}`,
+                    id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                     tableName: 'habitLogs',
                     recordId: logId,
                     action: 'upsert',
@@ -881,7 +883,7 @@
                                                     {habit.name}
                                                     {isDone && <span className="text-[10px] px-2 py-0.5 bg-green-200 text-green-800 rounded-full font-extrabold">Terisi</span>}
                                                 </h3>
-                                                <p className="text-xs text-gray-500 leading-snug mt-0.5">{habit.description}</p>
+                                                <p className="text-xs text-gray-500 leading-snug mt-0.5">{habit.defaultDetail}</p>
                                             </div>
                                         </div>
                                         <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-brand-green border-brand-green text-white scale-110' : 'border-gray-300'}`}>
@@ -1536,7 +1538,7 @@
         };
 
         // ==========================================
-        // MODUL ADMIN (FULL MASTER CRUD + EXCEL TEMPLATE ENGINE)
+        // MODUL ADMIN
         // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1778,7 +1780,6 @@
                 setSelectedTeacherIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
             };
 
-            // BULK RESET PASSWORD GURU
             const handleBulkResetPassword = async () => {
                 if (selectedTeacherIds.length === 0) return;
                 const { value: passResult } = await Swal.fire({
@@ -1857,7 +1858,6 @@
                 }
             };
 
-            // BULK DELETE GURU
             const handleBulkDeleteTeachers = async () => {
                 if (selectedTeacherIds.length === 0) return;
                 const confirmRes = await showAlert.confirm(
@@ -1891,7 +1891,6 @@
                 showAlert.success('Terhapus', `${deletedCount} akun guru berhasil dihapus.`);
             };
 
-            // UNDUH TEMPLATE EXCEL GURU (HANYA HEADER BERSIH)
             const handleDownloadTeacherTemplate = () => {
                 const headers = [['Nama Lengkap', 'Username', 'Password', 'NIP', 'Nomor Telepon', 'Mata Pelajaran']];
                 const ws = XLSX.utils.aoa_to_sheet(headers);
@@ -1902,7 +1901,6 @@
                 showAlert.success("Template Diunduh", "Silakan isi data guru mulai dari baris ke-2.");
             };
 
-            // MODAL PANDUAN IMPORT GURU
             const handleShowTeacherGuide = () => {
                 Swal.fire({
                     title: 'Panduan Import Excel Guru',
@@ -1917,9 +1915,6 @@
                                 <li><b>Nomor Telepon</b>: Opsional (Nomor WhatsApp aktif).</li>
                                 <li><b>Mata Pelajaran</b>: Opsional (Contoh: <i>Informatika</i>, <i>Matematika</i>).</li>
                             </ul>
-                            <div class="p-2.5 bg-red-50 border border-red-200 text-brand-red rounded-xl font-bold">
-                                💡 Jangan mengubah susunan baris pertama (Header) pada berkas template.
-                            </div>
                         </div>
                     `,
                     confirmButtonColor: '#EF4444',
@@ -1928,7 +1923,6 @@
                 });
             };
 
-            // IMPORT EXCEL GURU DENGAN VALIDASI CERDAS
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -2078,9 +2072,8 @@
                         </div>
                     </div>
 
-                    {/* FLOATING BULK ACTIONS BAR GURU */}
                     {selectedTeacherIds.length > 0 && (
-                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 md:p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 md:p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
                                 <span className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center font-black text-xs">{selectedTeacherIds.length}</span>
                                 <div>
@@ -2239,7 +2232,6 @@
                 setSelectedStudentIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
             };
 
-            // BULK RESET PASSWORD SISWA
             const handleBulkResetPassword = async () => {
                 if (selectedStudentIds.length === 0) return;
                 const { value: passResult } = await Swal.fire({
@@ -2249,14 +2241,14 @@
                             <p>Mereset kata sandi untuk <b>${selectedStudentIds.length} Siswa</b> terpilih:</p>
                             <div>
                                 <label class="block font-bold text-gray-600 mb-1">Pilihan Sandi Baru:</label>
-                                <select id="swal-bulk-pass-type" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-red">
+                                <select id="swal-bulk-pass-type" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-red">
                                     <option value="default">Reset ke Sandi Standar ("siswa123")</option>
                                     <option value="custom">Tentukan Sandi Seragam Baru</option>
                                 </select>
                             </div>
                             <div id="swal-bulk-custom-container" style="display:none;">
                                 <label class="block font-bold text-gray-600 mb-1">Ketik Sandi Baru:</label>
-                                <input id="swal-bulk-custom-pass" type="text" placeholder="Minimal 4 karakter" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold text-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red" />
+                                <input id="swal-bulk-custom-pass" type="text" placeholder="Minimal 4 karakter" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold text-brand-red focus:ring-2 focus:ring-brand-red" />
                             </div>
                         </div>
                     `,
@@ -2318,7 +2310,6 @@
                 }
             };
 
-            // BULK MOVE CLASS SISWA
             const handleBulkMoveClass = async () => {
                 if (selectedStudentIds.length === 0) return;
                 if (classes.length === 0) return showAlert.warning('Perhatian', 'Belum ada data kelas yang terdaftar.');
@@ -2369,7 +2360,6 @@
                 }
             };
 
-            // BULK DELETE SISWA
             const handleBulkDeleteStudents = async () => {
                 if (selectedStudentIds.length === 0) return;
                 const confirmRes = await showAlert.confirm(
@@ -2406,7 +2396,6 @@
                 showAlert.success('Terhapus', `${deletedCount} akun siswa beserta seluruh rekam jejaknya berhasil dibersihkan.`);
             };
 
-            // UNDUH TEMPLATE EXCEL SISWA (HEADER BERSIH + REFERENSI KELAS DI TAB 2)
             const handleDownloadStudentTemplate = () => {
                 const headers = [['Nama Lengkap', 'Username', 'Password', 'NISN', 'Kelas', 'Jenis Kelamin']];
                 const ws = XLSX.utils.aoa_to_sheet(headers);
@@ -2426,7 +2415,6 @@
                 showAlert.success("Template Diunduh", "Silakan isi data siswa pada sheet 'Template_Siswa' mulai dari baris ke-2.");
             };
 
-            // MODAL PANDUAN IMPORT SISWA
             const handleShowStudentGuide = () => {
                 const classListText = classes.map(c => c.name).join(', ') || 'Belum ada kelas terdaftar';
                 Swal.fire({
@@ -2442,9 +2430,6 @@
                                 <li><b>Kelas</b>: Wajib diisi persis sesuai nama rombel aktif:<br><span class="font-black text-brand-red">${classListText}</span>.</li>
                                 <li><b>Jenis Kelamin</b>: Diisi <i>Laki-laki</i> atau <i>Perempuan</i>.</li>
                             </ul>
-                            <div class="p-2.5 bg-red-50 border border-red-200 text-brand-red rounded-xl font-bold">
-                                💡 Rujukan nama kelas yang aktif juga dapat dilihat pada lembar sheet kedua berkas template (<i>Referensi_Kelas</i>).
-                            </div>
                         </div>
                     `,
                     confirmButtonColor: '#EF4444',
@@ -2453,7 +2438,6 @@
                 });
             };
 
-            // IMPORT EXCEL SISWA DENGAN VALIDASI CERDAS
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -2635,9 +2619,8 @@
                         </div>
                     </div>
 
-                    {/* FLOATING BULK ACTIONS BAR SISWA */}
                     {selectedStudentIds.length > 0 && (
-                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 md:p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 md:p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
                                 <span className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center font-black text-xs">{selectedStudentIds.length}</span>
                                 <div>
@@ -2801,7 +2784,7 @@
         };
 
         // ==========================================
-        // MODUL ARSIP SEMESTER (ADMIN ONLY)
+        // MODUL ARSIP SEMESTER
         // ==========================================
         const AdminArchivesPage = () => {
             const [archiveList, setArchiveList] = useState([]);
@@ -3117,7 +3100,7 @@
         };
 
         // ==========================================
-        // MODUL LAPORAN & EKSPOR
+        // MODUL LAPORAN
         // ==========================================
         const ReportsModule = ({ user }) => {
             const today = getTodayWitaDateString();
@@ -3132,16 +3115,13 @@
             const [students, setStudents] = useState([]);
             const [habitLogs, setHabitLogs] = useState([]);
             const [journals, setJournals] = useState([]);
-            const [loading, setLoading] = useState(true);
 
             const loadReportData = async () => {
-                setLoading(true);
                 const c = await db.classes.toArray();
                 const s = await db.users.where('role').equals(ROLES.SISWA).toArray();
                 const hl = await db.habitLogs.toArray();
                 const j = await db.journals.toArray();
                 setClasses(c); setStudents(s); setHabitLogs(hl); setJournals(j);
-                setLoading(false);
             };
 
             useEffect(() => { loadReportData(); }, []);
@@ -3422,7 +3402,7 @@
         };
 
         // ==========================================
-        // LOGIN & ROOT CONTROLLER
+        // LOGIN & ROOT CONTROLLER (LOCAL-FIRST INSTANT LOAD)
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -3438,7 +3418,6 @@
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
             const [inputPassword, setInputPassword] = useState('');
-            const [isLoadingPull, setIsLoadingPull] = useState(true);
 
             const loadUsers = async () => {
                 const res = await db.users.where('role').equals(selectedRole).toArray();
@@ -3448,14 +3427,12 @@
 
             useEffect(() => { loadUsers(); setInputPassword(''); }, [selectedRole]);
 
+            // Local-First: Langsung load dari IndexedDB tanpa menahan UI (Non-blocking background pull)
             useEffect(() => {
-                async function syncInit() {
-                    setIsLoadingPull(true);
-                    await triggerManualPull();
-                    await loadUsers();
-                    setIsLoadingPull(false);
+                loadUsers();
+                if (navigator.onLine) {
+                    pullAllCloudData().then(() => loadUsers());
                 }
-                syncInit();
             }, []);
 
             const handleForgotPassword = () => {
@@ -3550,12 +3527,10 @@
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Nama Pengguna:</label>
-                                {isLoadingPull ? (
-                                    <div className="p-3 bg-gray-50 border rounded-xl text-xs text-gray-500 text-center font-bold">
-                                        <i className="fas fa-spinner fa-spin mr-1"></i> Memuat data akun...
+                                {users.length === 0 ? (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
+                                        Belum ada akun {selectedRole}. Lakukan sync awal atau login sebagai Admin.
                                     </div>
-                                ) : users.length === 0 ? (
-                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">Belum ada akun {selectedRole}.</div>
                                 ) : (
                                     <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
                                         {users.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username})</option>)}
@@ -3571,7 +3546,7 @@
                                 </div>
                                 <input type="password" value={inputPassword} onChange={e => setInputPassword(e.target.value)} placeholder="Masukkan kata sandi..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" required />
                             </div>
-                            <Button type="submit" fullWidth disabled={users.length === 0 || isLoadingPull}>Masuk Sistem</Button>
+                            <Button type="submit" fullWidth disabled={users.length === 0}>Masuk Sistem</Button>
                         </form>
                     </Card>
                 </div>
@@ -3606,7 +3581,8 @@
             useEffect(() => {
                 async function init() {
                     await seedDatabaseClean();
-                    await pullAllCloudData();
+                    // Jalankan pull background tanpa menahan proses rendering UI
+                    pullAllCloudData();
                     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW:', err));
 
                     const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
