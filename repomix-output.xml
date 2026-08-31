@@ -1,3 +1,139 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: index.html, manifest.json, sw.js, vercel.json
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+manifest.json
+sw.js
+vercel.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="manifest.json">
+{
+    "name": "7 Kebiasaan Anak Indonesia Hebat",
+    "short_name": "7 Kebiasaan",
+    "description": "Aplikasi Pembiasaan Karakter Positif Siswa SMP Negeri 1 Talaga Jaya",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F9FAFB",
+    "theme_color": "#EF4444",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇮🇩</text></svg>",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+</file>
+
+<file path="vercel.json">
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
+</file>
+
+<file path="sw.js">
+const CACHE_NAME = "7kebiasaan-cache-v1";
+const ASSETS_TO_CACHE = [
+    "/",
+    "/index.html",
+    "/manifest.json",
+    "https://unpkg.com/react@18/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone/babel.min.js",
+    "https://cdn.tailwindcss.com",
+    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdn.jsdelivr.net/npm/sweetalert2@11",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                }),
+            ),
+        ),
+    );
+    self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Jangan cache permintaan POST/GET API Google Apps Script
+    if (event.request.url.includes("script.google.com")) {
+        return;
+    }
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            return (
+                cachedResponse ||
+                fetch(event.request).catch(() => caches.match("/index.html"))
+            );
+        }),
+    );
+});
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -250,51 +386,96 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // BATCH SYNC ENGINE (FULL BULK CONSOLIDATION)
+        // BATCH SYNC ENGINE (FULL BULK CONSOLIDATION - PREVENTS GAS LOCK COLLISION)
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
-            const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action !== 'delete').map(q => q.recordId);
-            const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && q.action !== 'delete').map(q => q.recordId);
-            const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && q.action !== 'delete').map(q => q.recordId);
-            const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && q.action !== 'delete').map(q => q.recordId);
-
-            const [classes, users, habitLogs, journals] = await Promise.all([
-                classUpsertIds.length > 0 ? db.classes.bulkGet(classUpsertIds) : [],
-                userUpsertIds.length > 0 ? db.users.bulkGet(userUpsertIds) : [],
-                habitLogs.length > 0 ? db.habitLogs.bulkGet(habitUpsertIds) : [],
-                journalUpsertIds.length > 0 ? db.journals.bulkGet(journalUpsertIds) : []
-            ]);
-
-            const deletes = pendingQueue.filter(q => q.action === 'delete').map(q => ({
-                tableName: q.tableName,
-                recordId: q.recordId
-            }));
-
-            const payload = {
-                classes: classes.filter(Boolean),
-                users: users.filter(Boolean),
-                habitLogs: habitLogs.filter(Boolean),
-                journals: journals.filter(Boolean),
-                deletes: deletes
-            };
-
-            try {
-                await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'batchSyncAll', payload })
-                });
-
-                for (let item of pendingQueue) {
-                    await db.syncQueue.update(item.id, { status: 'synced' });
+            // 1. KONSOLIDASI BATCH HABIT LOGS (KIRIM DALAM 1 REQUEST)
+            const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && (q.action === 'upsert' || q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (habitUpsertIds.length > 0) {
+                const logs = await db.habitLogs.bulkGet(habitUpsertIds);
+                const validLogs = logs.filter(Boolean);
+                if (validLogs.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncHabits', payload: validLogs })
+                    });
                 }
-            } catch (err) {
-                console.error("Gagal sinkronisasi antrean:", err);
+            }
+
+            // 2. KONSOLIDASI BATCH USERS (SEMUA GURU & SISWA DIKIRIM SEKALIGUS)
+            const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && (q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (userUpsertIds.length > 0) {
+                const users = await db.users.bulkGet(userUpsertIds);
+                const validUsers = users.filter(Boolean);
+                if (validUsers.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncUser', payload: validUsers })
+                    });
+                }
+            }
+
+            // 3. KONSOLIDASI BATCH CLASSES
+            const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && (q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (classUpsertIds.length > 0) {
+                const classes = await db.classes.bulkGet(classUpsertIds);
+                const validClasses = classes.filter(Boolean);
+                if (validClasses.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncClass', payload: validClasses })
+                    });
+                }
+            }
+
+            // 4. KONSOLIDASI BATCH JOURNALS
+            const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && (q.action === 'upsert' || q.action === 'create' || q.action === 'update')).map(q => q.recordId);
+            if (journalUpsertIds.length > 0) {
+                const journals = await db.journals.bulkGet(journalUpsertIds);
+                const validJournals = journals.filter(Boolean);
+                if (validJournals.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncJournal', payload: validJournals })
+                    });
+                }
+            }
+
+            // 5. PROSES DELETE (JIKA ADA)
+            const deleteItems = pendingQueue.filter(q => q.action === 'delete');
+            for (let item of deleteItems) {
+                let endpointAction = '';
+                if (item.tableName === 'habitLogs') endpointAction = 'deleteHabitLog';
+                else if (item.tableName === 'journals') endpointAction = 'deleteJournal';
+                else if (item.tableName === 'users') endpointAction = 'deleteUser';
+                else if (item.tableName === 'classes') endpointAction = 'deleteClass';
+
+                if (endpointAction) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: endpointAction, payload: { id: item.recordId } })
+                    });
+                }
+            }
+
+            // Tandai antrean yang sudah diproses menjadi 'synced'
+            const allPendingIds = pendingQueue.map(q => q.id);
+            for (let id of allPendingIds) {
+                await db.syncQueue.update(id, { status: 'synced' });
             }
         }
 
@@ -457,6 +638,7 @@
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
+                // Polling background setiap 90 detik
                 const interval = setInterval(() => {
                     if (navigator.onLine) fullSynchronize();
                 }, 90000);
@@ -1546,7 +1728,7 @@
             const handleForcePushAllToCloud = async () => {
                 const confirmRes = await showAlert.confirm(
                     'Unggah Semua Data Lokal ke Cloud?',
-                    'Seluruh data Guru, Siswa, Kelas, Log, dan Jurnal di perangkat ini akan disinkronkan ke Google Sheets.',
+                    'Seluruh data Guru, Siswa, Kelas, dan Log yang ada di perangkat ini akan dikirim utuh ke Google Sheets.',
                     'Ya, Unggah Sekarang'
                 );
                 if (!confirmRes.isConfirmed) return;
@@ -1554,33 +1736,41 @@
                 try {
                     Swal.fire({
                         title: 'Mengunggah Data...',
-                        text: 'Mohon tunggu, menyinkronkan seluruh database ke Google Sheets.',
+                        text: 'Mohon tunggu, menyinkronkan seluruh database lokal ke Google Sheets.',
                         allowOutsideClick: false,
                         didOpen: () => Swal.showLoading()
                     });
 
-                    const [allUsers, allClasses, allLogs, allJournals] = await Promise.all([
-                        db.users.toArray(),
-                        db.classes.toArray(),
-                        db.habitLogs.toArray(),
-                        db.journals.toArray()
-                    ]);
+                    const allUsers = await db.users.toArray();
+                    const allClasses = await db.classes.toArray();
+                    const allLogs = await db.habitLogs.toArray();
 
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({
-                            action: 'batchSyncAll',
-                            payload: {
-                                classes: allClasses,
-                                users: allUsers,
-                                habitLogs: allLogs,
-                                journals: allJournals,
-                                deletes: []
-                            }
-                        })
-                    });
+                    if (allClasses.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncClass', payload: allClasses })
+                        });
+                    }
+
+                    if (allUsers.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncUser', payload: allUsers })
+                        });
+                    }
+
+                    if (allLogs.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: allLogs })
+                        });
+                    }
 
                     Swal.close();
                     showAlert.success('Berhasil!', 'Semua data lokal telah terunggah ke Google Sheets.');
@@ -2423,8 +2613,8 @@
                     await db.syncQueue.put({ id: `sync_jdel_${Date.now()}_${Math.random()}`, tableName: 'journals', recordId: j.id, action: 'delete', status: 'pending', createdAt: new Date() });
                 }
 
-                await db.points.where('userId').anyOf(selectedStudentIds).delete();
-                await db.streaks.where('userId').anyOf(selectedStudentIds).delete();
+                await db.points.where('userId').equals(selectedStudentIds).delete();
+                await db.streaks.where('userId').equals(selectedStudentIds).delete();
 
                 await db.users.bulkDelete(selectedStudentIds);
                 for (let id of selectedStudentIds) {
@@ -2632,8 +2822,8 @@
                     await db.syncQueue.put({ id: `sync_jdel_${Date.now()}_${Math.random()}`, tableName: 'journals', recordId: j.id, action: 'delete', status: 'pending', createdAt: new Date() });
                 }
 
-                await db.points.where('userId').equals(student.id).delete();
-                await db.streaks.where('userId').equals(student.id).delete();
+                await db.points.where('userId').equals(selectedStudentIds).delete();
+                await db.streaks.where('userId').equals(selectedStudentIds).delete();
 
                 await db.users.delete(student.id);
                 await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: student.id, action: 'delete', status: 'pending', createdAt: new Date() });
@@ -3476,6 +3666,7 @@
                 setShowPassword(false);
             }, [selectedRole]);
 
+            // Local-First: Langsung load dari IndexedDB tanpa menahan UI (Non-blocking background pull)
             useEffect(() => {
                 loadUsers();
                 if (navigator.onLine) {
@@ -3796,3 +3987,6 @@
     </script>
 </body>
 </html>
+</file>
+
+</files>
