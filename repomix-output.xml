@@ -1,3 +1,139 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: index.html, manifest.json, sw.js, vercel.json
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+manifest.json
+sw.js
+vercel.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="manifest.json">
+{
+    "name": "7 Kebiasaan Anak Indonesia Hebat",
+    "short_name": "7 Kebiasaan",
+    "description": "Aplikasi Pembiasaan Karakter Positif Siswa SMP Negeri 1 Talaga Jaya",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F9FAFB",
+    "theme_color": "#EF4444",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇮🇩</text></svg>",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+</file>
+
+<file path="vercel.json">
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
+</file>
+
+<file path="sw.js">
+const CACHE_NAME = "7kebiasaan-cache-v1";
+const ASSETS_TO_CACHE = [
+    "/",
+    "/index.html",
+    "/manifest.json",
+    "https://unpkg.com/react@18/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone/babel.min.js",
+    "https://cdn.tailwindcss.com",
+    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdn.jsdelivr.net/npm/sweetalert2@11",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                }),
+            ),
+        ),
+    );
+    self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Jangan cache permintaan POST/GET API Google Apps Script
+    if (event.request.url.includes("script.google.com")) {
+        return;
+    }
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            return (
+                cachedResponse ||
+                fetch(event.request).catch(() => caches.match("/index.html"))
+            );
+        }),
+    );
+});
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -651,15 +787,15 @@
                                     ) : user.role === ROLES.GURU ? (
                                         <>
                                             <p>🔴 <strong>Filter Belum Mengisi:</strong> Pantau siswa binaan yang pasif hari ini secara instan.</p>
-                                            <p>✏️ <strong>Edit Data Siswa:</strong> Ubah dan perbarui rincian siswa binaan langsung dari panel.</p>
                                             <p>🔑 <strong>Reset Sandi Siswa:</strong> Bantu siswa mereset kata sandi jika lupa secara langsung.</p>
                                             <p>💬 <strong>Apresiasi Jurnal:</strong> Berikan catatan motivasi langsung pada refleksi harian siswa.</p>
+                                            <p>📊 <strong>Ekspor PDF & Excel:</strong> Cetak laporan kartu kontrol lengkap dengan format tanda tangan resmi.</p>
                                         </>
                                     ) : (
                                         <>
-                                            <p>📥 <strong>Full Master CRUD:</strong> Kelola, tambah, edit, dan hapus permanen data guru, siswa, dan kelas.</p>
+                                            <p>📥 <strong>Import Excel Massal:</strong> Daftarkan ratusan siswa & guru dalam 1 kali unggah file.</p>
                                             <p>📦 <strong>Arsip & Lihat Arsip:</strong> Arsipkan data semester lama dan telaah riwayatnya kapan saja secara on-demand.</p>
-                                            <p>🔑 <strong>Reset Sandi Guru & Siswa:</strong> Kelola pengaturan kata sandi seluruh pengguna secara instan.</p>
+                                            <p>🔑 <strong>Reset Sandi:</strong> Kelola pengaturan kata sandi seluruh pengguna secara instan.</p>
                                             <p>🪪 <strong>Cetak Kartu Akun:</strong> Buat lembar kisi akun siswa siap gunting dalam format PDF.</p>
                                         </>
                                     )}
@@ -1158,7 +1294,7 @@
         };
 
         // ==========================================
-        // MODUL GURU (DENGAN TOMBOL EDIT SISWA & RESET SANDI)
+        // MODUL GURU
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
@@ -1301,7 +1437,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
-                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, tracking siswa pasif, edit data siswa, dan apresiasi jurnal.</p>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, tracking siswa pasif, reset password, dan apresiasi jurnal.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3">
@@ -1365,24 +1501,6 @@
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                                                     {count === 0 ? '🔴 Belum Mengisi' : `${count} / 7 Selesai`}
                                                 </span>
-                                                
-                                                {/* TOMBOL EDIT SISWA OLEH GURU */}
-                                                <button onClick={() => {
-                                                    setEditingStudent(student);
-                                                    setStudentFormData({
-                                                        name: student.name,
-                                                        username: student.username,
-                                                        password: '',
-                                                        nisn: student.nisn || '',
-                                                        gender: student.gender || 'Laki-laki',
-                                                        classId: student.classId || user.homeroomClassId || ''
-                                                    });
-                                                    setIsStudentModalOpen(true);
-                                                }} className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all" title="Edit Data Siswa">
-                                                    <i className="fas fa-edit text-[10px]"></i> Edit
-                                                </button>
-
-                                                {/* TOMBOL RESET PASSWORD OLEH GURU */}
                                                 <button onClick={async () => {
                                                     const success = await promptResetPassword(student, 'siswa123');
                                                     if (success) {
@@ -1392,7 +1510,6 @@
                                                 }} className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 flex items-center gap-1 transition-all" title="Reset Kata Sandi Siswa">
                                                     <i className="fas fa-key text-[10px]"></i> Reset Sandi
                                                 </button>
-
                                                 <button onClick={() => handleOpenFeedbackModal(student)} className="px-2.5 py-1 text-xs font-bold bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center gap-1">
                                                     <i className="fas fa-comment-dots"></i> Apresiasi Jurnal
                                                 </button>
@@ -1448,23 +1565,17 @@
                     {isStudentModalOpen && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md shadow-2xl">
-                                <h3 className="font-black text-lg mb-4 text-brand-dark">{editingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Binaan'}</h3>
+                                <h3 className="font-black text-lg mb-4 text-brand-dark">{editingStudent ? 'Edit Siswa' : 'Tambah Siswa Binaan'}</h3>
                                 <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
                                     <input type="text" placeholder="Nama Lengkap" value={studentFormData.name} onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
                                         <input type="text" placeholder="Username" value={studentFormData.username} onChange={e => setStudentFormData({ ...studentFormData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         <input type="text" placeholder="NISN" value={studentFormData.nisn} onChange={e => setStudentFormData({ ...studentFormData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <select value={studentFormData.classId} onChange={e => setStudentFormData({ ...studentFormData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
-                                            <option value="">-- Pilih Kelas --</option>
-                                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                        <select value={studentFormData.gender} onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
-                                            <option value="Laki-laki">Laki-laki</option>
-                                            <option value="Perempuan">Perempuan</option>
-                                        </select>
-                                    </div>
+                                    <select value={studentFormData.classId} onChange={e => setStudentFormData({ ...studentFormData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                        <option value="">-- Pilih Kelas --</option>
+                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="white" onClick={() => setIsStudentModalOpen(false)}>Batal</Button>
                                         <Button variant="primary" type="submit">Simpan</Button>
@@ -1542,7 +1653,7 @@
         };
 
         // ==========================================
-        // MODUL ADMIN (FULL MASTER CRUD: KELAS, GURU, SISWA)
+        // MODUL ADMIN
         // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1854,31 +1965,6 @@
                 showAlert.success('Berhasil', 'Data guru berhasil disimpan.');
             };
 
-            // HAPUS GURU OLEH ADMIN
-            const handleDeleteTeacher = async (teacher) => {
-                const confirmRes = await showAlert.confirm(
-                    `Hapus Guru ${teacher.name}?`,
-                    'Akun guru ini akan dihapus permanen dari sistem dan penugasan wali kelas terkait akan dikosongkan.',
-                    'Ya, Hapus Guru'
-                );
-                if (!confirmRes.isConfirmed) return;
-
-                // 1. Kosongkan penugasan wali kelas yang bersangkutan
-                const assignedClasses = await db.classes.where('teacherId').equals(teacher.id).toArray();
-                for (let c of assignedClasses) {
-                    await db.classes.update(c.id, { teacherId: '', teacherName: '' });
-                    await db.syncQueue.put({ id: `sync_c_${Date.now()}_${Math.random()}`, tableName: 'classes', recordId: c.id, action: 'update', status: 'pending', createdAt: new Date() });
-                }
-
-                // 2. Hapus data pengguna
-                await db.users.delete(teacher.id);
-                await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: teacher.id, action: 'delete', status: 'pending', createdAt: new Date() });
-
-                await loadData();
-                triggerSync();
-                showAlert.success('Terhapus', 'Data guru berhasil dihapus.');
-            };
-
             return (
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1926,7 +2012,6 @@
                                                         <i className="fas fa-key"></i> Reset Pass
                                                     </button>
                                                     <button onClick={() => { setEditingTeacher(t); setFormData({ name: t.name, username: t.username, password: '', phone: t.phone, nip: t.nip, subject: t.subject }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
-                                                    <button onClick={() => handleDeleteTeacher(t)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -2096,42 +2181,6 @@
                 showAlert.success('Berhasil Diunduh', 'Lembar kartu akun siswa siap dicetak.');
             };
 
-            // HAPUS SISWA OLEH ADMIN (CASCADE LOGS & JOURNALS)
-            const handleDeleteStudent = async (student) => {
-                const confirmRes = await showAlert.confirm(
-                    `Hapus Siswa ${student.name}?`,
-                    'Data akun siswa beserta seluruh catatan habit, jurnal, dan capaian poin akan dihapus permanen.',
-                    'Ya, Hapus Siswa'
-                );
-                if (!confirmRes.isConfirmed) return;
-
-                // 1. Bersihkan log habit terkait
-                const studentLogs = await db.habitLogs.where('userId').equals(student.id).toArray();
-                for (let l of studentLogs) {
-                    await db.habitLogs.delete(l.id);
-                    await db.syncQueue.put({ id: `sync_hdel_${Date.now()}_${Math.random()}`, tableName: 'habitLogs', recordId: l.id, action: 'delete', status: 'pending', createdAt: new Date() });
-                }
-
-                // 2. Bersihkan jurnal refleksi terkait
-                const studentJournals = await db.journals.where('userId').equals(student.id).toArray();
-                for (let j of studentJournals) {
-                    await db.journals.delete(j.id);
-                    await db.syncQueue.put({ id: `sync_jdel_${Date.now()}_${Math.random()}`, tableName: 'journals', recordId: j.id, action: 'delete', status: 'pending', createdAt: new Date() });
-                }
-
-                // 3. Bersihkan data poin & streak
-                await db.points.where('userId').equals(student.id).delete();
-                await db.streaks.where('userId').equals(student.id).delete();
-
-                // 4. Hapus data pengguna
-                await db.users.delete(student.id);
-                await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: student.id, action: 'delete', status: 'pending', createdAt: new Date() });
-
-                await loadData();
-                triggerSync();
-                showAlert.success('Terhapus', 'Data siswa dan riwayat log berhasil dihapus.');
-            };
-
             return (
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -2181,7 +2230,6 @@
                                                         <i className="fas fa-key"></i> Reset Pass
                                                     </button>
                                                     <button onClick={() => { setEditingStudent(s); setFormData({ name: s.name, username: s.username, password: '', nisn: s.nisn, classId: s.classId, mentorId: s.mentorId, gender: s.gender }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
-                                                    <button onClick={() => handleDeleteStudent(s)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -2251,7 +2299,7 @@
         };
 
         // ==========================================
-        // MODUL ARSIP SEMESTER (ADMIN ONLY)
+        // MODUL ARSIP SEMESTER (ADMIN ONLY - ON-DEMAND LAZY FETCH)
         // ==========================================
         const AdminArchivesPage = () => {
             const [archiveList, setArchiveList] = useState([]);
@@ -3163,3 +3211,6 @@
     </script>
 </body>
 </html>
+</file>
+
+</files>
