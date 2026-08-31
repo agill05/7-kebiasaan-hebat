@@ -657,7 +657,7 @@
                                     ) : (
                                         <>
                                             <p>📥 <strong>Import & Unduh Template:</strong> Unduh berkas format Excel murni dan pelajari panduan kolomnya.</p>
-                                            <p>🗑️ <strong>Master CRUD:</strong> Tambah, edit, dan hapus permanen data guru, siswa, dan kelas.</p>
+                                            <p>🗑️ <strong>Master CRUD & Multi-Select:</strong> Pilih banyak data siswa & guru untuk hapus, reset sandi, atau pindah kelas massal.</p>
                                             <p>📦 <strong>Arsip Semester:</strong> Backup dan telusuri riwayat semester lampau tanpa beban lag.</p>
                                             <p>🔑 <strong>Reset Sandi:</strong> Atur kata sandi guru dan siswa sewaktu-waktu.</p>
                                         </>
@@ -1745,6 +1745,7 @@
         const AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
             const [teachers, setTeachers] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
+            const [selectedTeacherIds, setSelectedTeacherIds] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [editingTeacher, setEditingTeacher] = useState(null);
             const [formData, setFormData] = useState({ name: '', username: '', password: '', phone: '', nip: '', subject: '', homeroomClassId: '' });
@@ -1760,6 +1761,135 @@
             const filteredTeachers = useMemo(() => {
                 return teachers.filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.username.toLowerCase().includes(searchQuery.toLowerCase()) || (t.nip && t.nip.includes(searchQuery)));
             }, [teachers, searchQuery]);
+
+            const isAllVisibleSelected = filteredTeachers.length > 0 && filteredTeachers.every(t => selectedTeacherIds.includes(t.id));
+
+            const toggleSelectAll = () => {
+                if (isAllVisibleSelected) {
+                    const visibleIds = new Set(filteredTeachers.map(t => t.id));
+                    setSelectedTeacherIds(prev => prev.filter(id => !visibleIds.has(id)));
+                } else {
+                    const newIds = new Set([...selectedTeacherIds, ...filteredTeachers.map(t => t.id)]);
+                    setSelectedTeacherIds(Array.from(newIds));
+                }
+            };
+
+            const toggleSelectOne = (id) => {
+                setSelectedTeacherIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+            };
+
+            // BULK RESET PASSWORD GURU
+            const handleBulkResetPassword = async () => {
+                if (selectedTeacherIds.length === 0) return;
+                const { value: passResult } = await Swal.fire({
+                    title: `Reset Sandi Massal`,
+                    html: `
+                        <div class="text-left text-xs space-y-3 pt-2 text-gray-700">
+                            <p>Mereset kata sandi untuk <b>${selectedTeacherIds.length} Guru</b> terpilih:</p>
+                            <div>
+                                <label class="block font-bold text-gray-600 mb-1">Pilihan Sandi Baru:</label>
+                                <select id="swal-bulk-pass-type" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-red">
+                                    <option value="default">Reset ke Sandi Standar ("guru123")</option>
+                                    <option value="custom">Tentukan Sandi Seragam Baru</option>
+                                </select>
+                            </div>
+                            <div id="swal-bulk-custom-container" style="display:none;">
+                                <label class="block font-bold text-gray-600 mb-1">Ketik Sandi Baru:</label>
+                                <input id="swal-bulk-custom-pass" type="text" placeholder="Minimal 4 karakter" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold text-brand-red focus:ring-2 focus:ring-brand-red" />
+                            </div>
+                        </div>
+                    `,
+                    didOpen: () => {
+                        const typeEl = document.getElementById('swal-bulk-pass-type');
+                        const customBox = document.getElementById('swal-bulk-custom-container');
+                        const customInput = document.getElementById('swal-bulk-custom-pass');
+                        typeEl.addEventListener('change', (e) => {
+                            if (e.target.value === 'custom') {
+                                customBox.style.display = 'block';
+                                customInput.focus();
+                            } else {
+                                customBox.style.display = 'none';
+                            }
+                        });
+                    },
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF4444',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: '🔑 Terapkan Reset Massal',
+                    cancelButtonText: 'Batal',
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5', cancelButton: 'rounded-xl font-bold px-5 py-2.5' },
+                    preConfirm: () => {
+                        const type = document.getElementById('swal-bulk-pass-type').value;
+                        const customVal = document.getElementById('swal-bulk-custom-pass').value.trim();
+                        if (type === 'custom') {
+                            if (!customVal || customVal.length < 4) {
+                                Swal.showValidationMessage('Kata sandi baru minimal 4 karakter!');
+                                return false;
+                            }
+                            return customVal;
+                        }
+                        return 'guru123';
+                    }
+                });
+
+                if (passResult) {
+                    const hashed = await hashPassword(passResult);
+                    const selectedUsers = await db.users.where('id').anyOf(selectedTeacherIds).toArray();
+                    const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
+                    
+                    await db.users.bulkPut(updatedUsers);
+
+                    for (let u of updatedUsers) {
+                        await db.syncQueue.put({
+                            id: `sync_reset_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                            tableName: 'users',
+                            recordId: u.id,
+                            action: 'update',
+                            status: 'pending',
+                            createdAt: new Date()
+                        });
+                    }
+
+                    await loadData();
+                    triggerSync();
+                    setSelectedTeacherIds([]);
+                    showAlert.success('Reset Berhasil', `Kata sandi ${updatedUsers.length} guru berhasil diubah menjadi: "${passResult}"`);
+                }
+            };
+
+            // BULK DELETE GURU
+            const handleBulkDeleteTeachers = async () => {
+                if (selectedTeacherIds.length === 0) return;
+                const confirmRes = await showAlert.confirm(
+                    `Hapus ${selectedTeacherIds.length} Guru Sekaligus?`,
+                    'Akun guru terpilih akan dihapus permanen. Seluruh penugasan wali kelas dan mentoring terkait akan dikosongkan.',
+                    'Ya, Hapus Semua Terpilih'
+                );
+                if (!confirmRes.isConfirmed) return;
+
+                const assignedClasses = await db.classes.where('teacherId').anyOf(selectedTeacherIds).toArray();
+                for (let c of assignedClasses) {
+                    await db.classes.update(c.id, { teacherId: '', teacherName: '' });
+                    await db.syncQueue.put({ id: `sync_c_${Date.now()}_${Math.random()}`, tableName: 'classes', recordId: c.id, action: 'update', status: 'pending', createdAt: new Date() });
+                }
+
+                const assignedStudents = await db.users.where('mentorId').anyOf(selectedTeacherIds).toArray();
+                for (let s of assignedStudents) {
+                    await db.users.update(s.id, { mentorId: '', mentorName: '' });
+                    await db.syncQueue.put({ id: `sync_s_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: s.id, action: 'update', status: 'pending', createdAt: new Date() });
+                }
+
+                await db.users.bulkDelete(selectedTeacherIds);
+                for (let id of selectedTeacherIds) {
+                    await db.syncQueue.put({ id: `sync_tdel_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                }
+
+                await loadData();
+                triggerSync();
+                const deletedCount = selectedTeacherIds.length;
+                setSelectedTeacherIds([]);
+                showAlert.success('Terhapus', `${deletedCount} akun guru berhasil dihapus.`);
+            };
 
             // UNDUH TEMPLATE EXCEL GURU (HANYA HEADER BERSIH)
             const handleDownloadTeacherTemplate = () => {
@@ -1917,6 +2047,12 @@
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}_${Math.random()}`, tableName: 'classes', recordId: c.id, action: 'update', status: 'pending', createdAt: new Date() });
                 }
 
+                const assignedStudents = await db.users.where('mentorId').equals(teacher.id).toArray();
+                for (let s of assignedStudents) {
+                    await db.users.update(s.id, { mentorId: '', mentorName: '' });
+                    await db.syncQueue.put({ id: `sync_s_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: s.id, action: 'update', status: 'pending', createdAt: new Date() });
+                }
+
                 await db.users.delete(teacher.id);
                 await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: teacher.id, action: 'delete', status: 'pending', createdAt: new Date() });
 
@@ -1930,7 +2066,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, template & import massal Excel, reset password, dan master kontrol guru.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, template & import massal Excel, multi-select, reset password, dan master kontrol guru.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
@@ -1941,6 +2077,30 @@
                             <Button variant="primary" onClick={() => { setEditingTeacher(null); setFormData({ name: '', username: '', password: '', phone: '', nip: '', subject: '' }); setIsModalOpen(true); }} className="text-sm py-2 px-4">+ Tambah Guru</Button>
                         </div>
                     </div>
+
+                    {/* FLOATING BULK ACTIONS BAR GURU */}
+                    {selectedTeacherIds.length > 0 && (
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 md:p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                            <div className="flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center font-black text-xs">{selectedTeacherIds.length}</span>
+                                <div>
+                                    <h4 className="font-extrabold text-sm">{selectedTeacherIds.length} Guru Dipilih</h4>
+                                    <p className="text-[11px] text-gray-300">Aksi akan diterapkan pada semua akun guru yang dicentang.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <button onClick={handleBulkResetPassword} className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-1.5">
+                                    <i className="fas fa-key"></i> Reset Sandi Terpilih
+                                </button>
+                                <button onClick={handleBulkDeleteTeachers} className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-1.5">
+                                    <i className="fas fa-trash"></i> Hapus Terpilih
+                                </button>
+                                <button onClick={() => setSelectedTeacherIds([])} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-xs font-bold rounded-xl transition-all">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <Card className="space-y-4">
                         <div className="relative w-full md:w-80">
@@ -1954,30 +2114,55 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Guru</th><th className="p-3">Username</th><th className="p-3">No. Telepon</th><th className="p-3">Mata Pelajaran</th><th className="p-3 text-right">Aksi</th></tr>
+                                        <tr>
+                                            <th className="p-3 w-10 text-center">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isAllVisibleSelected} 
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
+                                                />
+                                            </th>
+                                            <th className="p-3">Nama Guru</th>
+                                            <th className="p-3">Username</th>
+                                            <th className="p-3">No. Telepon</th>
+                                            <th className="p-3">Mata Pelajaran</th>
+                                            <th className="p-3 text-right">Aksi</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredTeachers.map(t => (
-                                            <tr key={t.id} className="border-b border-gray-50">
-                                                <td className="p-3 font-semibold">{t.name}</td>
-                                                <td className="p-3 text-gray-500">@{t.username}</td>
-                                                <td className="p-3 text-gray-600 font-bold">{t.phone || '-'}</td>
-                                                <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
-                                                <td className="p-3 text-right space-x-2">
-                                                    <button onClick={async () => {
-                                                        const success = await promptResetPassword(t, 'guru123');
-                                                        if (success) {
-                                                            await loadData();
-                                                            triggerSync();
-                                                        }
-                                                    }} className="text-amber-600 hover:underline font-bold text-xs" title="Reset Kata Sandi Guru">
-                                                        <i className="fas fa-key"></i> Reset Pass
-                                                    </button>
-                                                    <button onClick={() => { setEditingTeacher(t); setFormData({ name: t.name, username: t.username, password: '', phone: t.phone, nip: t.nip, subject: t.subject }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
-                                                    <button onClick={() => handleDeleteTeacher(t)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {filteredTeachers.map(t => {
+                                            const isSelected = selectedTeacherIds.includes(t.id);
+                                            return (
+                                                <tr key={t.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
+                                                    <td className="p-3 text-center">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isSelected} 
+                                                            onChange={() => toggleSelectOne(t.id)}
+                                                            className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
+                                                        />
+                                                    </td>
+                                                    <td className="p-3 font-semibold">{t.name}</td>
+                                                    <td className="p-3 text-gray-500">@{t.username}</td>
+                                                    <td className="p-3 text-gray-600 font-bold">{t.phone || '-'}</td>
+                                                    <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
+                                                    <td className="p-3 text-right space-x-2">
+                                                        <button onClick={async () => {
+                                                            const success = await promptResetPassword(t, 'guru123');
+                                                            if (success) {
+                                                                await loadData();
+                                                                triggerSync();
+                                                            }
+                                                        }} className="text-amber-600 hover:underline font-bold text-xs" title="Reset Kata Sandi Guru">
+                                                            <i className="fas fa-key"></i> Reset Pass
+                                                        </button>
+                                                        <button onClick={() => { setEditingTeacher(t); setFormData({ name: t.name, username: t.username, password: '', phone: t.phone, nip: t.nip, subject: t.subject }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
+                                                        <button onClick={() => handleDeleteTeacher(t)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -2013,6 +2198,8 @@
             const [classes, setClasses] = useState([]);
             const [teachers, setTeachers] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
+            const [filterClassId, setFilterClassId] = useState('all');
+            const [selectedStudentIds, setSelectedStudentIds] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
             const [formData, setFormData] = useState({ name: '', username: '', password: '', nisn: '', classId: '', mentorId: '', gender: 'Laki-laki' });
@@ -2028,8 +2215,196 @@
             useEffect(() => { loadData(); }, []);
 
             const filteredStudents = useMemo(() => {
-                return students.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.username.toLowerCase().includes(searchQuery.toLowerCase()) || (s.nisn && s.nisn.includes(searchQuery)));
-            }, [students, searchQuery]);
+                return students.filter(s => {
+                    const matchesClass = filterClassId === 'all' || s.classId === filterClassId;
+                    const query = searchQuery.toLowerCase().trim();
+                    const matchesSearch = !query || s.name.toLowerCase().includes(query) || s.username.toLowerCase().includes(query) || (s.nisn && s.nisn.includes(query));
+                    return matchesClass && matchesSearch;
+                });
+            }, [students, searchQuery, filterClassId]);
+
+            const isAllVisibleSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.includes(s.id));
+
+            const toggleSelectAll = () => {
+                if (isAllVisibleSelected) {
+                    const visibleIds = new Set(filteredStudents.map(s => s.id));
+                    setSelectedStudentIds(prev => prev.filter(id => !visibleIds.has(id)));
+                } else {
+                    const newIds = new Set([...selectedStudentIds, ...filteredStudents.map(s => s.id)]);
+                    setSelectedStudentIds(Array.from(newIds));
+                }
+            };
+
+            const toggleSelectOne = (id) => {
+                setSelectedStudentIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+            };
+
+            // BULK RESET PASSWORD SISWA
+            const handleBulkResetPassword = async () => {
+                if (selectedStudentIds.length === 0) return;
+                const { value: passResult } = await Swal.fire({
+                    title: `Reset Sandi Massal`,
+                    html: `
+                        <div class="text-left text-xs space-y-3 pt-2 text-gray-700">
+                            <p>Mereset kata sandi untuk <b>${selectedStudentIds.length} Siswa</b> terpilih:</p>
+                            <div>
+                                <label class="block font-bold text-gray-600 mb-1">Pilihan Sandi Baru:</label>
+                                <select id="swal-bulk-pass-type" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-red">
+                                    <option value="default">Reset ke Sandi Standar ("siswa123")</option>
+                                    <option value="custom">Tentukan Sandi Seragam Baru</option>
+                                </select>
+                            </div>
+                            <div id="swal-bulk-custom-container" style="display:none;">
+                                <label class="block font-bold text-gray-600 mb-1">Ketik Sandi Baru:</label>
+                                <input id="swal-bulk-custom-pass" type="text" placeholder="Minimal 4 karakter" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold text-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red" />
+                            </div>
+                        </div>
+                    `,
+                    didOpen: () => {
+                        const typeEl = document.getElementById('swal-bulk-pass-type');
+                        const customBox = document.getElementById('swal-bulk-custom-container');
+                        const customInput = document.getElementById('swal-bulk-custom-pass');
+                        typeEl.addEventListener('change', (e) => {
+                            if (e.target.value === 'custom') {
+                                customBox.style.display = 'block';
+                                customInput.focus();
+                            } else {
+                                customBox.style.display = 'none';
+                            }
+                        });
+                    },
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF4444',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: '🔑 Terapkan Reset Massal',
+                    cancelButtonText: 'Batal',
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5', cancelButton: 'rounded-xl font-bold px-5 py-2.5' },
+                    preConfirm: () => {
+                        const type = document.getElementById('swal-bulk-pass-type').value;
+                        const customVal = document.getElementById('swal-bulk-custom-pass').value.trim();
+                        if (type === 'custom') {
+                            if (!customVal || customVal.length < 4) {
+                                Swal.showValidationMessage('Kata sandi baru minimal 4 karakter!');
+                                return false;
+                            }
+                            return customVal;
+                        }
+                        return 'siswa123';
+                    }
+                });
+
+                if (passResult) {
+                    const hashed = await hashPassword(passResult);
+                    const selectedUsers = await db.users.where('id').anyOf(selectedStudentIds).toArray();
+                    const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
+                    
+                    await db.users.bulkPut(updatedUsers);
+
+                    for (let u of updatedUsers) {
+                        await db.syncQueue.put({
+                            id: `sync_reset_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                            tableName: 'users',
+                            recordId: u.id,
+                            action: 'update',
+                            status: 'pending',
+                            createdAt: new Date()
+                        });
+                    }
+
+                    await loadData();
+                    triggerSync();
+                    setSelectedStudentIds([]);
+                    showAlert.success('Reset Berhasil', `Kata sandi ${updatedUsers.length} siswa berhasil diubah menjadi: "${passResult}"`);
+                }
+            };
+
+            // BULK MOVE CLASS SISWA
+            const handleBulkMoveClass = async () => {
+                if (selectedStudentIds.length === 0) return;
+                if (classes.length === 0) return showAlert.warning('Perhatian', 'Belum ada data kelas yang terdaftar.');
+
+                const classOptionsHtml = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                const { value: targetClassId } = await Swal.fire({
+                    title: 'Pindah Kelas Massal',
+                    html: `
+                        <div class="text-left text-xs space-y-2 pt-2 text-gray-700">
+                            <p>Pindahkan <b>${selectedStudentIds.length} Siswa</b> terpilih ke rombel baru:</p>
+                            <select id="swal-target-class" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-red">
+                                ${classOptionsHtml}
+                            </select>
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonColor: '#EF4444',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: '🏫 Terapkan Perpindahan',
+                    cancelButtonText: 'Batal',
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5', cancelButton: 'rounded-xl font-bold px-5 py-2.5' },
+                    preConfirm: () => document.getElementById('swal-target-class').value
+                });
+
+                if (targetClassId) {
+                    const targetClass = classes.find(c => c.id === targetClassId);
+                    const selectedUsers = await db.users.where('id').anyOf(selectedStudentIds).toArray();
+                    const updatedUsers = selectedUsers.map(u => ({ ...u, classId: targetClass.id, className: targetClass.name, updatedAt: new Date() }));
+
+                    await db.users.bulkPut(updatedUsers);
+
+                    for (let u of updatedUsers) {
+                        await db.syncQueue.put({
+                            id: `sync_c_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                            tableName: 'users',
+                            recordId: u.id,
+                            action: 'update',
+                            status: 'pending',
+                            createdAt: new Date()
+                        });
+                    }
+
+                    await loadData();
+                    triggerSync();
+                    setSelectedStudentIds([]);
+                    showAlert.success('Perpindahan Selesai', `${updatedUsers.length} siswa berhasil dipindahkan ke rombel "${targetClass.name}".`);
+                }
+            };
+
+            // BULK DELETE SISWA
+            const handleBulkDeleteStudents = async () => {
+                if (selectedStudentIds.length === 0) return;
+                const confirmRes = await showAlert.confirm(
+                    `Hapus ${selectedStudentIds.length} Siswa Sekaligus?`,
+                    'Seluruh akun siswa terpilih beserta data pembiasaan (habit logs), jurnal, dan poin karakter akan dihapus permanen.',
+                    'Ya, Hapus Semua Terpilih'
+                );
+                if (!confirmRes.isConfirmed) return;
+
+                const studentLogs = await db.habitLogs.where('userId').anyOf(selectedStudentIds).toArray();
+                for (let l of studentLogs) {
+                    await db.habitLogs.delete(l.id);
+                    await db.syncQueue.put({ id: `sync_hdel_${Date.now()}_${Math.random()}`, tableName: 'habitLogs', recordId: l.id, action: 'delete', status: 'pending', createdAt: new Date() });
+                }
+
+                const studentJournals = await db.journals.where('userId').anyOf(selectedStudentIds).toArray();
+                for (let j of studentJournals) {
+                    await db.journals.delete(j.id);
+                    await db.syncQueue.put({ id: `sync_jdel_${Date.now()}_${Math.random()}`, tableName: 'journals', recordId: j.id, action: 'delete', status: 'pending', createdAt: new Date() });
+                }
+
+                await db.points.where('userId').anyOf(selectedStudentIds).delete();
+                await db.streaks.where('userId').anyOf(selectedStudentIds).delete();
+
+                await db.users.bulkDelete(selectedStudentIds);
+                for (let id of selectedStudentIds) {
+                    await db.syncQueue.put({ id: `sync_sdel_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: id, action: 'delete', status: 'pending', createdAt: new Date() });
+                }
+
+                await loadData();
+                triggerSync();
+                const deletedCount = selectedStudentIds.length;
+                setSelectedStudentIds([]);
+                showAlert.success('Terhapus', `${deletedCount} akun siswa beserta seluruh rekam jejaknya berhasil dibersihkan.`);
+            };
 
             // UNDUH TEMPLATE EXCEL SISWA (HEADER BERSIH + REFERENSI KELAS DI TAB 2)
             const handleDownloadStudentTemplate = () => {
@@ -2247,7 +2622,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, template & import massal Excel, reset sandi, dan master kontrol siswa.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, template & import massal Excel, multi-select, pindah kelas, reset sandi, dan master kontrol siswa.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
@@ -2260,10 +2635,47 @@
                         </div>
                     </div>
 
+                    {/* FLOATING BULK ACTIONS BAR SISWA */}
+                    {selectedStudentIds.length > 0 && (
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-3 md:p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                            <div className="flex items-center gap-3">
+                                <span className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center font-black text-xs">{selectedStudentIds.length}</span>
+                                <div>
+                                    <h4 className="font-extrabold text-sm">{selectedStudentIds.length} Siswa Dipilih</h4>
+                                    <p className="text-[11px] text-gray-300">Aksi akan diterapkan pada seluruh siswa yang Anda pilih.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <button onClick={handleBulkMoveClass} className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-1.5">
+                                    <i className="fas fa-exchange-alt"></i> Pindah Rombel
+                                </button>
+                                <button onClick={handleBulkResetPassword} className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-1.5">
+                                    <i className="fas fa-key"></i> Reset Sandi
+                                </button>
+                                <button onClick={handleBulkDeleteStudents} className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-1.5">
+                                    <i className="fas fa-trash"></i> Hapus Terpilih
+                                </button>
+                                <button onClick={() => setSelectedStudentIds([])} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white text-xs font-bold rounded-xl transition-all">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <Card className="space-y-4">
-                        <div className="relative w-full md:w-80">
-                            <i className="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
-                            <input type="text" placeholder="Cari nama siswa, NISN, atau username..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-xl text-xs font-semibold" />
+                        <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
+                            <div className="relative w-full md:w-80">
+                                <i className="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                                <input type="text" placeholder="Cari nama siswa, NISN, atau username..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-xl text-xs font-semibold" />
+                            </div>
+                            <div className="w-full md:w-auto">
+                                <select value={filterClassId} onChange={e => { setFilterClassId(e.target.value); setSelectedStudentIds([]); }} className="w-full md:w-auto p-2 bg-gray-50 border rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-brand-red">
+                                    <option value="all">-- Semua Rombel / Kelas ({students.length}) --</option>
+                                    {classes.map(c => (
+                                        <option key={c.id} value={c.id}>Kelas {c.name} ({students.filter(s => s.classId === c.id).length} Siswa)</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         {filteredStudents.length === 0 ? (
@@ -2272,31 +2684,57 @@
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
-                                        <tr><th className="p-3">Nama Siswa</th><th className="p-3">Username</th><th className="p-3">NISN</th><th className="p-3">Kelas</th><th className="p-3">Mentor</th><th className="p-3 text-right">Aksi</th></tr>
+                                        <tr>
+                                            <th className="p-3 w-10 text-center">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isAllVisibleSelected} 
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
+                                                />
+                                            </th>
+                                            <th className="p-3">Nama Siswa</th>
+                                            <th className="p-3">Username</th>
+                                            <th className="p-3">NISN</th>
+                                            <th className="p-3">Kelas</th>
+                                            <th className="p-3">Mentor</th>
+                                            <th className="p-3 text-right">Aksi</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredStudents.map(s => (
-                                            <tr key={s.id} className="border-b border-gray-50">
-                                                <td className="p-3 font-semibold">{s.name}</td>
-                                                <td className="p-3 text-gray-500">@{s.username}</td>
-                                                <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
-                                                <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
-                                                <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
-                                                <td className="p-3 text-right space-x-2">
-                                                    <button onClick={async () => {
-                                                        const success = await promptResetPassword(s, 'siswa123');
-                                                        if (success) {
-                                                            await loadData();
-                                                            triggerSync();
-                                                        }
-                                                    }} className="text-amber-600 hover:underline font-bold text-xs" title="Reset Kata Sandi Siswa">
-                                                        <i className="fas fa-key"></i> Reset Pass
-                                                    </button>
-                                                    <button onClick={() => { setEditingStudent(s); setFormData({ name: s.name, username: s.username, password: '', nisn: s.nisn, classId: s.classId, mentorId: s.mentorId, gender: s.gender }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
-                                                    <button onClick={() => handleDeleteStudent(s)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {filteredStudents.map(s => {
+                                            const isSelected = selectedStudentIds.includes(s.id);
+                                            return (
+                                                <tr key={s.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
+                                                    <td className="p-3 text-center">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isSelected} 
+                                                            onChange={() => toggleSelectOne(s.id)}
+                                                            className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
+                                                        />
+                                                    </td>
+                                                    <td className="p-3 font-semibold">{s.name}</td>
+                                                    <td className="p-3 text-gray-500">@{s.username}</td>
+                                                    <td className="p-3 text-gray-500">{s.nisn || '-'}</td>
+                                                    <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
+                                                    <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
+                                                    <td className="p-3 text-right space-x-2">
+                                                        <button onClick={async () => {
+                                                            const success = await promptResetPassword(s, 'siswa123');
+                                                            if (success) {
+                                                                await loadData();
+                                                                triggerSync();
+                                                            }
+                                                        }} className="text-amber-600 hover:underline font-bold text-xs" title="Reset Kata Sandi Siswa">
+                                                            <i className="fas fa-key"></i> Reset Pass
+                                                        </button>
+                                                        <button onClick={() => { setEditingStudent(s); setFormData({ name: s.name, username: s.username, password: '', nisn: s.nisn, classId: s.classId, mentorId: s.mentorId, gender: s.gender }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
+                                                        <button onClick={() => handleDeleteStudent(s)} className="text-brand-red hover:underline font-bold text-xs"><i className="fas fa-trash"></i> Hapus</button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
