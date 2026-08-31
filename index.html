@@ -3340,10 +3340,10 @@
                     const s = item.student;
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`Nama Siswa   : ${s.name}`, 40, 92);
+                    doc.text(`Nama Siswa    : ${s.name}`, 40, 92);
                     doc.text(`Kelas / Rombel: ${s.className || '-'}`, 40, 106);
                     doc.text(`NISN              : ${s.nisn || '-'}`, pageWidth - 260, 92);
-                    doc.text(`Guru Mentor  : ${s.mentorName || '-'}`, pageWidth - 260, 106);
+                    doc.text(`Guru Mentor   : ${s.mentorName || '-'}`, pageWidth - 260, 106);
 
                     const tableBody = item.flatRows.map(r => [r.no, r.date, r.habitName, r.completed ? 'Selesai' : 'Belum Selesai', r.timeValue || '-', r.detailValue || '-']);
 
@@ -3514,6 +3514,7 @@
             const [selectedRole, setSelectedRole] = useState(ROLES.SISWA);
             const [selectedUserId, setSelectedUserId] = useState('');
             const [inputPassword, setInputPassword] = useState('');
+            const [searchQuery, setSearchQuery] = useState('');
 
             const loadUsers = async () => {
                 const res = await db.users.where('role').equals(selectedRole).toArray();
@@ -3521,7 +3522,11 @@
                 if (res.length > 0) setSelectedUserId(res[0].id); else setSelectedUserId('');
             };
 
-            useEffect(() => { loadUsers(); setInputPassword(''); }, [selectedRole]);
+            useEffect(() => { 
+                loadUsers(); 
+                setInputPassword('');
+                setSearchQuery('');
+            }, [selectedRole]);
 
             // Local-First: Langsung load dari IndexedDB tanpa menahan UI (Non-blocking background pull)
             useEffect(() => {
@@ -3530,6 +3535,27 @@
                     pullAllCloudData().then(() => loadUsers());
                 }
             }, []);
+
+            const filteredUsers = useMemo(() => {
+                const q = searchQuery.toLowerCase().trim();
+                if (!q) return users;
+                return users.filter(u => 
+                    (u.name && u.name.toLowerCase().includes(q)) || 
+                    (u.username && u.username.toLowerCase().includes(q)) || 
+                    (u.nisn && u.nisn.includes(q)) ||
+                    (u.nip && u.nip.includes(q))
+                );
+            }, [users, searchQuery]);
+
+            useEffect(() => {
+                if (filteredUsers.length > 0) {
+                    if (!filteredUsers.some(u => u.id === selectedUserId)) {
+                        setSelectedUserId(filteredUsers[0].id);
+                    }
+                } else {
+                    setSelectedUserId('');
+                }
+            }, [filteredUsers]);
 
             const handleForgotPassword = () => {
                 if (selectedRole === ROLES.SISWA) {
@@ -3623,13 +3649,29 @@
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Nama Pengguna:</label>
+                                {users.length > 0 && (
+                                    <div className="relative mb-2">
+                                        <i className="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                                        <input
+                                            type="text"
+                                            placeholder={`Ketik nama atau username ${selectedRole}...`}
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-brand-red outline-none"
+                                        />
+                                    </div>
+                                )}
                                 {users.length === 0 ? (
                                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
                                         Belum ada akun {selectedRole}. Lakukan sync awal atau login sebagai Admin.
                                     </div>
+                                ) : filteredUsers.length === 0 ? (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-brand-red text-xs font-semibold text-center">
+                                        Tidak ada akun {selectedRole} dengan kata kunci "{searchQuery}".
+                                    </div>
                                 ) : (
                                     <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
-                                        {users.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username})</option>)}
+                                        {filteredUsers.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username}){u.className ? ` - ${u.className}` : ''}</option>)}
                                     </select>
                                 )}
                             </div>
@@ -3642,7 +3684,7 @@
                                 </div>
                                 <input type="password" value={inputPassword} onChange={e => setInputPassword(e.target.value)} placeholder="Masukkan kata sandi..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" required />
                             </div>
-                            <Button type="submit" fullWidth disabled={users.length === 0}>Masuk Sistem</Button>
+                            <Button type="submit" fullWidth disabled={!selectedUserId || filteredUsers.length === 0}>Masuk Sistem</Button>
                         </form>
                     </Card>
                 </div>
