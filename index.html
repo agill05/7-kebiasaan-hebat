@@ -3515,6 +3515,7 @@
             const [selectedUserId, setSelectedUserId] = useState('');
             const [inputPassword, setInputPassword] = useState('');
             const [searchQuery, setSearchQuery] = useState('');
+            const [showPassword, setShowPassword] = useState(false);
 
             const loadUsers = async () => {
                 const res = await db.users.where('role').equals(selectedRole).toArray();
@@ -3526,6 +3527,7 @@
                 loadUsers(); 
                 setInputPassword('');
                 setSearchQuery('');
+                setShowPassword(false);
             }, [selectedRole]);
 
             // Local-First: Langsung load dari IndexedDB tanpa menahan UI (Non-blocking background pull)
@@ -3548,14 +3550,20 @@
             }, [users, searchQuery]);
 
             useEffect(() => {
-                if (filteredUsers.length > 0) {
-                    if (!filteredUsers.some(u => u.id === selectedUserId)) {
-                        setSelectedUserId(filteredUsers[0].id);
+                if (selectedRole !== ROLES.ADMIN) {
+                    if (filteredUsers.length > 0) {
+                        if (!filteredUsers.some(u => u.id === selectedUserId)) {
+                            setSelectedUserId(filteredUsers[0].id);
+                        }
+                    } else {
+                        setSelectedUserId('');
                     }
                 } else {
-                    setSelectedUserId('');
+                    if (users.length > 0) {
+                        setSelectedUserId(users[0].id);
+                    }
                 }
-            }, [filteredUsers]);
+            }, [filteredUsers, users, selectedRole, selectedUserId]);
 
             const handleForgotPassword = () => {
                 if (selectedRole === ROLES.SISWA) {
@@ -3609,8 +3617,12 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (!selectedUserId) return showAlert.warning('Perhatian', 'Pilih akun Anda!');
-                const user = await db.users.get(selectedUserId);
+                let targetUserId = selectedUserId;
+                if (selectedRole === ROLES.ADMIN && users.length > 0) {
+                    targetUserId = users[0].id;
+                }
+                if (!targetUserId) return showAlert.warning('Perhatian', 'Pilih akun Anda!');
+                const user = await db.users.get(targetUserId);
                 if (!user) return showAlert.error('Gagal', 'Akun tidak ditemukan!');
 
                 const typedPassword = String(inputPassword).trim();
@@ -3647,34 +3659,37 @@
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Nama Pengguna:</label>
-                                {users.length > 0 && (
-                                    <div className="relative mb-2">
-                                        <i className="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
-                                        <input
-                                            type="text"
-                                            placeholder={`Ketik nama atau username ${selectedRole}...`}
-                                            value={searchQuery}
-                                            onChange={e => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-brand-red outline-none"
-                                        />
-                                    </div>
-                                )}
-                                {users.length === 0 ? (
-                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
-                                        Belum ada akun {selectedRole}. Lakukan sync awal atau login sebagai Admin.
-                                    </div>
-                                ) : filteredUsers.length === 0 ? (
-                                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-brand-red text-xs font-semibold text-center">
-                                        Tidak ada akun {selectedRole} dengan kata kunci "{searchQuery}".
-                                    </div>
-                                ) : (
-                                    <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
-                                        {filteredUsers.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username}){u.className ? ` - ${u.className}` : ''}</option>)}
-                                    </select>
-                                )}
-                            </div>
+                            {selectedRole !== ROLES.ADMIN && (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Nama Pengguna:</label>
+                                    {users.length > 0 && (
+                                        <div className="relative mb-2">
+                                            <i className="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                                            <input
+                                                type="text"
+                                                placeholder={`Ketik nama atau username ${selectedRole}...`}
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                className="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-brand-red outline-none"
+                                            />
+                                        </div>
+                                    )}
+                                    {users.length === 0 ? (
+                                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold text-center">
+                                            Belum ada akun {selectedRole}. Lakukan sync awal atau login sebagai Admin.
+                                        </div>
+                                    ) : filteredUsers.length === 0 ? (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-brand-red text-xs font-semibold text-center">
+                                            Tidak ada akun {selectedRole} dengan kata kunci "{searchQuery}".
+                                        </div>
+                                    ) : (
+                                        <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
+                                            {filteredUsers.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username}){u.className ? ` - ${u.className}` : ''}</option>)}
+                                        </select>
+                                    )}
+                                </div>
+                            )}
+
                             <div>
                                 <div className="flex justify-between items-center mb-1">
                                     <label className="text-xs font-bold text-gray-600">Kata Sandi:</label>
@@ -3682,9 +3697,26 @@
                                         Lupa Kata Sandi?
                                     </button>
                                 </div>
-                                <input type="password" value={inputPassword} onChange={e => setInputPassword(e.target.value)} placeholder="Masukkan kata sandi..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" required />
+                                <div className="relative">
+                                    <input 
+                                        type={showPassword ? "text" : "password"} 
+                                        value={inputPassword} 
+                                        onChange={e => setInputPassword(e.target.value)} 
+                                        placeholder="Masukkan kata sandi..." 
+                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
+                                        required 
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 focus:outline-none transition-colors"
+                                        title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                                    >
+                                        <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-sm`}></i>
+                                    </button>
+                                </div>
                             </div>
-                            <Button type="submit" fullWidth disabled={!selectedUserId || filteredUsers.length === 0}>Masuk Sistem</Button>
+                            <Button type="submit" fullWidth disabled={selectedRole === ROLES.ADMIN ? users.length === 0 : (!selectedUserId || filteredUsers.length === 0)}>Masuk Sistem</Button>
                         </form>
                     </Card>
                 </div>
