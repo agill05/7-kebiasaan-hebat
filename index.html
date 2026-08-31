@@ -76,7 +76,7 @@
         const SESSION_STORAGE_KEY = 'seven_habits_session_v1';
         const COMPACT_STORAGE_KEY = 'seven_habits_compact_view';
         const ONBOARDING_STORAGE_KEY = 'seven_habits_onboarding_seen';
-        const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 Menit
+        const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
         const SCHOOL_IDENTITY = {
             name: "SMP NEGERI 1 TALAGA JAYA",
@@ -149,7 +149,6 @@
         }
 
         async function promptResetPassword(targetUser, defaultPass = 'siswa123') {
-            const isGuru = targetUser.role === ROLES.GURU;
             const { value: newPasswordResult } = await Swal.fire({
                 title: `Reset Kata Sandi`,
                 html: `
@@ -657,10 +656,10 @@
                                         </>
                                     ) : (
                                         <>
-                                            <p>📥 <strong>Full Master CRUD:</strong> Kelola, tambah, edit, dan hapus permanen data guru, siswa, dan kelas.</p>
-                                            <p>📦 <strong>Arsip & Lihat Arsip:</strong> Arsipkan data semester lama dan telaah riwayatnya kapan saja secara on-demand.</p>
-                                            <p>🔑 <strong>Reset Sandi Guru & Siswa:</strong> Kelola pengaturan kata sandi seluruh pengguna secara instan.</p>
-                                            <p>🪪 <strong>Cetak Kartu Akun:</strong> Buat lembar kisi akun siswa siap gunting dalam format PDF.</p>
+                                            <p>📥 <strong>Import & Unduh Template:</strong> Unduh berkas format Excel murni dan pelajari panduan kolomnya.</p>
+                                            <p>🗑️ <strong>Master CRUD:</strong> Tambah, edit, dan hapus permanen data guru, siswa, dan kelas.</p>
+                                            <p>📦 <strong>Arsip Semester:</strong> Backup dan telusuri riwayat semester lampau tanpa beban lag.</p>
+                                            <p>🔑 <strong>Reset Sandi:</strong> Atur kata sandi guru dan siswa sewaktu-waktu.</p>
                                         </>
                                     )}
                                 </div>
@@ -1158,7 +1157,7 @@
         };
 
         // ==========================================
-        // MODUL GURU (DENGAN TOMBOL EDIT SISWA & RESET SANDI)
+        // MODUL GURU
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
@@ -1365,8 +1364,6 @@
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                                                     {count === 0 ? '🔴 Belum Mengisi' : `${count} / 7 Selesai`}
                                                 </span>
-                                                
-                                                {/* TOMBOL EDIT SISWA OLEH GURU */}
                                                 <button onClick={() => {
                                                     setEditingStudent(student);
                                                     setStudentFormData({
@@ -1381,8 +1378,6 @@
                                                 }} className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all" title="Edit Data Siswa">
                                                     <i className="fas fa-edit text-[10px]"></i> Edit
                                                 </button>
-
-                                                {/* TOMBOL RESET PASSWORD OLEH GURU */}
                                                 <button onClick={async () => {
                                                     const success = await promptResetPassword(student, 'siswa123');
                                                     if (success) {
@@ -1392,7 +1387,6 @@
                                                 }} className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 flex items-center gap-1 transition-all" title="Reset Kata Sandi Siswa">
                                                     <i className="fas fa-key text-[10px]"></i> Reset Sandi
                                                 </button>
-
                                                 <button onClick={() => handleOpenFeedbackModal(student)} className="px-2.5 py-1 text-xs font-bold bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center gap-1">
                                                     <i className="fas fa-comment-dots"></i> Apresiasi Jurnal
                                                 </button>
@@ -1542,7 +1536,7 @@
         };
 
         // ==========================================
-        // MODUL ADMIN (FULL MASTER CRUD: KELAS, GURU, SISWA)
+        // MODUL ADMIN (FULL MASTER CRUD + EXCEL TEMPLATE ENGINE)
         // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1767,6 +1761,44 @@
                 return teachers.filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.username.toLowerCase().includes(searchQuery.toLowerCase()) || (t.nip && t.nip.includes(searchQuery)));
             }, [teachers, searchQuery]);
 
+            // UNDUH TEMPLATE EXCEL GURU (HANYA HEADER BERSIH)
+            const handleDownloadTeacherTemplate = () => {
+                const headers = [['Nama Lengkap', 'Username', 'Password', 'NIP', 'Nomor Telepon', 'Mata Pelajaran']];
+                const ws = XLSX.utils.aoa_to_sheet(headers);
+                ws['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 22 }, { wch: 18 }, { wch: 20 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Template_Guru");
+                XLSX.writeFile(wb, "Template_Import_Guru.xlsx");
+                showAlert.success("Template Diunduh", "Silakan isi data guru mulai dari baris ke-2.");
+            };
+
+            // MODAL PANDUAN IMPORT GURU
+            const handleShowTeacherGuide = () => {
+                Swal.fire({
+                    title: 'Panduan Import Excel Guru',
+                    html: `
+                        <div class="text-left text-xs space-y-2.5 text-gray-700 pt-1 leading-relaxed">
+                            <p><b>Ketentuan Pengisian Kolom:</b></p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li><b>Nama Lengkap</b>: Wajib diisi (Contoh: <i>Ahmad Fauzi, S.Pd.</i>).</li>
+                                <li><b>Username</b>: Wajib diisi, unik, huruf kecil tanpa spasi (Contoh: <i>ahmad.fauzi</i>).</li>
+                                <li><b>Password</b>: Opsional (Jika kosong, otomatis diset <code>guru123</code>).</li>
+                                <li><b>NIP</b>: Opsional (Nomor NIP / NIK guru).</li>
+                                <li><b>Nomor Telepon</b>: Opsional (Nomor WhatsApp aktif).</li>
+                                <li><b>Mata Pelajaran</b>: Opsional (Contoh: <i>Informatika</i>, <i>Matematika</i>).</li>
+                            </ul>
+                            <div class="p-2.5 bg-red-50 border border-red-200 text-brand-red rounded-xl font-bold">
+                                💡 Jangan mengubah susunan baris pertama (Header) pada berkas template.
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonColor: '#EF4444',
+                    confirmButtonText: 'Saya Mengerti',
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
+                });
+            };
+
+            // IMPORT EXCEL GURU DENGAN VALIDASI CERDAS
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1779,26 +1811,41 @@
                         const wsname = wb.SheetNames[0];
                         const data = XLSX.utils.sheet_to_json(wb.Sheets[wsname]);
 
-                        if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data pada Excel.');
+                        if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data pada berkas Excel.');
 
+                        const existingUsers = await db.users.toArray();
+                        const existingUsernames = new Set(existingUsers.map(u => u.username.toLowerCase()));
                         const newTeachers = [];
-                        for (let row of data) {
-                            const name = String(row['Nama'] || row['Nama Lengkap'] || '').trim();
-                            const username = String(row['Username'] || '').trim().toLowerCase();
-                            if (!name || !username) continue;
+                        const seenBatchUsernames = new Set();
+                        let skippedCount = 0;
 
+                        for (let row of data) {
+                            const name = String(row['Nama Lengkap'] || row['Nama'] || '').trim();
+                            const rawUsername = String(row['Username'] || '').trim().toLowerCase();
+
+                            if (!name || !rawUsername) {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            if (existingUsernames.has(rawUsername) || seenBatchUsernames.has(rawUsername)) {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            seenBatchUsernames.add(rawUsername);
                             const defaultPass = String(row['Password'] || 'guru123').trim();
                             const hashedPassword = await hashPassword(defaultPass);
                             const id = `u_guru_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
                             const teacherObj = {
                                 id,
-                                username,
+                                username: rawUsername,
                                 password: hashedPassword,
                                 name,
-                                phone: String(row['Telepon'] || row['Nomor Telepon'] || '').trim(),
+                                phone: String(row['Nomor Telepon'] || row['Telepon'] || '').trim(),
                                 nip: String(row['NIP'] || '').trim(),
-                                subject: String(row['Mapel'] || row['Mata Pelajaran'] || 'Umum').trim(),
+                                subject: String(row['Mata Pelajaran'] || row['Mapel'] || 'Umum').trim(),
                                 homeroomClassId: '',
                                 role: ROLES.GURU,
                                 avatar: '👨‍🏫',
@@ -1814,7 +1861,9 @@
                             await db.users.bulkPut(newTeachers);
                             await loadData();
                             triggerSync();
-                            showAlert.success('Import Berhasil', `${newTeachers.length} data guru berhasil didaftarkan.`);
+                            showAlert.success('Import Berhasil', `${newTeachers.length} guru berhasil didaftarkan.${skippedCount > 0 ? ` (${skippedCount} baris dilewati karena duplikat/tidak lengkap)` : ''}`);
+                        } else {
+                            showAlert.warning('Tidak Ada Data Diimport', 'Semua baris kosong atau username sudah terdaftar di sistem.');
                         }
                     } catch (err) {
                         showAlert.error('Gagal Membaca Excel', err.message);
@@ -1854,7 +1903,6 @@
                 showAlert.success('Berhasil', 'Data guru berhasil disimpan.');
             };
 
-            // HAPUS GURU OLEH ADMIN
             const handleDeleteTeacher = async (teacher) => {
                 const confirmRes = await showAlert.confirm(
                     `Hapus Guru ${teacher.name}?`,
@@ -1863,14 +1911,12 @@
                 );
                 if (!confirmRes.isConfirmed) return;
 
-                // 1. Kosongkan penugasan wali kelas yang bersangkutan
                 const assignedClasses = await db.classes.where('teacherId').equals(teacher.id).toArray();
                 for (let c of assignedClasses) {
                     await db.classes.update(c.id, { teacherId: '', teacherName: '' });
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}_${Math.random()}`, tableName: 'classes', recordId: c.id, action: 'update', status: 'pending', createdAt: new Date() });
                 }
 
-                // 2. Hapus data pengguna
                 await db.users.delete(teacher.id);
                 await db.syncQueue.put({ id: `sync_tdel_${Date.now()}`, tableName: 'users', recordId: teacher.id, action: 'delete', status: 'pending', createdAt: new Date() });
 
@@ -1884,10 +1930,12 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, import massal via Excel, reset password, dan pembaruan profil guru.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, template & import massal Excel, reset password, dan master kontrol guru.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
+                            <Button variant="white" onClick={handleDownloadTeacherTemplate} className="text-xs py-2 px-3 text-brand-dark font-bold"><i className="fas fa-download mr-1 text-brand-blue"></i> Unduh Template</Button>
+                            <Button variant="white" onClick={handleShowTeacherGuide} className="text-xs py-2 px-3 text-gray-600"><i className="fas fa-info-circle mr-1 text-amber-500"></i> Panduan Format</Button>
                             <Button variant="green" onClick={() => fileInputRef.current?.click()} className="text-xs py-2 px-3"><i className="fas fa-file-excel mr-1"></i> Import Excel</Button>
                             <Button variant="white" onClick={triggerManualPull} className="text-xs py-2 px-3"><i className="fas fa-sync-alt mr-1"></i> Tarik Cloud</Button>
                             <Button variant="primary" onClick={() => { setEditingTeacher(null); setFormData({ name: '', username: '', password: '', phone: '', nip: '', subject: '' }); setIsModalOpen(true); }} className="text-sm py-2 px-4">+ Tambah Guru</Button>
@@ -1901,7 +1949,7 @@
                         </div>
 
                         {filteredTeachers.length === 0 ? (
-                            <EmptyState icon="👨‍🏫" title="Belum Ada Guru" description="Tambahkan data guru pengajar atau unggah file Excel." />
+                            <EmptyState icon="👨‍🏫" title="Belum Ada Guru" description="Tambahkan data guru pengajar atau unduh template lalu unggah berkas Excel." />
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
@@ -1983,6 +2031,54 @@
                 return students.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.username.toLowerCase().includes(searchQuery.toLowerCase()) || (s.nisn && s.nisn.includes(searchQuery)));
             }, [students, searchQuery]);
 
+            // UNDUH TEMPLATE EXCEL SISWA (HEADER BERSIH + REFERENSI KELAS DI TAB 2)
+            const handleDownloadStudentTemplate = () => {
+                const headers = [['Nama Lengkap', 'Username', 'Password', 'NISN', 'Kelas', 'Jenis Kelamin']];
+                const ws = XLSX.utils.aoa_to_sheet(headers);
+                ws['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 15 }, { wch: 16 }, { wch: 12 }, { wch: 15 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Template_Siswa");
+
+                if (classes.length > 0) {
+                    const classRefData = [['Nama Kelas', 'Wali Kelas Terdaftar']];
+                    classes.forEach(c => classRefData.push([c.name, c.teacherName || '-']));
+                    const wsRef = XLSX.utils.aoa_to_sheet(classRefData);
+                    wsRef['!cols'] = [{ wch: 15 }, { wch: 25 }];
+                    XLSX.utils.book_append_sheet(wb, wsRef, "Referensi_Kelas");
+                }
+
+                XLSX.writeFile(wb, "Template_Import_Siswa.xlsx");
+                showAlert.success("Template Diunduh", "Silakan isi data siswa pada sheet 'Template_Siswa' mulai dari baris ke-2.");
+            };
+
+            // MODAL PANDUAN IMPORT SISWA
+            const handleShowStudentGuide = () => {
+                const classListText = classes.map(c => c.name).join(', ') || 'Belum ada kelas terdaftar';
+                Swal.fire({
+                    title: 'Panduan Import Excel Siswa',
+                    html: `
+                        <div class="text-left text-xs space-y-2.5 text-gray-700 pt-1 leading-relaxed">
+                            <p><b>Ketentuan Pengisian Kolom:</b></p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li><b>Nama Lengkap</b>: Wajib diisi (Contoh: <i>Muhammad Rizky</i>).</li>
+                                <li><b>Username</b>: Wajib diisi, unik, huruf kecil tanpa spasi (Contoh: <i>rizky.pratama</i>).</li>
+                                <li><b>Password</b>: Opsional (Jika kosong, otomatis diset <code>siswa123</code>).</li>
+                                <li><b>NISN</b>: Opsional (10 digit angka).</li>
+                                <li><b>Kelas</b>: Wajib diisi persis sesuai nama rombel aktif:<br><span class="font-black text-brand-red">${classListText}</span>.</li>
+                                <li><b>Jenis Kelamin</b>: Diisi <i>Laki-laki</i> atau <i>Perempuan</i>.</li>
+                            </ul>
+                            <div class="p-2.5 bg-red-50 border border-red-200 text-brand-red rounded-xl font-bold">
+                                💡 Rujukan nama kelas yang aktif juga dapat dilihat pada lembar sheet kedua berkas template (<i>Referensi_Kelas</i>).
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonColor: '#EF4444',
+                    confirmButtonText: 'Saya Mengerti',
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
+                });
+            };
+
+            // IMPORT EXCEL SISWA DENGAN VALIDASI CERDAS
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1995,23 +2091,40 @@
                         const wsname = wb.SheetNames[0];
                         const data = XLSX.utils.sheet_to_json(wb.Sheets[wsname]);
 
-                        if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada data siswa pada Excel.');
+                        if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data siswa pada berkas Excel.');
 
+                        const existingUsers = await db.users.toArray();
+                        const existingUsernames = new Set(existingUsers.map(u => u.username.toLowerCase()));
                         const newStudents = [];
-                        for (let row of data) {
-                            const name = String(row['Nama'] || row['Nama Lengkap'] || '').trim();
-                            const username = String(row['Username'] || '').trim().toLowerCase();
-                            if (!name || !username) continue;
+                        const seenBatchUsernames = new Set();
+                        let skippedCount = 0;
 
+                        for (let row of data) {
+                            const name = String(row['Nama Lengkap'] || row['Nama'] || '').trim();
+                            const rawUsername = String(row['Username'] || '').trim().toLowerCase();
+
+                            if (!name || !rawUsername) {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            if (existingUsernames.has(rawUsername) || seenBatchUsernames.has(rawUsername)) {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            seenBatchUsernames.add(rawUsername);
                             const defaultPass = String(row['Password'] || 'siswa123').trim();
                             const hashedPassword = await hashPassword(defaultPass);
                             const classNameVal = String(row['Kelas'] || '').trim();
                             const matchingClass = classes.find(c => c.name.toLowerCase() === classNameVal.toLowerCase());
 
+                            const genderVal = String(row['Jenis Kelamin'] || row['Gender'] || 'Laki-laki').trim();
                             const id = `u_siswa_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+
                             const stdObj = {
                                 id,
-                                username,
+                                username: rawUsername,
                                 password: hashedPassword,
                                 name,
                                 nisn: String(row['NISN'] || '').trim(),
@@ -2019,9 +2132,9 @@
                                 className: matchingClass ? matchingClass.name : classNameVal,
                                 mentorId: '',
                                 mentorName: '',
-                                gender: String(row['Gender'] || row['Jenis Kelamin'] || 'Laki-laki').trim(),
+                                gender: genderVal,
                                 role: ROLES.SISWA,
-                                avatar: String(row['Gender'] || '').toLowerCase().includes('perempuan') ? '👧' : '👦',
+                                avatar: genderVal.toLowerCase().includes('perempuan') ? '👧' : '👦',
                                 createdBy: 'admin',
                                 status: 'Aktif',
                                 createdAt: new Date()
@@ -2035,7 +2148,9 @@
                             await db.users.bulkPut(newStudents);
                             await loadData();
                             triggerSync();
-                            showAlert.success('Import Berhasil', `${newStudents.length} siswa berhasil didaftarkan.`);
+                            showAlert.success('Import Berhasil', `${newStudents.length} siswa berhasil didaftarkan.${skippedCount > 0 ? ` (${skippedCount} baris dilewati karena duplikat/tidak lengkap)` : ''}`);
+                        } else {
+                            showAlert.warning('Tidak Ada Data Diimport', 'Semua baris kosong atau username sudah terdaftar di sistem.');
                         }
                     } catch (err) {
                         showAlert.error('Gagal Membaca Excel', err.message);
@@ -2096,7 +2211,6 @@
                 showAlert.success('Berhasil Diunduh', 'Lembar kartu akun siswa siap dicetak.');
             };
 
-            // HAPUS SISWA OLEH ADMIN (CASCADE LOGS & JOURNALS)
             const handleDeleteStudent = async (student) => {
                 const confirmRes = await showAlert.confirm(
                     `Hapus Siswa ${student.name}?`,
@@ -2105,25 +2219,21 @@
                 );
                 if (!confirmRes.isConfirmed) return;
 
-                // 1. Bersihkan log habit terkait
                 const studentLogs = await db.habitLogs.where('userId').equals(student.id).toArray();
                 for (let l of studentLogs) {
                     await db.habitLogs.delete(l.id);
                     await db.syncQueue.put({ id: `sync_hdel_${Date.now()}_${Math.random()}`, tableName: 'habitLogs', recordId: l.id, action: 'delete', status: 'pending', createdAt: new Date() });
                 }
 
-                // 2. Bersihkan jurnal refleksi terkait
                 const studentJournals = await db.journals.where('userId').equals(student.id).toArray();
                 for (let j of studentJournals) {
                     await db.journals.delete(j.id);
                     await db.syncQueue.put({ id: `sync_jdel_${Date.now()}_${Math.random()}`, tableName: 'journals', recordId: j.id, action: 'delete', status: 'pending', createdAt: new Date() });
                 }
 
-                // 3. Bersihkan data poin & streak
                 await db.points.where('userId').equals(student.id).delete();
                 await db.streaks.where('userId').equals(student.id).delete();
 
-                // 4. Hapus data pengguna
                 await db.users.delete(student.id);
                 await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: student.id, action: 'delete', status: 'pending', createdAt: new Date() });
 
@@ -2137,12 +2247,14 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran siswa, import massal, reset kata sandi, dan cetak kartu akses login.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, template & import massal Excel, reset sandi, dan master kontrol siswa.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
+                            <Button variant="white" onClick={handleDownloadStudentTemplate} className="text-xs py-2 px-3 text-brand-dark font-bold"><i className="fas fa-download mr-1 text-brand-blue"></i> Unduh Template</Button>
+                            <Button variant="white" onClick={handleShowStudentGuide} className="text-xs py-2 px-3 text-gray-600"><i className="fas fa-info-circle mr-1 text-amber-500"></i> Panduan Format</Button>
                             <Button variant="green" onClick={() => fileInputRef.current?.click()} className="text-xs py-2 px-3"><i className="fas fa-file-excel mr-1"></i> Import Excel</Button>
-                            <Button variant="amber" onClick={handlePrintAccountCards} className="text-xs py-2 px-3"><i className="fas fa-id-card mr-1"></i> Cetak Kartu Akun (PDF)</Button>
+                            <Button variant="amber" onClick={handlePrintAccountCards} className="text-xs py-2 px-3"><i className="fas fa-id-card mr-1"></i> Cetak Kartu Akun</Button>
                             <Button variant="white" onClick={triggerManualPull} className="text-xs py-2 px-3"><i className="fas fa-sync-alt mr-1"></i> Tarik Cloud</Button>
                             <Button variant="primary" onClick={() => { setEditingStudent(null); setFormData({ name: '', username: '', password: '', nisn: '', classId: classes[0]?.id || '', mentorId: '', gender: 'Laki-laki' }); setIsModalOpen(true); }} className="text-sm py-2 px-4">+ Tambah Siswa</Button>
                         </div>
@@ -2155,7 +2267,7 @@
                         </div>
 
                         {filteredStudents.length === 0 ? (
-                            <EmptyState icon="👦" title="Belum Ada Siswa" description="Tambahkan siswa atau unggah berkas Excel." />
+                            <EmptyState icon="👦" title="Belum Ada Siswa" description="Tambahkan data siswa atau unduh template lalu unggah berkas Excel." />
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
