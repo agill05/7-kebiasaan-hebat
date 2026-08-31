@@ -250,55 +250,98 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // AUTO PUSH ENGINE
+        // PUSH KE CLOUD (STANDARD SYNC)[cite: 1]
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
             if (pendingQueue.length === 0) return;
 
+            // 1. Habit Logs[cite: 1]
             const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action !== 'delete').map(q => q.recordId);
-            const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && q.action !== 'delete').map(q => q.recordId);
-            const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && q.action !== 'delete').map(q => q.recordId);
-            const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && q.action !== 'delete').map(q => q.recordId);
-
-            const [classes, users, habitLogs, journals] = await Promise.all([
-                classUpsertIds.length > 0 ? db.classes.bulkGet(classUpsertIds) : [],
-                userUpsertIds.length > 0 ? db.users.bulkGet(userUpsertIds) : [],
-                habitLogs.length > 0 ? db.habitLogs.bulkGet(habitUpsertIds) : [],
-                journalUpsertIds.length > 0 ? db.journals.bulkGet(journalUpsertIds) : []
-            ]);
-
-            const deletes = pendingQueue.filter(q => q.action === 'delete').map(q => ({
-                tableName: q.tableName,
-                recordId: q.recordId
-            }));
-
-            const payload = {
-                classes: classes.filter(Boolean),
-                users: users.filter(Boolean),
-                habitLogs: habitLogs.filter(Boolean),
-                journals: journals.filter(Boolean),
-                deletes: deletes
-            };
-
-            try {
-                await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: 'batchSyncAll', payload })
-                });
-
-                for (let item of pendingQueue) {
-                    await db.syncQueue.update(item.id, { status: 'synced' });
+            if (habitUpsertIds.length > 0) {
+                const logs = await db.habitLogs.bulkGet(habitUpsertIds);
+                const validLogs = logs.filter(Boolean);
+                if (validLogs.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncHabits', payload: validLogs })
+                    });
                 }
-            } catch (err) {
-                console.error("Gagal sinkronisasi antrean:", err);
+            }
+
+            // 2. Users[cite: 1]
+            const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && q.action !== 'delete').map(q => q.recordId);
+            if (userUpsertIds.length > 0) {
+                const users = await db.users.bulkGet(userUpsertIds);
+                const validUsers = users.filter(Boolean);
+                if (validUsers.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncUser', payload: validUsers })
+                    });
+                }
+            }
+
+            // 3. Classes[cite: 1]
+            const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && q.action !== 'delete').map(q => q.recordId);
+            if (classUpsertIds.length > 0) {
+                const classes = await db.classes.bulkGet(classUpsertIds);
+                const validClasses = classes.filter(Boolean);
+                if (validClasses.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncClass', payload: validClasses })
+                    });
+                }
+            }
+
+            // 4. Journals[cite: 1]
+            const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && q.action !== 'delete').map(q => q.recordId);
+            if (journalUpsertIds.length > 0) {
+                const journals = await db.journals.bulkGet(journalUpsertIds);
+                const validJournals = journals.filter(Boolean);
+                if (validJournals.length > 0) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'syncJournal', payload: validJournals })
+                    });
+                }
+            }
+
+            // 5. Deletes[cite: 1]
+            const deleteItems = pendingQueue.filter(q => q.action === 'delete');
+            for (let item of deleteItems) {
+                let endpointAction = '';
+                if (item.tableName === 'habitLogs') endpointAction = 'deleteHabitLog';
+                else if (item.tableName === 'journals') endpointAction = 'deleteJournal';
+                else if (item.tableName === 'users') endpointAction = 'deleteUser';
+                else if (item.tableName === 'classes') endpointAction = 'deleteClass';
+
+                if (endpointAction) {
+                    await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: endpointAction, payload: { id: item.recordId } })
+                    });
+                }
+            }
+
+            for (let item of pendingQueue) {
+                await db.syncQueue.update(item.id, { status: 'synced' });
             }
         }
 
-        // AUTO PULL ENGINE (SAFE UPSERT MERGE)
+        // PULL DARI CLOUD (STANDARD LOAD DATA)[cite: 1]
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -407,20 +450,7 @@
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [syncStatus, setSyncStatus] = useState('idle');
 
-            const triggerSync = useCallback(async () => {
-                if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
-                setSyncStatus('syncing');
-                try {
-                    await pushPendingQueue();
-                    setSyncStatus('synced');
-                    setTimeout(() => setSyncStatus('idle'), 2000);
-                } catch (e) {
-                    setSyncStatus('error');
-                    setTimeout(() => setSyncStatus('idle'), 2500);
-                }
-            }, []);
-
-            const triggerManualPull = useCallback(async () => {
+            const fullSynchronize = useCallback(async () => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
                 setSyncStatus('syncing');
                 try {
@@ -435,14 +465,15 @@
             }, []);
 
             useEffect(() => {
-                const handleOnline = () => { setIsOnline(true); triggerSync(); };
+                const handleOnline = () => { setIsOnline(true); fullSynchronize(); };
                 const handleOffline = () => { setIsOnline(false); setSyncStatus('idle'); };
 
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
+                // Polling background setiap 60 detik[cite: 1]
                 const interval = setInterval(() => {
-                    if (navigator.onLine) triggerSync();
+                    if (navigator.onLine) fullSynchronize();
                 }, 60000);
 
                 return () => {
@@ -450,12 +481,14 @@
                     window.removeEventListener('offline', handleOffline);
                     clearInterval(interval);
                 };
-            }, [triggerSync]);
+            }, [fullSynchronize]);
 
-            return { isOnline, syncStatus, triggerSync, triggerManualPull };
+            return { isOnline, syncStatus, triggerSync: fullSynchronize, triggerManualPull: fullSynchronize };
         }
 
+        // ==========================================
         // UI ATOMS
+        // ==========================================
         const Card = ({ children, className = '', compact = false }) => (
             <div className={`bg-white rounded-2xl shadow-soft border border-gray-100 ${compact ? 'p-3 md:p-4' : 'p-5'} ${className}`}>{children}</div>
         );
@@ -484,7 +517,9 @@
             </div>
         );
 
+        // ==========================================
         // LAYOUT UTAMA & ONBOARDING GUIDE
+        // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, compact, setCompact, children }) => {
             const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -644,7 +679,9 @@
             );
         };
 
+        // ==========================================
         // MODUL SISWA
+        // ==========================================
         const StudentHabitsPage = ({ user, triggerSync, compact }) => {
             const todayStr = getTodayWitaDateString();
             const [logs, setLogs] = useState({});
@@ -1127,7 +1164,9 @@
             );
         };
 
+        // ==========================================
         // MODUL GURU
+        // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
@@ -1504,7 +1543,9 @@
             );
         };
 
+        // ==========================================
         // MODUL ADMIN
+        // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
 
@@ -1540,21 +1581,41 @@
                         db.journals.toArray()
                     ]);
 
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({
-                            action: 'batchSyncAll',
-                            payload: {
-                                classes: allClasses,
-                                users: allUsers,
-                                habitLogs: allLogs,
-                                journals: allJournals,
-                                deletes: []
-                            }
-                        })
-                    });
+                    if (allClasses.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncClass', payload: allClasses })
+                        });
+                    }
+
+                    if (allUsers.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncUser', payload: allUsers })
+                        });
+                    }
+
+                    if (allLogs.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: allLogs })
+                        });
+                    }
+
+                    if (allJournals.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncJournal', payload: allJournals })
+                        });
+                    }
 
                     Swal.close();
                     showAlert.success('Berhasil!', 'Semua data lokal telah terunggah ke Google Sheets.');
@@ -2799,7 +2860,9 @@
             );
         };
 
+        // ==========================================
         // MODUL ARSIP SEMESTER
+        // ==========================================
         const AdminArchivesPage = () => {
             const [archiveList, setArchiveList] = useState([]);
             const [selectedSheetName, setSelectedSheetName] = useState('');
@@ -3113,7 +3176,9 @@
             );
         };
 
+        // ==========================================
         // MODUL LAPORAN
+        // ==========================================
         const ReportsModule = ({ user }) => {
             const today = getTodayWitaDateString();
             const [reportType, setReportType] = useState('habits');
@@ -3413,7 +3478,9 @@
             );
         };
 
+        // ==========================================
         // LOGIN & ROOT CONTROLLER
+        // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
                 <div className="text-6xl mb-3">🇮🇩</div>
