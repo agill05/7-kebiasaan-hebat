@@ -2686,8 +2686,8 @@
                     await db.syncQueue.put({ id: `sync_jdel_${Date.now()}_${Math.random()}`, tableName: 'journals', recordId: j.id, action: 'delete', status: 'pending', createdAt: new Date() });
                 }
 
-                await db.points.where('userId').equals(student.id).delete();
-                await db.streaks.where('userId').equals(student.id).delete();
+                await db.points.where('userId').equals(selectedStudentIds).delete();
+                await db.streaks.where('userId').equals(selectedStudentIds).delete();
 
                 await db.users.delete(student.id);
                 await db.syncQueue.put({ id: `sync_sdel_${Date.now()}`, tableName: 'users', recordId: student.id, action: 'delete', status: 'pending', createdAt: new Date() });
@@ -3674,7 +3674,11 @@
                                     </div>
                                 ) : (
                                     <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold">
-                                        {filteredUsers.map(u => <option key={u.id} value={u.id}>{u.name} (@{u.username}){u.className ? ` - ${u.className}` : ''}</option>)}
+                                        {filteredUsers.map(u => (
+                                            <option key={u.id} value={u.id}>
+                                                {u.name} (@{u.username}){u.role === ROLES.SISWA && u.className ? ` - ${u.className}` : ''}
+                                            </option>
+                                        ))}
                                     </select>
                                 )}
                             </div>
