@@ -1,30 +1,32 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>7 Kebiasaan Anak Indonesia Hebat — SMP Negeri 1 Talaga Jaya</title>
-    
+
     <!-- PWA Settings -->
     <meta name="theme-color" content="#EF4444">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
-    
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
+
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
+
     <!-- Babel for JSX -->
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Dexie.js for IndexedDB -->
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
-    
+
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -50,17 +52,40 @@
             background-color: #F9FAFB;
             -webkit-tap-highlight-color: transparent;
         }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #E5E7EB;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D1D5DB;
+        }
+
         @media print {
-            body { background: white; }
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
+            body {
+                background: white;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
         }
     </style>
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -81,6 +106,7 @@
         }
     </script>
 </head>
+
 <body>
     <div id="root"></div>
 
@@ -235,7 +261,7 @@
             try {
                 const res = await fetch(`${GAS_API_URL}?action=getAllData`);
                 const json = await res.json();
-                
+
                 if (json.status === 'success') {
                     const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
                     const pendingUserIds = new Set(pendingQueue.filter(q => q.tableName === 'users').map(q => q.recordId));
@@ -498,12 +524,11 @@
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={triggerManualPull} title="Tarik & Perbarui Data dari Google Sheets" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
-                                    !isOnline ? 'bg-orange-100 text-orange-600' :
-                                    syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
-                                    syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
-                                    'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}>
+                                <button onClick={triggerManualPull} title="Tarik & Perbarui Data dari Google Sheets" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${!isOnline ? 'bg-orange-100 text-orange-600' :
+                                        syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
+                                            syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
+                                                'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}>
                                     <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
                                     <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
                                 </button>
@@ -658,7 +683,7 @@
             // STRUKTUR REKAP JURNAL PER SISWA
             const studentJournalsDetailed = useMemo(() => {
                 return filteredStudentList.map(student => {
-                    const studentEntries = journals.filter(j => 
+                    const studentEntries = journals.filter(j =>
                         j.userId === student.id && j.date >= startDate && j.date <= endDate
                     ).sort((a, b) => b.date.localeCompare(a.date));
 
@@ -723,7 +748,7 @@
                         const s = item.student;
                         aoaData.push([`TABEL SISWA ${idx + 1}: ${s.name.toUpperCase()}`, `NISN: ${s.nisn || '-'}`, `Kelas: ${s.className || '-'}`]);
                         aoaData.push(['No', 'Tanggal Refleksi', 'Suasana Hati (Mood)', 'Isi Refleksi Harian']);
-                        
+
                         if (item.entries.length === 0) {
                             aoaData.push(['-', '-', '-', 'Belum ada catatan jurnal pada periode ini.']);
                         } else {
@@ -764,7 +789,7 @@
                         doc.setFont('helvetica', 'bold');
                         doc.setFontSize(13);
                         doc.text(SCHOOL_IDENTITY.name.toUpperCase(), pageWidth / 2, 38, { align: 'center' });
-                        
+
                         doc.setFontSize(10);
                         doc.setFont('helvetica', 'normal');
                         doc.text(`LAPORAN RINCIAN PEMBIASAAN 7 KEBIASAAN ANAK INDONESIA HEBAT`, pageWidth / 2, 52, { align: 'center' });
@@ -815,14 +840,25 @@
                         // FOOTER TANDA TANGAN DI HALAMAN SISWA
                         const finalY = doc.lastAutoTable.finalY + 25;
                         const sigY = finalY > pageHeight - 75 ? pageHeight - 75 : finalY;
+                        const sigX = pageWidth - 180;
 
                         doc.setFontSize(8);
                         doc.setFont('helvetica', 'normal');
-                        doc.text(`Talaga Jaya, ${formatDisplayDate(today)}`, pageWidth - 180, sigY);
-                        doc.text(user.role === ROLES.ADMIN ? 'Administrator Sistem,' : 'Guru Pembimbing / Wali Kelas,', pageWidth - 180, sigY + 12);
+                        doc.text(`Talaga Jaya, ${formatDisplayDate(today)}`, sigX, sigY);
+                        doc.text(user.role === ROLES.ADMIN ? 'Administrator Sistem,' : 'Guru Pembimbing / Wali Kelas,', sigX, sigY + 12);
+
+                        // Nama (Tebal & Garis Bawah Otomatis)
                         doc.setFont('helvetica', 'bold');
-                        doc.text(user.name, pageWidth - 180, sigY + 45);
-                        if (user.nip) doc.text(`NIP: ${user.nip}`, pageWidth - 180, sigY + 55);
+                        doc.text(user.name, sigX, sigY + 45);
+                        const nameWidth = doc.getTextWidth(user.name);
+                        doc.setLineWidth(0.8);
+                        doc.line(sigX, sigY + 47, sigX + nameWidth, sigY + 47);
+
+                        // NIP
+                        if (user.nip) {
+                            doc.setFont('helvetica', 'bold');
+                            doc.text(`NIP: ${user.nip}`, sigX, sigY + 58);
+                        }
                     });
 
                     const fileName = `Laporan_Rinci_7Kebiasaan_${startDate}_sd_${endDate}.pdf`;
@@ -840,7 +876,7 @@
                         doc.setFont('helvetica', 'bold');
                         doc.setFontSize(13);
                         doc.text(SCHOOL_IDENTITY.name.toUpperCase(), pageWidth / 2, 38, { align: 'center' });
-                        
+
                         doc.setFontSize(10);
                         doc.setFont('helvetica', 'normal');
                         doc.text(`REKAPITULASI JURNAL REFLEKSI SISWA`, pageWidth / 2, 52, { align: 'center' });
@@ -1105,12 +1141,12 @@
             const loadLogs = async () => {
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
                 const logMap = {};
-                userLogs.forEach(l => { 
+                userLogs.forEach(l => {
                     logMap[l.habitId] = {
                         completed: l.completed,
                         timeValue: l.timeValue,
                         detailValue: l.detailValue
-                    }; 
+                    };
                 });
                 setLogs(logMap);
 
@@ -1304,12 +1340,12 @@
                                             </label>
                                             <span className="text-[10px] text-gray-400 font-semibold">Format 24 Jam (WITA)</span>
                                         </div>
-                                        <input 
-                                            type="time" 
-                                            value={modalTime} 
-                                            onChange={e => setModalTime(e.target.value)} 
-                                            className="w-full p-2.5 bg-gray-50 border rounded-xl font-extrabold text-brand-red text-sm" 
-                                            required 
+                                        <input
+                                            type="time"
+                                            value={modalTime}
+                                            onChange={e => setModalTime(e.target.value)}
+                                            className="w-full p-2.5 bg-gray-50 border rounded-xl font-extrabold text-brand-red text-sm"
+                                            required
                                         />
                                     </div>
 
@@ -1317,27 +1353,27 @@
                                         <label className="block text-xs font-bold text-gray-700 mb-1">
                                             <i className="fas fa-align-left mr-1 text-brand-blue"></i> {activeHabitModal.detailLabel}
                                         </label>
-                                        <textarea 
-                                            rows="3" 
-                                            value={modalDetail} 
-                                            onChange={e => setModalDetail(e.target.value)} 
-                                            placeholder={activeHabitModal.detailPlaceholder} 
-                                            className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-red" 
+                                        <textarea
+                                            rows="3"
+                                            value={modalDetail}
+                                            onChange={e => setModalDetail(e.target.value)}
+                                            placeholder={activeHabitModal.detailPlaceholder}
+                                            className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-red"
                                             required
                                         ></textarea>
                                     </div>
 
                                     <div className="flex items-center justify-between pt-2">
                                         {logs[activeHabitModal.id]?.completed ? (
-                                            <button 
-                                                type="button" 
-                                                onClick={() => handleCancelHabit(activeHabitModal.id)} 
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCancelHabit(activeHabitModal.id)}
                                                 className="text-xs font-bold text-brand-red hover:underline"
                                             >
                                                 <i className="fas fa-trash-alt mr-1"></i> Batalkan
                                             </button>
                                         ) : <div></div>}
-                                        
+
                                         <div className="flex gap-2">
                                             <Button variant="white" onClick={() => setActiveHabitModal(null)} className="py-2.5 px-4 text-xs">Tutup</Button>
                                             <Button variant="primary" type="submit" className="py-2.5 px-5 text-xs">Simpan Kebiasaan</Button>
@@ -1437,7 +1473,7 @@
                 await db.syncQueue.put({
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
-                
+
                 showAlert.success('Jurnal Tersimpan!', 'Catatan refleksi harianmu berhasil disimpan.');
                 setContent('');
                 loadJournals();
@@ -1519,7 +1555,7 @@
                 const updated = { ...user, password: newHashed };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
-                
+
                 showAlert.success('Berhasil!', 'Password akun Anda berhasil diubah.');
                 setOldPass('');
                 setNewPass('');
@@ -1572,7 +1608,7 @@
             const [selectedTab, setSelectedTab] = useState('all');
             const [selectedDate, setSelectedDate] = useState(getTodayWitaDateString());
             const [classLogs, setClassLogs] = useState([]);
-            
+
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
             const [studentFormData, setStudentFormData] = useState({
@@ -1645,9 +1681,9 @@
                 const currentId = editingStudent ? editingStudent.id : null;
 
                 const allExistingUsers = await db.users.toArray();
-                
-                const duplicateUsername = allExistingUsers.find(u => 
-                    u.id !== currentId && 
+
+                const duplicateUsername = allExistingUsers.find(u =>
+                    u.id !== currentId &&
                     u.username.toLowerCase() === targetUsername.toLowerCase()
                 );
                 if (duplicateUsername) {
@@ -1655,8 +1691,8 @@
                     return;
                 }
 
-                const duplicateName = allExistingUsers.find(u => 
-                    u.id !== currentId && 
+                const duplicateName = allExistingUsers.find(u =>
+                    u.id !== currentId &&
                     u.name.toLowerCase() === targetName.toLowerCase()
                 );
                 if (duplicateName) {
@@ -1665,8 +1701,8 @@
                 }
 
                 if (targetNisn !== '' && targetNisn !== '-') {
-                    const duplicateNisn = allExistingUsers.find(u => 
-                        u.id !== currentId && 
+                    const duplicateNisn = allExistingUsers.find(u =>
+                        u.id !== currentId &&
                         String(u.nisn || '').trim() === targetNisn
                     );
                     if (duplicateNisn) {
@@ -1732,7 +1768,7 @@
 
                 const hashed = await hashPassword(newResetPassword.trim());
                 const updated = { ...resetModalStudent, password: hashed };
-                
+
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_rst_${Date.now()}`, tableName: 'users', recordId: resetModalStudent.id, action: 'update', status: 'pending', createdAt: new Date() });
 
@@ -1806,14 +1842,14 @@
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
                                                     {count} / 7 Selesai
                                                 </span>
-                                                <button 
-                                                    onClick={() => handleOpenEditModal(student)} 
+                                                <button
+                                                    onClick={() => handleOpenEditModal(student)}
                                                     className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all"
                                                 >
                                                     <i className="fas fa-edit"></i> Edit
                                                 </button>
-                                                <button 
-                                                    onClick={() => { setResetModalStudent(student); setNewResetPassword('siswa123'); }} 
+                                                <button
+                                                    onClick={() => { setResetModalStudent(student); setNewResetPassword('siswa123'); }}
                                                     className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 flex items-center gap-1 transition-all"
                                                 >
                                                     <i className="fas fa-key"></i> Reset Password
@@ -1857,39 +1893,39 @@
                             <Card className="w-full max-w-md shadow-2xl">
                                 <h3 className="font-black text-lg mb-1 text-brand-dark">{editingStudent ? 'Edit Profil Siswa Binaan' : 'Tambah Siswa Binaan'}</h3>
                                 <p className="text-xs text-gray-500 mb-4">{editingStudent ? 'Perbarui informasi siswa binaan Anda.' : 'Siswa yang Anda tambahkan otomatis masuk ke binaan Anda.'}</p>
-                                
+
                                 <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
-                                        <input type="text" value={studentFormData.name} onChange={e => setStudentFormData({...studentFormData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" value={studentFormData.name} onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
-                                            <input type="text" value={studentFormData.username} onChange={e => setStudentFormData({...studentFormData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                            <input type="text" value={studentFormData.username} onChange={e => setStudentFormData({ ...studentFormData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
-                                            <input type="text" value={studentFormData.nisn} onChange={e => setStudentFormData({...studentFormData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={studentFormData.nisn} onChange={e => setStudentFormData({ ...studentFormData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
                                     {!editingStudent && (
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal Siswa (Default: siswa123)</label>
-                                            <input type="text" value={studentFormData.password} onChange={e => setStudentFormData({...studentFormData, password: e.target.value})} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={studentFormData.password} onChange={e => setStudentFormData({ ...studentFormData, password: e.target.value })} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     )}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
-                                            <select value={studentFormData.classId} onChange={e => setStudentFormData({...studentFormData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                            <select value={studentFormData.classId} onChange={e => setStudentFormData({ ...studentFormData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
                                                 <option value="">-- Pilih Kelas --</option>
                                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
-                                            <select value={studentFormData.gender} onChange={e => setStudentFormData({...studentFormData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <select value={studentFormData.gender} onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                                 <option value="Laki-laki">Laki-laki</option>
                                                 <option value="Perempuan">Perempuan</option>
                                             </select>
@@ -1965,7 +2001,7 @@
                 const updated = { ...user, password: newHashed };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
-                
+
                 showAlert.success('Berhasil!', 'Password akun Guru Anda berhasil diubah.');
                 setOldPass('');
                 setNewPass('');
@@ -2104,8 +2140,8 @@
                 const currentId = editingClass ? editingClass.id : null;
 
                 const allClasses = await db.classes.toArray();
-                const isDuplicate = allClasses.some(c => 
-                    c.id !== currentId && 
+                const isDuplicate = allClasses.some(c =>
+                    c.id !== currentId &&
                     c.name.toLowerCase() === targetClassName.toLowerCase()
                 );
 
@@ -2128,11 +2164,11 @@
                     showAlert.success('Berhasil Diperbarui', `Data kelas "${targetClassName}" berhasil diperbarui.`);
                 } else {
                     const newId = `c_${Date.now()}`;
-                    const created = { 
-                        id: newId, 
-                        name: targetClassName, 
-                        teacherId: teacherId || '', 
-                        teacherName: selectedTeacher ? selectedTeacher.name : '' 
+                    const created = {
+                        id: newId,
+                        name: targetClassName,
+                        teacherId: teacherId || '',
+                        teacherName: selectedTeacher ? selectedTeacher.name : ''
                     };
                     await db.classes.put(created);
                     await db.syncQueue.put({ id: `sync_c_${Date.now()}`, tableName: 'classes', recordId: newId, action: 'create', status: 'pending', createdAt: new Date() });
@@ -2287,9 +2323,9 @@
                 const currentId = editingTeacher ? editingTeacher.id : null;
 
                 const allExistingUsers = await db.users.toArray();
-                
-                const duplicateUsername = allExistingUsers.find(u => 
-                    u.id !== currentId && 
+
+                const duplicateUsername = allExistingUsers.find(u =>
+                    u.id !== currentId &&
                     u.username.toLowerCase() === targetUsername.toLowerCase()
                 );
                 if (duplicateUsername) {
@@ -2297,8 +2333,8 @@
                     return;
                 }
 
-                const duplicateName = allExistingUsers.find(u => 
-                    u.id !== currentId && 
+                const duplicateName = allExistingUsers.find(u =>
+                    u.id !== currentId &&
                     u.name.toLowerCase() === targetName.toLowerCase()
                 );
                 if (duplicateName) {
@@ -2307,8 +2343,8 @@
                 }
 
                 if (targetNip !== '' && targetNip !== '-') {
-                    const duplicateNip = allExistingUsers.find(u => 
-                        u.id !== currentId && 
+                    const duplicateNip = allExistingUsers.find(u =>
+                        u.id !== currentId &&
                         String(u.nip || '').trim() === targetNip
                     );
                     if (duplicateNip) {
@@ -2368,7 +2404,7 @@
                 const updated = { ...resetTeacherModal, password: hashed };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_trst_${Date.now()}`, tableName: 'users', recordId: resetTeacherModal.id, action: 'update', status: 'pending', createdAt: new Date() });
-                
+
                 showAlert.success('Password Direset', `Password guru ${resetTeacherModal.name} berhasil di-reset menjadi: "${newTeacherPass}"`);
                 setResetTeacherModal(null);
                 await loadData();
@@ -2454,32 +2490,32 @@
                                 <form onSubmit={handleSave} className="space-y-3">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap</label>
-                                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
-                                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                            <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Nomor Telepon</label>
-                                            <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="081234567890" className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="081234567890" className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
                                     {!editingTeacher && (
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal (Default: guru123)</label>
-                                            <input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="guru123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="guru123" className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     )}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">NIP / NIK</label>
-                                            <input type="text" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={formData.nip} onChange={e => setFormData({ ...formData, nip: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Mata Pelajaran</label>
-                                            <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
                                     <div className="flex justify-end gap-2 pt-2">
@@ -2563,9 +2599,9 @@
                 const currentId = editingStudent ? editingStudent.id : null;
 
                 const allExistingUsers = await db.users.toArray();
-                
-                const duplicateUsername = allExistingUsers.find(u => 
-                    u.id !== currentId && 
+
+                const duplicateUsername = allExistingUsers.find(u =>
+                    u.id !== currentId &&
                     u.username.toLowerCase() === targetUsername.toLowerCase()
                 );
                 if (duplicateUsername) {
@@ -2573,8 +2609,8 @@
                     return;
                 }
 
-                const duplicateName = allExistingUsers.find(u => 
-                    u.id !== currentId && 
+                const duplicateName = allExistingUsers.find(u =>
+                    u.id !== currentId &&
                     u.name.toLowerCase() === targetName.toLowerCase()
                 );
                 if (duplicateName) {
@@ -2583,8 +2619,8 @@
                 }
 
                 if (targetNisn !== '' && targetNisn !== '-') {
-                    const duplicateNisn = allExistingUsers.find(u => 
-                        u.id !== currentId && 
+                    const duplicateNisn = allExistingUsers.find(u =>
+                        u.id !== currentId &&
                         String(u.nisn || '').trim() === targetNisn
                     );
                     if (duplicateNisn) {
@@ -2655,7 +2691,7 @@
                 const updated = { ...resetStudentModal, password: hashed };
                 await db.users.put(updated);
                 await db.syncQueue.put({ id: `sync_srst_${Date.now()}`, tableName: 'users', recordId: resetStudentModal.id, action: 'update', status: 'pending', createdAt: new Date() });
-                
+
                 showAlert.success('Password Direset', `Password siswa ${resetStudentModal.name} berhasil di-reset menjadi: "${newStudentPass}"`);
                 setResetStudentModal(null);
                 await loadData();
@@ -2743,35 +2779,35 @@
                                 <form onSubmit={handleSave} className="space-y-3">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap Siswa</label>
-                                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Username Login</label>
-                                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                            <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">NISN</label>
-                                            <input type="text" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={formData.nisn} onChange={e => setFormData({ ...formData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     </div>
                                     {!editingStudent && (
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Password Awal Siswa (Default: siswa123)</label>
-                                            <input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
+                                            <input type="text" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="siswa123" className="w-full p-2.5 border rounded-xl text-sm" />
                                         </div>
                                     )}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Kelas</label>
-                                            <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                            <select value={formData.classId} onChange={e => setFormData({ ...formData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
                                                 <option value="">-- Pilih Kelas --</option>
                                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-600 mb-1">Jenis Kelamin</label>
-                                            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                            <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                                 <option value="Laki-laki">Laki-laki</option>
                                                 <option value="Perempuan">Perempuan</option>
                                             </select>
@@ -2779,7 +2815,7 @@
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Guru Pembimbing / Mentor (Opsional)</label>
-                                        <select value={formData.mentorId} onChange={e => setFormData({...formData, mentorId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                        <select value={formData.mentorId} onChange={e => setFormData({ ...formData, mentorId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                             <option value="">-- Tidak Ada Mentor Khusus --</option>
                                             {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                         </select>
@@ -2822,23 +2858,23 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
-                const updated = { 
-                    ...user, 
-                    username: username.trim(), 
-                    password: password.trim(), 
-                    phone: phone.trim() 
+                const updated = {
+                    ...user,
+                    username: username.trim(),
+                    password: password.trim(),
+                    phone: phone.trim()
                 };
-                
+
                 await db.users.put(updated);
                 onUpdateAdmin(updated);
 
-                await db.syncQueue.put({ 
-                    id: `sync_adm_${Date.now()}`, 
-                    tableName: 'users', 
-                    recordId: user.id, 
-                    action: 'update', 
-                    status: 'pending', 
-                    createdAt: new Date() 
+                await db.syncQueue.put({
+                    id: `sync_adm_${Date.now()}`,
+                    tableName: 'users',
+                    recordId: user.id,
+                    action: 'update',
+                    status: 'pending',
+                    createdAt: new Date()
                 });
 
                 showAlert.success('Berhasil Disimpan!', 'Kredensial Administrator berhasil disimpan.');
@@ -3008,13 +3044,13 @@
 
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Kata Sandi / Password:</label>
-                                <input 
-                                    type="password" 
-                                    value={inputPassword} 
-                                    onChange={e => setInputPassword(e.target.value)} 
-                                    placeholder={selectedRole === ROLES.ADMIN ? "Password admin" : "Masukkan password Anda..."} 
-                                    className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
-                                    required 
+                                <input
+                                    type="password"
+                                    value={inputPassword}
+                                    onChange={e => setInputPassword(e.target.value)}
+                                    placeholder={selectedRole === ROLES.ADMIN ? "Password admin" : "Masukkan password Anda..."}
+                                    className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none"
+                                    required
                                 />
                                 {selectedRole !== ROLES.ADMIN && (
                                     <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
@@ -3049,7 +3085,7 @@
                         const session = JSON.parse(sessionRaw);
                         session.lastActive = now;
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (err) {}
+                    } catch (err) { }
                 }
             }, []);
 
@@ -3100,7 +3136,7 @@
                             if (now - session.lastActive >= INACTIVITY_TIMEOUT_MS) {
                                 handleLogout(true);
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }, 10000);
 
@@ -3121,7 +3157,7 @@
                         session.path = path;
                         session.lastActive = Date.now();
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             };
 
@@ -3161,7 +3197,7 @@
                         const session = JSON.parse(sessionRaw);
                         session.user = updatedUser;
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             };
 
@@ -3194,13 +3230,13 @@
             }
 
             return (
-                <AppLayout 
-                    user={user} 
-                    currentPath={currentPath} 
-                    navigate={navigate} 
-                    onLogout={handleLogout} 
-                    isOnline={isOnline} 
-                    syncStatus={syncStatus} 
+                <AppLayout
+                    user={user}
+                    currentPath={currentPath}
+                    navigate={navigate}
+                    onLogout={handleLogout}
+                    isOnline={isOnline}
+                    syncStatus={syncStatus}
                     triggerManualPull={triggerManualPull}
                 >
                     {content}
@@ -3211,4 +3247,5 @@
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
+
 </html>
