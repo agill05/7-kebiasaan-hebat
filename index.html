@@ -148,6 +148,98 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        // FUNGSI RESET PASSWORD INTERAKTIF (HIERARKI SEKOLAH)
+        async function promptResetPassword(targetUser, defaultPass = 'siswa123') {
+            const isGuru = targetUser.role === ROLES.GURU;
+            const { value: newPasswordResult } = await Swal.fire({
+                title: `Reset Kata Sandi`,
+                html: `
+                    <div class="text-left text-xs space-y-3 pt-2 text-gray-700">
+                        <p class="leading-relaxed">Mereset kata sandi akun <b>${targetUser.name}</b> (@${targetUser.username}):</p>
+                        <div>
+                            <label class="block font-bold text-gray-600 mb-1">Opsi Kata Sandi Baru:</label>
+                            <select id="swal-reset-type" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-red">
+                                <option value="default">Reset ke Kata Sandi Standar ("${defaultPass}")</option>
+                                <option value="custom">Tentukan Kata Sandi Baru (Kustom)</option>
+                            </select>
+                        </div>
+                        <div id="swal-custom-pass-container" style="display:none;">
+                            <label class="block font-bold text-gray-600 mb-1">Ketik Kata Sandi Baru:</label>
+                            <input id="swal-custom-pass" type="text" placeholder="Minimal 4 karakter" class="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold text-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red" />
+                        </div>
+                    </div>
+                `,
+                didOpen: () => {
+                    const resetType = document.getElementById('swal-reset-type');
+                    const customContainer = document.getElementById('swal-custom-pass-container');
+                    const customInput = document.getElementById('swal-custom-pass');
+                    resetType.addEventListener('change', (e) => {
+                        if (e.target.value === 'custom') {
+                            customContainer.style.display = 'block';
+                            customInput.focus();
+                        } else {
+                            customContainer.style.display = 'none';
+                        }
+                    });
+                },
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: '🔑 Terapkan Reset',
+                cancelButtonText: 'Batal',
+                customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5', cancelButton: 'rounded-xl font-bold px-5 py-2.5' },
+                preConfirm: () => {
+                    const type = document.getElementById('swal-reset-type').value;
+                    const customVal = document.getElementById('swal-custom-pass').value.trim();
+                    if (type === 'custom') {
+                        if (!customVal || customVal.length < 4) {
+                            Swal.showValidationMessage('Kata sandi baru minimal 4 karakter!');
+                            return false;
+                        }
+                        return customVal;
+                    }
+                    return defaultPass;
+                }
+            });
+
+            if (newPasswordResult) {
+                const newPlainPass = newPasswordResult;
+                const hashedPass = await hashPassword(newPlainPass);
+                const updatedUser = { ...targetUser, password: hashedPass, updatedAt: new Date() };
+
+                await db.users.put(updatedUser);
+                await db.syncQueue.put({
+                    id: `sync_reset_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                    tableName: 'users',
+                    recordId: targetUser.id,
+                    action: 'update',
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Kata Sandi Berhasil Direset!',
+                    html: `
+                        <div class="text-sm text-gray-700 space-y-2 pt-1">
+                            <p>Kata sandi untuk <b>${targetUser.name}</b> (@${targetUser.username}) berhasil diubah menjadi:</p>
+                            <div class="p-3 bg-red-50 border border-red-200 rounded-xl font-mono text-lg font-black text-brand-red select-all tracking-wider">
+                                ${newPlainPass}
+                            </div>
+                            <p class="text-xs text-gray-400">Silakan sampaikan kata sandi baru ini kepada pengguna bersangkutan.</p>
+                        </div>
+                    `,
+                    confirmButtonColor: '#EF4444',
+                    confirmButtonText: 'Selesai',
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
+                });
+
+                return true;
+            }
+            return false;
+        }
+
         const db = new Dexie('SevenHabitsWitaDB');
         db.version(2).stores({
             users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
@@ -160,7 +252,7 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // BATCH SYNC ENGINE (OPTIMASI POINT 1)
+        // BATCH SYNC ENGINE
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
 
@@ -562,12 +654,14 @@
                                     ) : user.role === ROLES.GURU ? (
                                         <>
                                             <p>🔴 <strong>Filter Belum Mengisi:</strong> Pantau siswa binaan yang pasif hari ini secara instan.</p>
+                                            <p>🔑 <strong>Reset Sandi Siswa:</strong> Bantu siswa mereset kata sandi jika lupa secara langsung.</p>
                                             <p>💬 <strong>Apresiasi Jurnal:</strong> Berikan catatan motivasi langsung pada refleksi harian siswa.</p>
                                             <p>📊 <strong>Ekspor PDF & Excel:</strong> Cetak laporan kartu kontrol lengkap dengan format tanda tangan resmi.</p>
                                         </>
                                     ) : (
                                         <>
                                             <p>📥 <strong>Import Excel Massal:</strong> Daftarkan ratusan siswa & guru dalam 1 kali unggah file.</p>
+                                            <p>🔑 <strong>Reset Sandi Guru & Siswa:</strong> Kelola pengaturan kata sandi seluruh civitas sekolah.</p>
                                             <p>🪪 <strong>Cetak Kartu Akun:</strong> Buat lembar kisi akun siswa siap gunting dalam format PDF.</p>
                                             <p>📦 <strong>Arsip Semester:</strong> Backup dan arsipkan data log habit lama agar sistem selalu cepat.</p>
                                         </>
@@ -582,7 +676,7 @@
         };
 
         // ==========================================
-        // MODUL SISWA (QUICK FILL, BADGES, REFLECTION REMINDER)
+        // MODUL SISWA
         // ==========================================
         const StudentHabitsPage = ({ user, triggerSync, compact }) => {
             const todayStr = getTodayWitaDateString();
@@ -610,7 +704,6 @@
 
             useEffect(() => { loadLogs(); }, [user.id]);
 
-            // FITUR 2.A: TOMBOL TANDAI RUTINITAS PAGI (QUICK FILL)
             const handleQuickFillMorning = async () => {
                 const confirmRes = await showAlert.confirm(
                     'Tandai Rutinitas Pagi?',
@@ -727,7 +820,6 @@
 
             const completedCount = Object.values(logs).filter(l => l.completed).length;
 
-            // GAMIFIKASI: LENCANA PENCAPAIAN SISWA
             const badges = useMemo(() => [
                 { id: 'b1', name: 'Pejuang Fajar', desc: 'Rutinitas Pagi', icon: '🌅', unlocked: !!logs['h1']?.completed },
                 { id: 'b2', name: 'Karakter Hebat', desc: '7/7 Hari Ini', icon: '🌟', unlocked: completedCount === 7 },
@@ -753,7 +845,6 @@
                         </div>
                     </div>
 
-                    {/* KARTU PROGRES & LENCANA KARAKTER */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <Card className="lg:col-span-2 bg-gradient-to-r from-brand-red to-red-600 text-white flex justify-between items-center shadow-lg">
                             <div>
@@ -779,7 +870,6 @@
                         </Card>
                     </div>
 
-                    {/* KISI 7 KEBIASAAN */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {HABITS_CONFIG.map(habit => {
                             const entry = logs[habit.id];
@@ -1071,14 +1161,14 @@
         };
 
         // ==========================================
-        // MODUL GURU (ALPHA TRACKER, FEEDBACK JURNAL, SMART SEARCH)
+        // MODUL GURU (DENGAN FITUR RESET PASSWORD SISWA)
         // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
             const [selectedTab, setSelectedTab] = useState('all');
-            const [filterAlphaOnly, setFilterAlphaOnly] = useState(false); // FITUR 2.B: ALPHA TRACKER
-            const [searchQuery, setSearchQuery] = useState(''); // FITUR 3: SMART SEARCH
+            const [filterAlphaOnly, setFilterAlphaOnly] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
             const [selectedDate, setSelectedDate] = useState(getTodayWitaDateString());
             const [classLogs, setClassLogs] = useState([]);
 
@@ -1214,7 +1304,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
-                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, tracking siswa pasif, dan apresiasi jurnal.</p>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, tracking siswa pasif, reset password, dan apresiasi jurnal.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3">
@@ -1227,7 +1317,6 @@
                         </div>
                     </div>
 
-                    {/* SMART SEARCH BAR & FILTER TABS */}
                     <Card className="space-y-3 p-4">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
                             <div className="relative w-full md:w-80">
@@ -1255,7 +1344,6 @@
                         </div>
                     </Card>
 
-                    {/* DAFTAR SISWA */}
                     {filteredStudents.length === 0 ? (
                         <Card><EmptyState icon="👦" title="Tidak Ada Siswa Ditemukan" description="Coba sesuaikan pencarian atau nonaktifkan filter siswa belum mengisi." /></Card>
                     ) : (
@@ -1280,6 +1368,18 @@
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                                                     {count === 0 ? '🔴 Belum Mengisi' : `${count} / 7 Selesai`}
                                                 </span>
+                                                
+                                                {/* TOMBOL RESET PASSWORD OLEH GURU */}
+                                                <button onClick={async () => {
+                                                    const success = await promptResetPassword(student, 'siswa123');
+                                                    if (success) {
+                                                        await loadData();
+                                                        triggerSync();
+                                                    }
+                                                }} className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 flex items-center gap-1 transition-all" title="Reset Kata Sandi Siswa">
+                                                    <i className="fas fa-key text-[10px]"></i> Reset Sandi
+                                                </button>
+
                                                 <button onClick={() => handleOpenFeedbackModal(student)} className="px-2.5 py-1 text-xs font-bold bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center gap-1">
                                                     <i className="fas fa-comment-dots"></i> Apresiasi Jurnal
                                                 </button>
@@ -1425,7 +1525,7 @@
         };
 
         // ==========================================
-        // MODUL ADMIN (MASS IMPORT, PRINT CARDS, ARSIP SEMESTER)
+        // MODUL ADMIN
         // ==========================================
         const AdminDashboard = ({ triggerManualPull }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
@@ -1439,7 +1539,6 @@
 
             useEffect(() => { loadStats(); }, []);
 
-            // FITUR 2.C: ALAT PENGARSIPAN SEMESTER
             const handleArchiveSemester = async () => {
                 const confirmRes = await showAlert.confirm(
                     'Arsipkan Data Semester?',
@@ -1629,6 +1728,7 @@
             );
         };
 
+        // ADMIN TEACHERS PAGE DENGAN RESET PASSWORD GURU
         const AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
             const [teachers, setTeachers] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
@@ -1648,7 +1748,6 @@
                 return teachers.filter(t => !searchQuery || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.username.toLowerCase().includes(searchQuery.toLowerCase()) || (t.nip && t.nip.includes(searchQuery)));
             }, [teachers, searchQuery]);
 
-            // FITUR 2.C: IMPORT MASSAL EXCEL GURU
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1741,7 +1840,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Guru</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, import massal via Excel, dan pembaruan profil guru.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran, import massal via Excel, reset password, dan pembaruan profil guru.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
@@ -1773,6 +1872,16 @@
                                                 <td className="p-3 text-gray-600 font-bold">{t.phone || '-'}</td>
                                                 <td className="p-3 font-bold text-brand-blue">{t.subject || 'Umum'}</td>
                                                 <td className="p-3 text-right space-x-2">
+                                                    {/* TOMBOL RESET PASSWORD GURU OLEH ADMIN */}
+                                                    <button onClick={async () => {
+                                                        const success = await promptResetPassword(t, 'guru123');
+                                                        if (success) {
+                                                            await loadData();
+                                                            triggerSync();
+                                                        }
+                                                    }} className="text-amber-600 hover:underline font-bold text-xs" title="Reset Kata Sandi Guru">
+                                                        <i className="fas fa-key"></i> Reset Pass
+                                                    </button>
                                                     <button onClick={() => { setEditingTeacher(t); setFormData({ name: t.name, username: t.username, password: '', phone: t.phone, nip: t.nip, subject: t.subject }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
                                                 </td>
                                             </tr>
@@ -1807,6 +1916,7 @@
             );
         };
 
+        // ADMIN STUDENTS PAGE DENGAN RESET PASSWORD SISWA
         const AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
             const [students, setStudents] = useState([]);
             const [classes, setClasses] = useState([]);
@@ -1830,7 +1940,6 @@
                 return students.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.username.toLowerCase().includes(searchQuery.toLowerCase()) || (s.nisn && s.nisn.includes(searchQuery)));
             }, [students, searchQuery]);
 
-            // FITUR 2.C: IMPORT MASSAL SISWA VIA EXCEL
             const handleExcelUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1893,13 +2002,11 @@
                 e.target.value = null;
             };
 
-            // FITUR 2.C: CETAK KARTU KREDENSIAL AKUN SISWA (PDF GRID SIAP GUNTING)
             const handlePrintAccountCards = () => {
                 if (students.length === 0) return showAlert.warning('Data Kosong', 'Tidak ada siswa untuk dicetak kartu akun.');
 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('portrait', 'pt', 'a4');
-                const pageWidth = doc.internal.pageSize.getWidth();
                 const cardW = 250;
                 const cardH = 130;
                 const marginX = 40;
@@ -1911,12 +2018,10 @@
                     const x = marginX + (col * (cardW + 15));
                     const y = marginY + (row * (cardH + 15));
 
-                    // Border Kartu Gunting
                     doc.setDrawColor(200, 200, 200);
                     doc.setLineDashPattern([3, 3], 0);
                     doc.roundedRect(x, y, cardW, cardH, 8, 8);
 
-                    // Header Kartu
                     doc.setFillColor(239, 68, 68);
                     doc.roundedRect(x, y, cardW, 28, 8, 8, 'F');
                     doc.setFontSize(8);
@@ -1924,7 +2029,6 @@
                     doc.setTextColor(255, 255, 255);
                     doc.text("KARTU AKSES SISWA — 7 KEBIASAAN", x + (cardW / 2), y + 18, { align: 'center' });
 
-                    // Detail Kredensial
                     doc.setTextColor(0, 0, 0);
                     doc.setFontSize(8.5);
                     doc.text(`Nama     : ${s.name}`, x + 12, y + 48);
@@ -1954,7 +2058,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-black text-brand-dark">Kelola Data Siswa</h1>
-                            <p className="text-gray-500 font-medium text-sm">Pendaftaran siswa, import massal, dan cetak kartu akses login.</p>
+                            <p className="text-gray-500 font-medium text-sm">Pendaftaran siswa, import massal, reset kata sandi, dan cetak kartu akses login.</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
@@ -1988,6 +2092,16 @@
                                                 <td className="p-3 font-bold text-brand-red">{s.className || '-'}</td>
                                                 <td className="p-3 text-brand-blue font-bold text-xs">{s.mentorName || '-'}</td>
                                                 <td className="p-3 text-right space-x-2">
+                                                    {/* TOMBOL RESET PASSWORD SISWA OLEH ADMIN */}
+                                                    <button onClick={async () => {
+                                                        const success = await promptResetPassword(s, 'siswa123');
+                                                        if (success) {
+                                                            await loadData();
+                                                            triggerSync();
+                                                        }
+                                                    }} className="text-amber-600 hover:underline font-bold text-xs" title="Reset Kata Sandi Siswa">
+                                                        <i className="fas fa-key"></i> Reset Pass
+                                                    </button>
                                                     <button onClick={() => { setEditingStudent(s); setFormData({ name: s.name, username: s.username, password: '', nisn: s.nisn, classId: s.classId, mentorId: s.mentorId, gender: s.gender }); setIsModalOpen(true); }} className="text-brand-blue hover:underline font-bold text-xs"><i className="fas fa-edit"></i> Edit</button>
                                                 </td>
                                             </tr>
@@ -2096,7 +2210,7 @@
         };
 
         // ==========================================
-        // MODUL LAPORAN & EKSPOR (OPSI 2: TABEL RINCI PER SISWA)
+        // MODUL LAPORAN & EKSPOR
         // ==========================================
         const ReportsModule = ({ user }) => {
             const today = getTodayWitaDateString();
@@ -2183,14 +2297,6 @@
                 });
             }, [filteredStudentList, habitLogs, startDate, endDate, dateRangeList]);
 
-            const studentJournalsDetailed = useMemo(() => {
-                return filteredStudentList.map(student => {
-                    const studentEntries = journals.filter(j => j.userId === student.id && j.date >= startDate && j.date <= endDate).sort((a, b) => b.date.localeCompare(a.date));
-                    return { student, entries: studentEntries };
-                });
-            }, [filteredStudentList, journals, startDate, endDate]);
-
-            // EKSPOR EXCEL RINCI
             const handleExportExcel = () => {
                 if (reportType === 'habits') {
                     if (studentDetailedHabits.length === 0) return showAlert.warning('Data Kosong', 'Tidak ada data log kebiasaan.');
@@ -2224,7 +2330,6 @@
                 }
             };
 
-            // EKSPOR PDF RINCI (PAGE BREAK PER SISWA & SOLID SIGNATURE)
             const handleExportPDF = () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('landscape', 'pt', 'a4');
@@ -2271,7 +2376,6 @@
                         columnStyles: { 0: { halign: 'center', cellWidth: 30 }, 1: { halign: 'center', cellWidth: 70 }, 2: { cellWidth: 120, fontStyle: 'bold' }, 3: { halign: 'center', cellWidth: 70 }, 4: { halign: 'center', cellWidth: 60 }, 5: { cellWidth: 'auto' } }
                     });
 
-                    // FOOTER TANDA TANGAN (HITAM PEKAT & GARIS BAWAH SOLID)
                     const finalY = doc.lastAutoTable.finalY + 25;
                     const sigY = finalY > pageHeight - 85 ? pageHeight - 85 : finalY;
                     const sigX = pageWidth - 190;
@@ -2370,7 +2474,7 @@
                                                     <p className="text-xs text-gray-500 font-bold">NISN: {s.nisn || '-'} • Kelas: <span className="text-brand-red font-black">{s.className || '-'}</span> • Mentor: <span className="text-brand-blue font-bold">{s.mentorName || '-'}</span></p>
                                                 </div>
                                             </div>
-                                            <span className="text-xs px-3.5 py-1.5 bg-green-50 border border-green-200 text-green-700 font-black rounded-xl">Capaian: {item.totalCompleted}/{item.totalPossible} ({item.percentage}%)</span>
+                                            <span className="text-xs px-3.5 py-1.5 bg-green-50 border border-green-200 text-green-700 font-black rounded-xl">Capaian: {item.totalCompleted}/{item.totalPossible} (${item.percentage}%)</span>
                                         </div>
 
                                         <div className="space-y-4">
@@ -2447,6 +2551,57 @@
                 syncInit();
             }, []);
 
+            // FITUR PANDUAN LUPA PASSWORD BERJENJANG
+            const handleForgotPassword = () => {
+                if (selectedRole === ROLES.SISWA) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Lupa Kata Sandi?',
+                        html: `
+                            <div class="text-left text-xs space-y-2.5 text-gray-700 pt-2 leading-relaxed">
+                                <p>Silakan hubungi <b>Guru Wali Kelas</b> atau <b>Guru Pembimbing / Mentor</b> Anda.</p>
+                                <p class="bg-red-50 p-2.5 rounded-xl border border-red-200 text-brand-red font-medium">
+                                    💡 Guru Anda dapat langsung mereset kata sandi akun Anda melalui tombol <b>Reset Sandi</b> pada panel guru.
+                                </p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#EF4444',
+                        confirmButtonText: 'Saya Mengerti',
+                        customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
+                    });
+                } else if (selectedRole === ROLES.GURU) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Lupa Kata Sandi Guru?',
+                        html: `
+                            <div class="text-left text-xs space-y-2.5 text-gray-700 pt-2 leading-relaxed">
+                                <p>Silakan hubungi <b>Administrator Sistem Sekolah</b> untuk mereset kata sandi akun Guru Anda.</p>
+                                <p class="bg-blue-50 p-2.5 rounded-xl border border-blue-200 text-brand-blue font-medium">
+                                    💡 Administrator dapat mereset sandi Anda ke kata sandi standar (<code>guru123</code>) atau sandi kustom.
+                                </p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#EF4444',
+                        confirmButtonText: 'Saya Mengerti',
+                        customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Lupa Sandi Administrator?',
+                        html: `
+                            <div class="text-left text-xs space-y-2 text-gray-700 pt-2 leading-relaxed">
+                                <p>Kata sandi bawaan Super Admin adalah <code>admin</code>.</p>
+                                <p>Jika telah diubah dan Anda lupa, silakan periksa lembar spreadsheet <b>Users</b> pada Google Sheets backend.</p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#EF4444',
+                        confirmButtonText: 'Saya Mengerti',
+                        customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' }
+                    });
+                }
+            };
+
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!selectedUserId) return showAlert.warning('Perhatian', 'Pilih akun Anda!');
@@ -2460,7 +2615,7 @@
                     const inputHashed = await hashPassword(typedPassword);
                     const defaultPass = user.role === ROLES.GURU ? 'guru123' : 'siswa123';
                     const expectedHashed = user.password ? String(user.password).trim() : await hashPassword(defaultPass);
-                    if (inputHashed !== expectedHashed) return showAlert.error('Password Salah', 'Password salah!');
+                    if (inputHashed !== expectedHashed) return showAlert.error('Password Salah', 'Kata sandi yang Anda masukkan salah!');
                 }
                 onLogin(user);
             };
@@ -2502,7 +2657,12 @@
                                 )}
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Kata Sandi:</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="text-xs font-bold text-gray-600">Kata Sandi:</label>
+                                    <button type="button" onClick={handleForgotPassword} className="text-[11px] font-bold text-brand-red hover:underline transition-colors">
+                                        Lupa Kata Sandi?
+                                    </button>
+                                </div>
                                 <input type="password" value={inputPassword} onChange={e => setInputPassword(e.target.value)} placeholder="Masukkan kata sandi..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" required />
                             </div>
                             <Button type="submit" fullWidth disabled={users.length === 0 || isLoadingPull}>Masuk Sistem</Button>
