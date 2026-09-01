@@ -250,98 +250,117 @@
             syncQueue: 'id, tableName, recordId, action, status, createdAt'
         });
 
-        // PUSH KE CLOUD (STANDARD SYNC)[cite: 1]
+        // ==========================================
+        // PUSH KE CLOUD (BATCH & STABLE DELETES)
+        // ==========================================
         async function pushPendingQueue() {
-            if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+            if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
 
             const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
-            if (pendingQueue.length === 0) return;
+            if (pendingQueue.length === 0) return false;
 
-            // 1. Habit Logs[cite: 1]
-            const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action !== 'delete').map(q => q.recordId);
-            if (habitUpsertIds.length > 0) {
-                const logs = await db.habitLogs.bulkGet(habitUpsertIds);
-                const validLogs = logs.filter(Boolean);
-                if (validLogs.length > 0) {
+            try {
+                // 1. Habit Logs (Upsert)
+                const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action !== 'delete').map(q => q.recordId);
+                if (habitUpsertIds.length > 0) {
+                    const logs = await db.habitLogs.bulkGet(habitUpsertIds);
+                    const validLogs = logs.filter(Boolean);
+                    if (validLogs.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabits', payload: validLogs })
+                        });
+                    }
+                }
+
+                // 2. Users (Upsert)
+                const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && q.action !== 'delete').map(q => q.recordId);
+                if (userUpsertIds.length > 0) {
+                    const users = await db.users.bulkGet(userUpsertIds);
+                    const validUsers = users.filter(Boolean);
+                    if (validUsers.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncUser', payload: validUsers })
+                        });
+                    }
+                }
+
+                // 3. Classes (Upsert)
+                const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && q.action !== 'delete').map(q => q.recordId);
+                if (classUpsertIds.length > 0) {
+                    const classes = await db.classes.bulkGet(classUpsertIds);
+                    const validClasses = classes.filter(Boolean);
+                    if (validClasses.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncClass', payload: validClasses })
+                        });
+                    }
+                }
+
+                // 4. Journals (Upsert)
+                const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && q.action !== 'delete').map(q => q.recordId);
+                if (journalUpsertIds.length > 0) {
+                    const journals = await db.journals.bulkGet(journalUpsertIds);
+                    const validJournals = journals.filter(Boolean);
+                    if (validJournals.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncJournal', payload: validJournals })
+                        });
+                    }
+                }
+
+                // 5. Batch Deletes
+                const deleteItems = pendingQueue.filter(q => q.action === 'delete');
+                const deletesByTable = { habitLogs: [], users: [], classes: [], journals: [] };
+                deleteItems.forEach(d => {
+                    if (deletesByTable[d.tableName]) deletesByTable[d.tableName].push(d.recordId);
+                });
+
+                if (deletesByTable.habitLogs.length > 0) {
                     await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'syncHabits', payload: validLogs })
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteHabitLogs', payload: deletesByTable.habitLogs })
                     });
                 }
-            }
-
-            // 2. Users[cite: 1]
-            const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && q.action !== 'delete').map(q => q.recordId);
-            if (userUpsertIds.length > 0) {
-                const users = await db.users.bulkGet(userUpsertIds);
-                const validUsers = users.filter(Boolean);
-                if (validUsers.length > 0) {
+                if (deletesByTable.users.length > 0) {
                     await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'syncUser', payload: validUsers })
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteUsers', payload: deletesByTable.users })
                     });
                 }
-            }
-
-            // 3. Classes[cite: 1]
-            const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && q.action !== 'delete').map(q => q.recordId);
-            if (classUpsertIds.length > 0) {
-                const classes = await db.classes.bulkGet(classUpsertIds);
-                const validClasses = classes.filter(Boolean);
-                if (validClasses.length > 0) {
+                if (deletesByTable.classes.length > 0) {
                     await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'syncClass', payload: validClasses })
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteClasses', payload: deletesByTable.classes })
                     });
                 }
-            }
-
-            // 4. Journals[cite: 1]
-            const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && q.action !== 'delete').map(q => q.recordId);
-            if (journalUpsertIds.length > 0) {
-                const journals = await db.journals.bulkGet(journalUpsertIds);
-                const validJournals = journals.filter(Boolean);
-                if (validJournals.length > 0) {
+                if (deletesByTable.journals.length > 0) {
                     await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'syncJournal', payload: validJournals })
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: 'deleteJournals', payload: deletesByTable.journals })
                     });
                 }
-            }
 
-            // 5. Deletes[cite: 1]
-            const deleteItems = pendingQueue.filter(q => q.action === 'delete');
-            for (let item of deleteItems) {
-                let endpointAction = '';
-                if (item.tableName === 'habitLogs') endpointAction = 'deleteHabitLog';
-                else if (item.tableName === 'journals') endpointAction = 'deleteJournal';
-                else if (item.tableName === 'users') endpointAction = 'deleteUser';
-                else if (item.tableName === 'classes') endpointAction = 'deleteClass';
-
-                if (endpointAction) {
-                    await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: endpointAction, payload: { id: item.recordId } })
-                    });
-                }
-            }
-
-            for (let item of pendingQueue) {
-                await db.syncQueue.update(item.id, { status: 'synced' });
+                await db.syncQueue.where('status').equals('pending').delete();
+                return true;
+            } catch (err) {
+                console.error("Push queue error:", err);
+                return false;
             }
         }
 
-        // PULL DARI CLOUD (STANDARD LOAD DATA)[cite: 1]
+        // PULL DARI CLOUD (STANDARD LOAD DATA)
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -403,7 +422,7 @@
                         const formattedJournals = json.journals.map(j => ({
                             id: String(j['ID Jurnal'] || j['id'] || '').trim(),
                             userId: String(j['User ID'] || j['userId'] || '').trim(),
-                            studentName: String(j['Nama Siswa'] || j['studentName'] || '').trim(),
+                            studentName: String(j['Nama Siswa'] || l['studentName'] || '').trim(),
                             className: String(j['Kelas'] || j['className'] || '').trim(),
                             date: String(j['Tanggal'] || j['date'] || '').trim().split('T')[0],
                             mood: String(j['Mood'] || j['mood'] || '').trim(),
@@ -449,31 +468,39 @@
         function useOnlineSyncEngine() {
             const [isOnline, setIsOnline] = useState(navigator.onLine);
             const [syncStatus, setSyncStatus] = useState('idle');
+            const isSyncingRef = useRef(false);
 
-            const fullSynchronize = useCallback(async () => {
+            const fullSynchronize = useCallback(async (isImmediatePush = true) => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+                if (isSyncingRef.current) return;
+                isSyncingRef.current = true;
                 setSyncStatus('syncing');
+
                 try {
-                    await pushPendingQueue();
+                    if (isImmediatePush) {
+                        await pushPendingQueue();
+                        await new Promise(res => setTimeout(res, 800));
+                    }
                     await pullAllCloudData();
                     setSyncStatus('synced');
                     setTimeout(() => setSyncStatus('idle'), 2000);
                 } catch (e) {
                     setSyncStatus('error');
                     setTimeout(() => setSyncStatus('idle'), 2500);
+                } finally {
+                    isSyncingRef.current = false;
                 }
             }, []);
 
             useEffect(() => {
-                const handleOnline = () => { setIsOnline(true); fullSynchronize(); };
+                const handleOnline = () => { setIsOnline(true); fullSynchronize(true); };
                 const handleOffline = () => { setIsOnline(false); setSyncStatus('idle'); };
 
                 window.addEventListener('online', handleOnline);
                 window.addEventListener('offline', handleOffline);
 
-                // Polling background setiap 60 detik[cite: 1]
                 const interval = setInterval(() => {
-                    if (navigator.onLine) fullSynchronize();
+                    if (navigator.onLine && !isSyncingRef.current) fullSynchronize(true);
                 }, 60000);
 
                 return () => {
@@ -483,7 +510,7 @@
                 };
             }, [fullSynchronize]);
 
-            return { isOnline, syncStatus, triggerSync: fullSynchronize, triggerManualPull: fullSynchronize };
+            return { isOnline, syncStatus, triggerSync: () => fullSynchronize(true), triggerManualPull: () => fullSynchronize(false) };
         }
 
         // ==========================================
