@@ -1,3 +1,139 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: index.html, manifest.json, sw.js, vercel.json
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+index.html
+manifest.json
+sw.js
+vercel.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="manifest.json">
+{
+    "name": "7 Kebiasaan Anak Indonesia Hebat",
+    "short_name": "7 Kebiasaan",
+    "description": "Aplikasi Pembiasaan Karakter Positif Siswa SMP Negeri 1 Talaga Jaya",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F9FAFB",
+    "theme_color": "#EF4444",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇮🇩</text></svg>",
+            "sizes": "192x192 512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+</file>
+
+<file path="vercel.json">
+{
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
+</file>
+
+<file path="sw.js">
+const CACHE_NAME = "7kebiasaan-cache-v1";
+const ASSETS_TO_CACHE = [
+    "/",
+    "/index.html",
+    "/manifest.json",
+    "https://unpkg.com/react@18/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone/babel.min.js",
+    "https://cdn.tailwindcss.com",
+    "https://unpkg.com/dexie@3.2.4/dist/dexie.js",
+    "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js",
+    "https://cdn.jsdelivr.net/npm/sweetalert2@11",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) =>
+            Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
+                }),
+            ),
+        ),
+    );
+    self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Jangan cache permintaan POST/GET API Google Apps Script
+    if (event.request.url.includes("script.google.com")) {
+        return;
+    }
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            return (
+                cachedResponse ||
+                fetch(event.request).catch(() => caches.match("/index.html"))
+            );
+        }),
+    );
+});
+</file>
+
+<file path="index.html">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -117,26 +253,6 @@
         const getNowWitaTimeString = () => {
             const formatter = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false });
             return formatter.format(new Date()).replace('.', ':');
-        };
-
-        // Helper pembersih format jam
-        const formatCleanTime = (timeVal) => {
-            if (!timeVal || timeVal === '-' || timeVal === 'null' || timeVal === 'undefined') return '-';
-            const str = String(timeVal).trim();
-            if (str.includes('T')) {
-                try {
-                    const d = new Date(str);
-                    if (!isNaN(d.getTime())) {
-                        const hh = String(d.getHours()).padStart(2, '0');
-                        const mm = String(d.getMinutes()).padStart(2, '0');
-                        return `${hh}:${mm}`;
-                    }
-                } catch(e) {}
-            }
-            if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
-                return str.substring(0, 5);
-            }
-            return str;
         };
 
         const formatDisplayDate = (dateStr) => {
@@ -271,7 +387,7 @@
         });
 
         // ==========================================
-        // PUSH KE CLOUD
+        // PUSH KE CLOUD (BATCH & STABLE DELETES)
         // ==========================================
         async function pushPendingQueue() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
@@ -280,6 +396,7 @@
             if (pendingQueue.length === 0) return false;
 
             try {
+                // 1. Habit Logs (Upsert)
                 const habitUpsertIds = pendingQueue.filter(q => q.tableName === 'habitLogs' && q.action !== 'delete').map(q => q.recordId);
                 if (habitUpsertIds.length > 0) {
                     const logs = await db.habitLogs.bulkGet(habitUpsertIds);
@@ -294,6 +411,7 @@
                     }
                 }
 
+                // 2. Users (Upsert)
                 const userUpsertIds = pendingQueue.filter(q => q.tableName === 'users' && q.action !== 'delete').map(q => q.recordId);
                 if (userUpsertIds.length > 0) {
                     const users = await db.users.bulkGet(userUpsertIds);
@@ -308,6 +426,7 @@
                     }
                 }
 
+                // 3. Classes (Upsert)
                 const classUpsertIds = pendingQueue.filter(q => q.tableName === 'classes' && q.action !== 'delete').map(q => q.recordId);
                 if (classUpsertIds.length > 0) {
                     const classes = await db.classes.bulkGet(classUpsertIds);
@@ -322,6 +441,7 @@
                     }
                 }
 
+                // 4. Journals (Upsert)
                 const journalUpsertIds = pendingQueue.filter(q => q.tableName === 'journals' && q.action !== 'delete').map(q => q.recordId);
                 if (journalUpsertIds.length > 0) {
                     const journals = await db.journals.bulkGet(journalUpsertIds);
@@ -336,6 +456,7 @@
                     }
                 }
 
+                // 5. Batch Deletes
                 const deleteItems = pendingQueue.filter(q => q.action === 'delete');
                 const deletesByTable = { habitLogs: [], users: [], classes: [], journals: [] };
                 deleteItems.forEach(d => {
@@ -376,7 +497,7 @@
         }
 
         // ==========================================
-        // PULL DARI CLOUD
+        // PULL DARI CLOUD DENGAN REKONSILIASI ID (DIFFING SYNC)
         // ==========================================
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
@@ -393,6 +514,7 @@
                         journals: new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId))
                     };
 
+                    // 1. REKONSILIASI KELAS (CLASSES)
                     if (Array.isArray(json.classes)) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
@@ -411,6 +533,7 @@
                         if (staleClassIds.length > 0) await db.classes.bulkDelete(staleClassIds);
                     }
 
+                    // 2. REKONSILIASI PENGGUNA (USERS - GURU & SISWA)
                     if (Array.isArray(json.users)) {
                         const formattedUsers = json.users.map(u => {
                             const genderVal = String(u['Jenis Kelamin'] || u['gender'] || (u['Role'] === 'guru' || u['Role'] === 'admin' ? '' : 'Laki-laki')).trim();
@@ -446,6 +569,7 @@
                         if (staleUserIds.length > 0) await db.users.bulkDelete(staleUserIds);
                     }
 
+                    // 3. REKONSILIASI LOG KEBIASAAN (HABIT LOGS)
                     if (Array.isArray(json.habitLogs)) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
@@ -456,7 +580,7 @@
                             habitName: String(l['Nama Kebiasaan'] || l['habitName'] || '').trim(),
                             date: String(l['Tanggal'] || l['date'] || '').trim().split('T')[0],
                             completed: String(l['Status Selesai'] || l['completed']).trim() === 'Selesai' || l['completed'] === true,
-                            timeValue: formatCleanTime(l['Jam / Waktu'] || l['timeValue'] || ''),
+                            timeValue: String(l['Jam / Waktu'] || l['timeValue'] || '').trim(),
                             detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || '').trim(),
                             syncStatus: 'synced'
                         })).filter(l => l.id);
@@ -471,6 +595,7 @@
                         if (staleLogIds.length > 0) await db.habitLogs.bulkDelete(staleLogIds);
                     }
 
+                    // 4. REKONSILIASI JURNAL (JOURNALS)
                     if (Array.isArray(json.journals)) {
                         const formattedJournals = json.journals.map(j => ({
                             id: String(j['ID Jurnal'] || j['id'] || '').trim(),
@@ -531,6 +656,7 @@
             const [syncStatus, setSyncStatus] = useState('idle');
             const isSyncingRef = useRef(false);
 
+            // Push mandiri saat ada mutasi data lokal (tanpa menimpa dengan pull instan)
             const pushOnly = useCallback(async () => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
                 setSyncStatus('syncing');
@@ -544,6 +670,7 @@
                 }
             }, []);
 
+            // Tarik data lengkap (Pull)
             const fullSynchronize = useCallback(async (isImmediatePush = true) => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
                 if (isSyncingRef.current) return;
@@ -624,7 +751,7 @@
         );
 
         // ==========================================
-        // LAYOUT UTAMA
+        // LAYOUT UTAMA & ONBOARDING GUIDE
         // ==========================================
         const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, compact, setCompact, children }) => {
             const [showOnboarding, setShowOnboarding] = useState(false);
@@ -801,7 +928,7 @@
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
                 const logMap = {};
                 userLogs.forEach(l => { 
-                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue }; 
+                    logMap[l.habitId] = { completed: l.completed, timeValue: l.timeValue, detailValue: l.detailValue }; 
                 });
                 setLogs(logMap);
 
@@ -886,7 +1013,6 @@
                 const habit = activeHabitModal;
                 const logId = `${user.id}_${habit.id}_${todayStr}`;
                 const wasCompleted = logs[habit.id]?.completed;
-                const cleanTime = formatCleanTime(modalTime);
 
                 await db.habitLogs.put({
                     id: logId,
@@ -897,7 +1023,7 @@
                     habitName: habit.name,
                     date: todayStr,
                     completed: true,
-                    timeValue: cleanTime,
+                    timeValue: modalTime,
                     detailValue: modalDetail,
                     syncStatus: 'pending',
                     updatedAt: new Date()
@@ -912,7 +1038,7 @@
                     createdAt: new Date()
                 });
 
-                setLogs(prev => ({ ...prev, [habit.id]: { completed: true, timeValue: cleanTime, detailValue: modalDetail } }));
+                setLogs(prev => ({ ...prev, [habit.id]: { completed: true, timeValue: modalTime, detailValue: modalDetail } }));
 
                 if (!wasCompleted) {
                     const pRecord = await db.points.where('userId').equals(user.id).first();
@@ -1008,7 +1134,7 @@
                                         <div className="mt-3 pt-3 border-t border-green-200/60 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl space-y-1">
                                             <div className="flex items-center gap-1 font-bold text-brand-dark">
                                                 <i className="far fa-clock text-brand-blue"></i>
-                                                <span>Pukul: {formatCleanTime(entry.timeValue)} WITA</span>
+                                                <span>Pukul: {entry.timeValue || '-'} WITA</span>
                                             </div>
                                             <p className="text-gray-600 italic line-clamp-2">"{entry.detailValue || '-'}"</p>
                                         </div>
@@ -1519,7 +1645,7 @@
                                                                 <span>{h.icon}</span> {h.name}
                                                             </span>
                                                             <span className={isDone ? 'text-green-600 font-extrabold' : 'text-gray-400 font-normal'}>
-                                                                {isDone ? `Pkl ${formatCleanTime(log.timeValue)} WITA` : 'Belum'}
+                                                                {isDone ? `Pkl ${log.timeValue || '-'} WITA` : 'Belum'}
                                                             </span>
                                                         </div>
                                                         {isDone && (
@@ -3067,7 +3193,7 @@
                         r['Nama Kebiasaan'] || r['habitName'] || '-',
                         r['Tanggal'] || r['date'] || '-',
                         r['Status Selesai'] || (r['completed'] === 'true' || r['completed'] === true ? 'Selesai' : 'Belum Selesai'),
-                        formatCleanTime(r['Jam / Waktu'] || r['timeValue']),
+                        r['Jam / Waktu'] || r['timeValue'] || '-',
                         r['Detail / Keterangan'] || r['detailValue'] || '-'
                     ]);
                 });
@@ -3105,7 +3231,7 @@
                     r['Nama Kebiasaan'] || r['habitName'] || '-',
                     r['Tanggal'] || r['date'] || '-',
                     r['Status Selesai'] || (r['completed'] ? 'Selesai' : 'Belum'),
-                    formatCleanTime(r['Jam / Waktu'] || r['timeValue']),
+                    r['Jam / Waktu'] || r['timeValue'] || '-',
                     r['Detail / Keterangan'] || r['detailValue'] || '-'
                 ]);
 
@@ -3231,7 +3357,7 @@
                                                             {isDone ? 'Selesai' : 'Belum Selesai'}
                                                         </span>
                                                     </td>
-                                                    <td className="p-2.5 text-center font-bold text-brand-blue">{formatCleanTime(row['Jam / Waktu'] || row['timeValue'])}</td>
+                                                    <td className="p-2.5 text-center font-bold text-brand-blue">{row['Jam / Waktu'] || row['timeValue'] || '-'}</td>
                                                     <td className="p-2.5 text-gray-600 italic max-w-xs truncate">{row['Detail / Keterangan'] || row['detailValue'] || '-'}</td>
                                                 </tr>
                                             );
@@ -3342,7 +3468,7 @@
                             return {
                                 habitId: h.id, habitName: h.name, icon: h.icon,
                                 completed: log ? log.completed : false,
-                                timeValue: log ? formatCleanTime(log.timeValue) : '-',
+                                timeValue: log ? log.timeValue : '-',
                                 detailValue: log ? log.detailValue : '-'
                             };
                         });
@@ -3387,7 +3513,7 @@
 
                         item.daysBreakdown.forEach(day => {
                             day.habits.forEach((h, hIdx) => {
-                                aoaData.push([hIdx + 1, day.date, h.habitName, h.completed ? 'Selesai' : 'Belum Selesai', formatCleanTime(h.timeValue), h.detailValue || '-']);
+                                aoaData.push([hIdx + 1, day.date, h.habitName, h.completed ? 'Selesai' : 'Belum Selesai', h.timeValue || '-', h.detailValue || '-']);
                             });
                         });
                         aoaData.push([]);
@@ -3428,40 +3554,12 @@
                     const s = item.student;
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
+                    doc.text(`Nama Siswa    : ${s.name}`, 40, 92);
+                    doc.text(`Kelas / Rombel: ${s.className || '-'}`, 40, 106);
+                    doc.text(`NISN              : ${s.nisn || '-'}`, pageWidth - 260, 92);
+                    doc.text(`Guru Mentor   : ${s.mentorName || '-'}`, pageWidth - 260, 106);
 
-                    // Posisi Titik Dua (:) Sejajar Presisi
-                    const leftLabelX = 40;
-                    const leftColonX = 110;
-                    const leftValX = 118;
-
-                    doc.text("Nama Siswa", leftLabelX, 92);
-                    doc.text(":", leftColonX, 92);
-                    doc.text(s.name, leftValX, 92);
-
-                    doc.text("Kelas / Rombel", leftLabelX, 106);
-                    doc.text(":", leftColonX, 106);
-                    doc.text(s.className || '-', leftValX, 106);
-
-                    const rightLabelX = pageWidth - 260;
-                    const rightColonX = pageWidth - 190;
-                    const rightValX = pageWidth - 182;
-
-                    doc.text("NISN", rightLabelX, 92);
-                    doc.text(":", rightColonX, 92);
-                    doc.text(s.nisn || '-', rightValX, 92);
-
-                    doc.text("Guru Mentor", rightLabelX, 106);
-                    doc.text(":", rightColonX, 106);
-                    doc.text(s.mentorName || '-', rightValX, 106);
-
-                    const tableBody = item.flatRows.map(r => [
-                        r.no, 
-                        r.date, 
-                        r.habitName, 
-                        r.completed ? 'Selesai' : 'Belum Selesai', 
-                        formatCleanTime(r.timeValue), 
-                        r.detailValue || '-'
-                    ]);
+                    const tableBody = item.flatRows.map(r => [r.no, r.date, r.habitName, r.completed ? 'Selesai' : 'Belum Selesai', r.timeValue || '-', r.detailValue || '-']);
 
                     doc.autoTable({
                         startY: 116,
@@ -3573,7 +3671,7 @@
                                                     <p className="text-xs text-gray-500 font-bold">NISN: {s.nisn || '-'} • Kelas: <span className="text-brand-red font-black">{s.className || '-'}</span> • Mentor: <span className="text-brand-blue font-bold">{s.mentorName || '-'}</span></p>
                                                 </div>
                                             </div>
-                                            <span className="text-xs px-3.5 py-1.5 bg-green-50 border border-green-200 text-green-700 font-black rounded-xl">Capaian: {item.totalCompleted}/{item.totalPossible} ({item.percentage}%)</span>
+                                            <span className="text-xs px-3.5 py-1.5 bg-green-50 border border-green-200 text-green-700 font-black rounded-xl">Capaian: {item.totalCompleted}/{item.totalPossible} (${item.percentage}%)</span>
                                         </div>
 
                                         <div className="space-y-4">
@@ -3594,7 +3692,7 @@
                                                                         <td className="p-2.5 text-center text-gray-400">{hIdx + 1}</td>
                                                                         <td className="p-2.5 font-bold text-gray-800">{h.icon} {h.habitName}</td>
                                                                         <td className="p-2.5 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${h.completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>{h.completed ? 'Selesai' : 'Belum'}</span></td>
-                                                                        <td className="p-2.5 text-center font-bold text-brand-blue">{formatCleanTime(h.timeValue)}</td>
+                                                                        <td className="p-2.5 text-center font-bold text-brand-blue">{h.timeValue || '-'}</td>
                                                                         <td className="p-2.5 text-gray-600 italic">{h.detailValue || '-'}</td>
                                                                     </tr>
                                                                 ))}
@@ -3614,7 +3712,7 @@
         };
 
         // ==========================================
-        // LOGIN & CONTROLLER UTAMA
+        // LOGIN & ROOT CONTROLLER
         // ==========================================
         const LandingPage = ({ onStart }) => (
             <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
@@ -3966,3 +4064,6 @@
     </script>
 </body>
 </html>
+</file>
+
+</files>
