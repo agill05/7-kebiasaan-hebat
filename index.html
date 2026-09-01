@@ -1125,18 +1125,35 @@
             );
         };
 
-        const StudentJournalPage = ({ user, triggerSync }) => {
+        // ==========================================
+        // JURNAL SISWA (DENGAN SINKRONISASI AKTIF)
+        // ==========================================
+        const StudentJournalPage = ({ user, triggerSync, syncStatus, triggerManualPull }) => {
             const todayStr = getTodayWitaDateString();
             const [mood, setMood] = useState('😊 Senang');
             const [content, setContent] = useState('');
             const [savedJournals, setSavedJournals] = useState([]);
+            const [isCheckingCloud, setIsCheckingCloud] = useState(false);
 
             const loadJournals = async () => {
                 const list = await db.journals.where('userId').equals(user.id).toArray();
                 setSavedJournals(list.sort((a, b) => b.date.localeCompare(a.date)));
             };
 
-            useEffect(() => { loadJournals(); }, [user.id]);
+            // Reaktif: Otomatis reload saat user berubah ATAU saat background sync selesai ('synced')
+            useEffect(() => { 
+                loadJournals(); 
+            }, [user.id, syncStatus]);
+
+            const handleManualCheckUpdates = async () => {
+                setIsCheckingCloud(true);
+                if (triggerManualPull) {
+                    await triggerManualPull();
+                }
+                await loadJournals();
+                setIsCheckingCloud(false);
+                showAlert.success('Pembaruan Selesai', 'Data catatan dan balasan apresiasi telah disinkronkan.');
+            };
 
             const handleSave = async (e) => {
                 e.preventDefault();
@@ -1170,7 +1187,22 @@
 
             return (
                 <div className="space-y-6">
-                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
+                            <p className="text-gray-500 font-medium text-sm">Tuliskan kegiatan positif dan baca apresiasi dari bapak/ibu guru.</p>
+                        </div>
+                        <Button 
+                            variant="white" 
+                            onClick={handleManualCheckUpdates} 
+                            disabled={isCheckingCloud || syncStatus === 'syncing'}
+                            className="text-xs py-2 px-3.5 flex items-center gap-2 text-brand-dark border-gray-200 hover:bg-gray-100"
+                        >
+                            <i className={`fas fa-sync-alt ${isCheckingCloud || syncStatus === 'syncing' ? 'fa-spin text-brand-blue' : 'text-brand-red'}`}></i>
+                            <span>{isCheckingCloud || syncStatus === 'syncing' ? 'Memeriksa...' : 'Cek Balasan Guru'}</span>
+                        </Button>
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <Card className="lg:col-span-2">
                             <form onSubmit={handleSave} className="space-y-4">
@@ -1197,12 +1229,17 @@
                                 <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi Hari Ini</Button>
                             </form>
                         </Card>
+
                         <Card className="space-y-3">
-                            <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
+                            <div className="flex justify-between items-center border-b pb-2">
+                                <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
+                                <span className="text-[10px] text-gray-400 font-extrabold">{savedJournals.length} Entri</span>
+                            </div>
+
                             {savedJournals.length === 0 ? (
                                 <EmptyState icon="📝" title="Belum Ada Jurnal" description="Tulis refleksi harian pertamamu hari ini." />
                             ) : (
-                                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                                <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
                                     {savedJournals.map(j => {
                                         const hrFb = j.homeroomFeedback || j.teacherFeedback || '';
                                         const hrName = j.homeroomTeacherName || 'Wali Kelas';
@@ -1216,11 +1253,13 @@
                                                     <span>{formatDisplayDate(j.date)}</span>
                                                     <span>{j.mood}</span>
                                                 </div>
-                                                <p className="text-gray-700 leading-relaxed">"{j.content}"</p>
+                                                <p className="text-gray-700 leading-relaxed bg-white p-2.5 rounded-lg border border-gray-100">
+                                                    "{j.content}"
+                                                </p>
                                                 
                                                 {/* Kasus 1: Balasan Sama dari Guru yang Merangkap Wali & Mentor */}
                                                 {isSameDual && (
-                                                    <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
+                                                    <div className="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
                                                         <span className="font-extrabold text-brand-blue flex items-center gap-1">
                                                             <span>💬</span> Apresiasi Wali Kelas & Guru Mentor ({hrName}):
                                                         </span>
@@ -1231,20 +1270,29 @@
                                                 {/* Kasus 2: Balasan Terpisah */}
                                                 {!isSameDual && (
                                                     <div className="space-y-1.5 pt-1">
-                                                        {hrFb && (
+                                                        {hrFb ? (
                                                             <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 space-y-0.5">
                                                                 <span className="font-bold text-brand-blue block">
                                                                     👨‍🏫 Apresiasi Wali Kelas ({hrName}):
                                                                 </span>
                                                                 <p className="italic text-gray-700">{hrFb}</p>
                                                             </div>
+                                                        ) : (
+                                                            <div className="p-2 bg-gray-100/60 border border-dashed border-gray-200 rounded-lg text-gray-400 text-[11px] italic">
+                                                                ⏳ Belum ada apresiasi dari Wali Kelas
+                                                            </div>
                                                         )}
-                                                        {mtFb && (
+
+                                                        {mtFb ? (
                                                             <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-950 space-y-0.5">
                                                                 <span className="font-bold text-emerald-700 block">
                                                                     🌟 Apresiasi Guru Mentor ({mtName}):
                                                                 </span>
                                                                 <p className="italic text-gray-700">{mtFb}</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="p-2 bg-gray-100/60 border border-dashed border-gray-200 rounded-lg text-gray-400 text-[11px] italic">
+                                                                ⏳ Belum ada apresiasi dari Guru Mentor
                                                             </div>
                                                         )}
                                                     </div>
@@ -1400,7 +1448,14 @@
             const allCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s) || isStudentMentor(s)).length, [allStudents, isStudentHomeroom, isStudentMentor]);
 
             const handleOpenFeedbackModal = async (student) => {
-                const journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
+                let journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
+                
+                // Fallback: Jika belum ada di lokal dan online, coba sync pull terlebih dahulu
+                if (!journal && navigator.onLine) {
+                    await pullAllCloudData();
+                    journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
+                }
+
                 if (!journal) {
                     return showAlert.warning('Belum Ada Jurnal', `${student.name} belum mengisi jurnal refleksi pada tanggal ${formatDisplayDate(selectedDate)}.`);
                 }
@@ -1466,7 +1521,7 @@
                     id: `sync_fb_${Date.now()}`, tableName: 'journals', recordId: feedbackModalJournal.id, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
 
-                showAlert.success('Apresiasi Tersimpan!', 'Catatan apresiasi Anda berhasil dikirim ke siswa.');
+                showAlert.success('Apresiasi Tersimpan!', 'Catatan apresiasi Anda berhasil dikirim ke database.');
                 setFeedbackModalJournal(null);
                 setFeedbackStudent(null);
                 triggerSync();
@@ -4143,7 +4198,7 @@
             switch (currentPath) {
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} compact={compact} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
-                case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
+                case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} syncStatus={syncStatus} triggerManualPull={triggerManualPull} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
