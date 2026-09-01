@@ -119,7 +119,6 @@
             return formatter.format(new Date()).replace('.', ':');
         };
 
-        // Helper pembersih format jam
         const formatCleanTime = (timeVal) => {
             if (!timeVal || timeVal === '-' || timeVal === 'null' || timeVal === 'undefined') return '-';
             const str = String(timeVal).trim();
@@ -1289,7 +1288,7 @@
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
             const [studentFormData, setStudentFormData] = useState({
-                name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: user.homeroomClassId || ''
+                name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: ''
             });
 
             const loadData = async () => {
@@ -1303,10 +1302,37 @@
 
             useEffect(() => { loadData(); }, [selectedDate]);
 
+            // ==========================================================
+            // DETEKSI KELAS BINAAN SECARA DINAMIS DARI MASTER CLASSES
+            // ==========================================================
+            const myHomeroomClasses = useMemo(() => {
+                return classes.filter(c => c.teacherId === user.id);
+            }, [classes, user.id]);
+
+            const myHomeroomClassIds = useMemo(() => {
+                return new Set(myHomeroomClasses.map(c => c.id));
+            }, [myHomeroomClasses]);
+
+            const myHomeroomClassNames = useMemo(() => {
+                return new Set(myHomeroomClasses.map(c => (c.name || '').toLowerCase().trim()));
+            }, [myHomeroomClasses]);
+
+            const isStudentHomeroom = useCallback((s) => {
+                return (
+                    (s.classId && myHomeroomClassIds.has(s.classId)) ||
+                    (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) ||
+                    (user.homeroomClassId && s.classId === user.homeroomClassId)
+                );
+            }, [myHomeroomClassIds, myHomeroomClassNames, user.homeroomClassId]);
+
+            const isStudentMentor = useCallback((s) => {
+                return s.mentorId === user.id;
+            }, [user.id]);
+
             const filteredStudents = useMemo(() => {
                 return allStudents.filter(s => {
-                    const isHomeroom = user.homeroomClassId && s.classId === user.homeroomClassId;
-                    const isMentor = s.mentorId === user.id;
+                    const isHomeroom = isStudentHomeroom(s);
+                    const isMentor = isStudentMentor(s);
                     const matchesTab = selectedTab === 'homeroom' ? isHomeroom : selectedTab === 'mentor' ? isMentor : (isHomeroom || isMentor);
                     
                     const query = searchQuery.toLowerCase().trim();
@@ -1317,7 +1343,11 @@
 
                     return matchesTab && matchesSearch && matchesAlpha;
                 });
-            }, [allStudents, user, selectedTab, searchQuery, filterAlphaOnly, classLogs]);
+            }, [allStudents, isStudentHomeroom, isStudentMentor, selectedTab, searchQuery, filterAlphaOnly, classLogs]);
+
+            const homeroomCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s)).length, [allStudents, isStudentHomeroom]);
+            const mentorCount = useMemo(() => allStudents.filter(s => isStudentMentor(s)).length, [allStudents, isStudentMentor]);
+            const allCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s) || isStudentMentor(s)).length, [allStudents, isStudentHomeroom, isStudentMentor]);
 
             const handleOpenFeedbackModal = async (student) => {
                 const journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
@@ -1345,8 +1375,9 @@
 
             const handleOpenAddModal = () => {
                 setEditingStudent(null);
+                const defaultClassId = myHomeroomClasses[0]?.id || user.homeroomClassId || (classes[0]?.id || '');
                 setStudentFormData({
-                    name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: user.homeroomClassId || (classes[0]?.id || '')
+                    name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: defaultClassId
                 });
                 setIsStudentModalOpen(true);
             };
@@ -1444,13 +1475,13 @@
 
                         <div className="flex gap-2 border-t pt-3 overflow-x-auto text-xs font-bold">
                             <button onClick={() => setSelectedTab('all')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'all' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
-                                Semua Binaan ({allStudents.filter(s => (user.homeroomClassId && s.classId === user.homeroomClassId) || s.mentorId === user.id).length})
+                                Semua Binaan ({allCount})
                             </button>
                             <button onClick={() => setSelectedTab('homeroom')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'homeroom' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
-                                Kelas Binaan (Wali Kelas) ({allStudents.filter(s => user.homeroomClassId && s.classId === user.homeroomClassId).length})
+                                Kelas Binaan (Wali Kelas) ({homeroomCount})
                             </button>
                             <button onClick={() => setSelectedTab('mentor')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'mentor' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
-                                Kelompok Mentoring ({allStudents.filter(s => s.mentorId === user.id).length})
+                                Kelompok Mentoring ({mentorCount})
                             </button>
                         </div>
                     </Card>
@@ -1487,7 +1518,7 @@
                                                         password: '',
                                                         nisn: student.nisn || '',
                                                         gender: student.gender || 'Laki-laki',
-                                                        classId: student.classId || user.homeroomClassId || ''
+                                                        classId: student.classId || myHomeroomClasses[0]?.id || ''
                                                     });
                                                     setIsStudentModalOpen(true);
                                                 }} className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-brand-blue rounded-lg hover:bg-blue-100 flex items-center gap-1 transition-all" title="Edit Data Siswa">
@@ -2576,7 +2607,7 @@
                 await loadData();
                 triggerSync();
                 const deletedCount = selectedStudentIds.length;
-                setSelectedStudentIds([]);
+                setSelectedTeacherIds([]);
                 showAlert.success('Terhapus', `${deletedCount} akun siswa beserta seluruh rekam jejaknya berhasil dibersihkan.`);
             };
 
@@ -3312,14 +3343,20 @@
 
             const accessibleStudents = useMemo(() => {
                 if (user.role === ROLES.ADMIN) return students;
+                
+                const myHomeroomClassIds = new Set(classes.filter(c => c.teacherId === user.id).map(c => c.id));
+                const myHomeroomClassNames = new Set(classes.filter(c => c.teacherId === user.id).map(c => (c.name || '').toLowerCase().trim()));
+
                 return students.filter(s => {
-                    const isHomeroom = user.homeroomClassId && s.classId === user.homeroomClassId;
+                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) || 
+                                       (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) || 
+                                       (user.homeroomClassId && s.classId === user.homeroomClassId);
                     const isMentor = s.mentorId === user.id;
                     if (selectedScope === 'homeroom') return isHomeroom;
                     if (selectedScope === 'mentor') return isMentor;
                     return isHomeroom || isMentor;
                 });
-            }, [students, user, selectedScope]);
+            }, [students, classes, user, selectedScope]);
 
             const filteredStudentList = useMemo(() => {
                 let list = accessibleStudents;
@@ -3429,7 +3466,6 @@
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'bold');
 
-                    // Posisi Titik Dua (:) Sejajar Presisi
                     const leftLabelX = 40;
                     const leftColonX = 110;
                     const leftValX = 118;
