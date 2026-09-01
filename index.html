@@ -360,7 +360,9 @@
             }
         }
 
-        // PULL DARI CLOUD (STANDARD LOAD DATA)
+        // ==========================================
+        // PULL DARI CLOUD DENGAN REKONSILIASI ID (DIFFING SYNC)
+        // ==========================================
         async function pullAllCloudData() {
             if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
             try {
@@ -368,17 +370,36 @@
                 const json = await res.json();
 
                 if (json.status === 'success') {
-                    if (Array.isArray(json.classes) && json.classes.length > 0) {
+                    // Amankan antrean sync lokal agar data baru/edit offline tidak terhapus tidak sengaja
+                    const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
+                    const pendingIdsByTable = {
+                        classes: new Set(pendingQueue.filter(q => q.tableName === 'classes').map(q => q.recordId)),
+                        users: new Set(pendingQueue.filter(q => q.tableName === 'users').map(q => q.recordId)),
+                        habitLogs: new Set(pendingQueue.filter(q => q.tableName === 'habitLogs').map(q => q.recordId)),
+                        journals: new Set(pendingQueue.filter(q => q.tableName === 'journals').map(q => q.recordId))
+                    };
+
+                    // 1. REKONSILIASI KELAS (CLASSES)
+                    if (Array.isArray(json.classes)) {
                         const formattedClasses = json.classes.map(c => ({
                             id: String(c['Class ID'] || c['id'] || '').trim(),
                             name: String(c['Nama Kelas'] || c['name'] || '').trim(),
                             teacherId: String(c['Teacher ID (Wali)'] || c['teacherId'] || '').trim(),
                             teacherName: String(c['Nama Wali Kelas'] || c['teacherName'] || '').trim()
                         })).filter(c => c.id);
+
+                        const cloudClassIds = new Set(formattedClasses.map(c => c.id));
+                        const localClasses = await db.classes.toArray();
+                        const staleClassIds = localClasses
+                            .map(c => c.id)
+                            .filter(id => !cloudClassIds.has(id) && !pendingIdsByTable.classes.has(id));
+
                         if (formattedClasses.length > 0) await db.classes.bulkPut(formattedClasses);
+                        if (staleClassIds.length > 0) await db.classes.bulkDelete(staleClassIds);
                     }
 
-                    if (Array.isArray(json.users) && json.users.length > 0) {
+                    // 2. REKONSILIASI PENGGUNA (USERS - GURU & SISWA)
+                    if (Array.isArray(json.users)) {
                         const formattedUsers = json.users.map(u => ({
                             id: String(u['User ID'] || u['id'] || '').trim(),
                             username: String(u['Username'] || u['username'] || '').trim(),
@@ -396,12 +417,21 @@
                             mentorName: String(u['Mentor Name'] || u['mentorName'] || '').trim(),
                             createdBy: String(u['Created By'] || u['createdBy'] || 'admin').trim(),
                             status: String(u['Status'] || u['status'] || 'Aktif').trim(),
-                            avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (u['gender'] === 'Perempuan' ? '👧' : '👦'))
+                            avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (String(u['gender'] || u['Jenis Kelamin'] || '').toLowerCase().includes('perempuan') ? '👧' : '👦'))
                         })).filter(u => u.id);
+
+                        const cloudUserIds = new Set(formattedUsers.map(u => u.id));
+                        const localUsers = await db.users.toArray();
+                        const staleUserIds = localUsers
+                            .map(u => u.id)
+                            .filter(id => id !== 'u_admin_default' && !cloudUserIds.has(id) && !pendingIdsByTable.users.has(id));
+
                         if (formattedUsers.length > 0) await db.users.bulkPut(formattedUsers);
+                        if (staleUserIds.length > 0) await db.users.bulkDelete(staleUserIds);
                     }
 
-                    if (Array.isArray(json.habitLogs) && json.habitLogs.length > 0) {
+                    // 3. REKONSILIASI LOG KEBIASAAN (HABIT LOGS)
+                    if (Array.isArray(json.habitLogs)) {
                         const formattedLogs = json.habitLogs.map(l => ({
                             id: String(l['ID Log'] || l['id'] || '').trim(),
                             userId: String(l['User ID'] || l['userId'] || '').trim(),
@@ -415,14 +445,23 @@
                             detailValue: String(l['Detail / Keterangan'] || l['detailValue'] || '').trim(),
                             syncStatus: 'synced'
                         })).filter(l => l.id);
+
+                        const cloudLogIds = new Set(formattedLogs.map(l => l.id));
+                        const localLogs = await db.habitLogs.toArray();
+                        const staleLogIds = localLogs
+                            .map(l => l.id)
+                            .filter(id => !cloudLogIds.has(id) && !pendingIdsByTable.habitLogs.has(id));
+
                         if (formattedLogs.length > 0) await db.habitLogs.bulkPut(formattedLogs);
+                        if (staleLogIds.length > 0) await db.habitLogs.bulkDelete(staleLogIds);
                     }
 
-                    if (Array.isArray(json.journals) && json.journals.length > 0) {
+                    // 4. REKONSILIASI JURNAL (JOURNALS)
+                    if (Array.isArray(json.journals)) {
                         const formattedJournals = json.journals.map(j => ({
                             id: String(j['ID Jurnal'] || j['id'] || '').trim(),
                             userId: String(j['User ID'] || j['userId'] || '').trim(),
-                            studentName: String(j['Nama Siswa'] || l['studentName'] || '').trim(),
+                            studentName: String(j['Nama Siswa'] || j['studentName'] || '').trim(),
                             className: String(j['Kelas'] || j['className'] || '').trim(),
                             date: String(j['Tanggal'] || j['date'] || '').trim().split('T')[0],
                             mood: String(j['Mood'] || j['mood'] || '').trim(),
@@ -430,7 +469,15 @@
                             teacherFeedback: String(j['Catatan Guru'] || j['teacherFeedback'] || '').trim(),
                             syncStatus: 'synced'
                         })).filter(j => j.id);
+
+                        const cloudJournalIds = new Set(formattedJournals.map(j => j.id));
+                        const localJournals = await db.journals.toArray();
+                        const staleJournalIds = localJournals
+                            .map(j => j.id)
+                            .filter(id => !cloudJournalIds.has(id) && !pendingIdsByTable.journals.has(id));
+
                         if (formattedJournals.length > 0) await db.journals.bulkPut(formattedJournals);
+                        if (staleJournalIds.length > 0) await db.journals.bulkDelete(staleJournalIds);
                     }
 
                     return true;
