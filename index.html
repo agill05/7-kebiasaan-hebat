@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,7 +11,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
 
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -45,12 +47,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Nunito', sans-serif; background-color: #F9FAFB; -webkit-tap-highlight-color: transparent; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
-        @media print { body { background: white; } .no-print { display: none !important; } .print-only { display: block !important; } }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #F9FAFB;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #E5E7EB;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D1D5DB;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+        }
     </style>
 
     <script>
@@ -130,7 +163,7 @@
                         const mm = String(d.getMinutes()).padStart(2, '0');
                         return `${hh}:${mm}`;
                     }
-                } catch(e) {}
+                } catch (e) { }
             }
             if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
                 return str.substring(0, 5);
@@ -479,7 +512,10 @@
                             date: String(j['Tanggal'] || j['date'] || '').trim().split('T')[0],
                             mood: String(j['Mood'] || j['mood'] || '').trim(),
                             content: String(j['Isi Jurnal'] || j['content'] || '').trim(),
-                            teacherFeedback: String(j['Catatan Guru'] || j['teacherFeedback'] || '').trim(),
+                            homeroomFeedback: String(j['Catatan Wali Kelas'] || j['homeroomFeedback'] || j['Catatan Guru'] || j['teacherFeedback'] || '').trim(),
+                            homeroomTeacherName: String(j['Nama Wali Kelas'] || j['homeroomTeacherName'] || '').trim(),
+                            mentorFeedback: String(j['Catatan Guru Mentor'] || j['mentorFeedback'] || '').trim(),
+                            mentorTeacherName: String(j['Nama Guru Mentor'] || j['mentorTeacherName'] || '').trim(),
                             syncStatus: 'synced'
                         })).filter(j => j.id);
 
@@ -583,11 +619,11 @@
                 };
             }, [fullSynchronize]);
 
-            return { 
-                isOnline, 
-                syncStatus, 
-                triggerSync: pushOnly, 
-                triggerManualPull: () => fullSynchronize(false) 
+            return {
+                isOnline,
+                syncStatus,
+                triggerSync: pushOnly,
+                triggerManualPull: () => fullSynchronize(false)
             };
         }
 
@@ -712,12 +748,11 @@
                                 <button onClick={() => setShowOnboarding(true)} title="Panduan Aplikasi" className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold">
                                     <i className="fas fa-question"></i>
                                 </button>
-                                <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
-                                    !isOnline ? 'bg-orange-100 text-orange-600' :
-                                    syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
-                                    syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
-                                    'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}>
+                                <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${!isOnline ? 'bg-orange-100 text-orange-600' :
+                                        syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
+                                            syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
+                                                'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}>
                                     <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
                                     <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
                                 </button>
@@ -799,8 +834,8 @@
             const loadLogs = async () => {
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
                 const logMap = {};
-                userLogs.forEach(l => { 
-                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue }; 
+                userLogs.forEach(l => {
+                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue };
                 });
                 setLogs(logMap);
 
@@ -1141,7 +1176,19 @@
                 const existing = await db.journals.get(jId);
 
                 await db.journals.put({
-                    id: jId, userId: user.id, studentName: user.name, className: user.className || '', date: todayStr, mood, content, teacherFeedback: existing?.teacherFeedback || '', syncStatus: 'pending', updatedAt: new Date()
+                    id: jId,
+                    userId: user.id,
+                    studentName: user.name,
+                    className: user.className || '',
+                    date: todayStr,
+                    mood,
+                    content,
+                    homeroomFeedback: existing?.homeroomFeedback || existing?.teacherFeedback || '',
+                    homeroomTeacherName: existing?.homeroomTeacherName || '',
+                    mentorFeedback: existing?.mentorFeedback || '',
+                    mentorTeacherName: existing?.mentorTeacherName || '',
+                    syncStatus: 'pending',
+                    updatedAt: new Date()
                 });
                 await db.syncQueue.put({
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
@@ -1183,26 +1230,60 @@
                             </form>
                         </Card>
                         <Card className="space-y-3">
-                            <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Respon Guru</h3>
+                            <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
                             {savedJournals.length === 0 ? (
                                 <EmptyState icon="📝" title="Belum Ada Jurnal" description="Tulis refleksi harian pertamamu hari ini." />
                             ) : (
-                                <div className="space-y-2.5 max-h-[360px] overflow-y-auto">
-                                    {savedJournals.map(j => (
-                                        <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1.5">
-                                            <div className="flex justify-between font-bold text-brand-red">
-                                                <span>{formatDisplayDate(j.date)}</span>
-                                                <span>{j.mood}</span>
-                                            </div>
-                                            <p className="text-gray-700 line-clamp-3">{j.content}</p>
-                                            {j.teacherFeedback && (
-                                                <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 font-medium">
-                                                    <span className="font-bold text-brand-blue block">💬 Catatan & Apresiasi Guru:</span>
-                                                    {j.teacherFeedback}
+                                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                                    {savedJournals.map(j => {
+                                        const hrFb = j.homeroomFeedback || j.teacherFeedback || '';
+                                        const hrName = j.homeroomTeacherName || 'Wali Kelas';
+                                        const mtFb = j.mentorFeedback || '';
+                                        const mtName = j.mentorTeacherName || 'Guru Mentor';
+                                        const isSameDual = hrFb && mtFb && (hrFb === mtFb) && (hrName === mtName);
+
+                                        return (
+                                            <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-2">
+                                                <div className="flex justify-between font-bold text-brand-red">
+                                                    <span>{formatDisplayDate(j.date)}</span>
+                                                    <span>{j.mood}</span>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                                <p className="text-gray-700 leading-relaxed">"{j.content}"</p>
+
+                                                {/* Kasus 1: Balasan Sama dari Guru yang Merangkap Wali & Mentor */}
+                                                {isSameDual && (
+                                                    <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
+                                                        <span className="font-extrabold text-brand-blue flex items-center gap-1">
+                                                            <span>💬</span> Apresiasi Wali Kelas & Guru Mentor ({hrName}):
+                                                        </span>
+                                                        <p className="italic text-gray-700">{hrFb}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Kasus 2: Balasan Terpisah */}
+                                                {!isSameDual && (
+                                                    <div className="space-y-1.5 pt-1">
+                                                        {hrFb && (
+                                                            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 space-y-0.5">
+                                                                <span className="font-bold text-brand-blue block">
+                                                                    👨‍🏫 Apresiasi Wali Kelas ({hrName}):
+                                                                </span>
+                                                                <p className="italic text-gray-700">{hrFb}</p>
+                                                            </div>
+                                                        )}
+                                                        {mtFb && (
+                                                            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-950 space-y-0.5">
+                                                                <span className="font-bold text-emerald-700 block">
+                                                                    🌟 Apresiasi Guru Mentor ({mtName}):
+                                                                </span>
+                                                                <p className="italic text-gray-700">{mtFb}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </Card>
@@ -1283,7 +1364,11 @@
             const [classLogs, setClassLogs] = useState([]);
 
             const [feedbackModalJournal, setFeedbackModalJournal] = useState(null);
-            const [feedbackText, setFeedbackText] = useState('');
+            const [feedbackStudent, setFeedbackStudent] = useState(null);
+            const [isDualRole, setIsDualRole] = useState(false);
+            const [dualMode, setDualMode] = useState('both_same'); // 'both_same' | 'separate'
+            const [homeroomText, setHomeroomText] = useState('');
+            const [mentorText, setMentorText] = useState('');
 
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
@@ -1334,7 +1419,7 @@
                     const isHomeroom = isStudentHomeroom(s);
                     const isMentor = isStudentMentor(s);
                     const matchesTab = selectedTab === 'homeroom' ? isHomeroom : selectedTab === 'mentor' ? isMentor : (isHomeroom || isMentor);
-                    
+
                     const query = searchQuery.toLowerCase().trim();
                     const matchesSearch = !query || s.name.toLowerCase().includes(query) || (s.nisn && s.nisn.includes(query)) || s.username.toLowerCase().includes(query);
 
@@ -1354,22 +1439,71 @@
                 if (!journal) {
                     return showAlert.warning('Belum Ada Jurnal', `${student.name} belum mengisi jurnal refleksi pada tanggal ${formatDisplayDate(selectedDate)}.`);
                 }
+
+                const isHomeroom = isStudentHomeroom(student);
+                const isMentor = isStudentMentor(student);
+                const dual = isHomeroom && isMentor;
+
+                setFeedbackStudent(student);
+                setIsDualRole(dual);
                 setFeedbackModalJournal(journal);
-                setFeedbackText(journal.teacherFeedback || '');
+
+                const currentHr = journal.homeroomFeedback || journal.teacherFeedback || '';
+                const currentMt = journal.mentorFeedback || '';
+
+                setHomeroomText(currentHr);
+                setMentorText(currentMt);
+
+                if (dual && currentHr && currentMt && currentHr === currentMt) {
+                    setDualMode('both_same');
+                } else if (dual && (currentHr || currentMt) && currentHr !== currentMt) {
+                    setDualMode('separate');
+                } else {
+                    setDualMode('both_same');
+                }
             };
 
             const handleSaveTeacherFeedback = async (e) => {
                 e.preventDefault();
-                if (!feedbackModalJournal) return;
+                if (!feedbackModalJournal || !feedbackStudent) return;
 
-                const updatedJournal = { ...feedbackModalJournal, teacherFeedback: feedbackText.trim(), syncStatus: 'pending' };
+                const isHomeroom = isStudentHomeroom(feedbackStudent);
+                const isMentor = isStudentMentor(feedbackStudent);
+                let updatedJournal = { ...feedbackModalJournal, syncStatus: 'pending', updatedAt: new Date() };
+
+                if (isHomeroom && isMentor) {
+                    if (dualMode === 'both_same') {
+                        const note = homeroomText.trim();
+                        updatedJournal.homeroomFeedback = note;
+                        updatedJournal.homeroomTeacherName = user.name;
+                        updatedJournal.mentorFeedback = note;
+                        updatedJournal.mentorTeacherName = user.name;
+                    } else {
+                        if (homeroomText.trim()) {
+                            updatedJournal.homeroomFeedback = homeroomText.trim();
+                            updatedJournal.homeroomTeacherName = user.name;
+                        }
+                        if (mentorText.trim()) {
+                            updatedJournal.mentorFeedback = mentorText.trim();
+                            updatedJournal.mentorTeacherName = user.name;
+                        }
+                    }
+                } else if (isHomeroom) {
+                    updatedJournal.homeroomFeedback = homeroomText.trim();
+                    updatedJournal.homeroomTeacherName = user.name;
+                } else if (isMentor) {
+                    updatedJournal.mentorFeedback = mentorText.trim();
+                    updatedJournal.mentorTeacherName = user.name;
+                }
+
                 await db.journals.put(updatedJournal);
                 await db.syncQueue.put({
                     id: `sync_fb_${Date.now()}`, tableName: 'journals', recordId: feedbackModalJournal.id, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
 
-                showAlert.success('Apresiasi Tersimpan!', 'Catatan dan apresiasi Anda berhasil dikirim ke siswa.');
+                showAlert.success('Apresiasi Tersimpan!', 'Catatan apresiasi Anda berhasil dikirim ke siswa.');
                 setFeedbackModalJournal(null);
+                setFeedbackStudent(null);
                 triggerSync();
             };
 
@@ -1566,18 +1700,92 @@
                         </div>
                     )}
 
-                    {feedbackModalJournal && (
+                    {feedbackModalJournal && feedbackStudent && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                            <Card className="w-full max-w-md shadow-2xl space-y-3">
-                                <h3 className="font-black text-lg text-brand-dark">💬 Berikan Apresiasi Jurnal Siswa</h3>
+                            <Card className="w-full max-w-lg shadow-2xl space-y-3">
+                                <div className="flex justify-between items-center border-b pb-2">
+                                    <h3 className="font-black text-base md:text-lg text-brand-dark">💬 Berikan Apresiasi Jurnal</h3>
+                                    <button onClick={() => { setFeedbackModalJournal(null); setFeedbackStudent(null); }} className="text-gray-400 hover:text-gray-600">
+                                        <i className="fas fa-times"></i>
+                                    </button>
+                                </div>
+
                                 <div className="p-3 bg-gray-50 rounded-xl text-xs space-y-1">
-                                    <p className="font-bold text-gray-700">{feedbackModalJournal.studentName} ({formatDisplayDate(feedbackModalJournal.date)})</p>
+                                    <div className="flex justify-between font-bold text-gray-700">
+                                        <span>{feedbackModalJournal.studentName}</span>
+                                        <span className="text-brand-red">{feedbackModalJournal.mood}</span>
+                                    </div>
                                     <p className="text-gray-600 italic">"{feedbackModalJournal.content}"</p>
                                 </div>
+
                                 <form onSubmit={handleSaveTeacherFeedback} className="space-y-3">
-                                    <textarea rows="3" value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Tuliskan kata motivasi, nasihat baik, atau apresiasi untuk siswa..." className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-brand-blue" required></textarea>
-                                    <div className="flex justify-end gap-2">
-                                        <Button variant="white" onClick={() => setFeedbackModalJournal(null)}>Batal</Button>
+                                    {/* Jika Guru adalah Wali Kelas & Mentor Sekaligus */}
+                                    {isDualRole ? (
+                                        <div className="space-y-3">
+                                            <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-2">
+                                                <p className="font-bold text-amber-900">
+                                                    ⭐ Anda terdata sebagai <b>Wali Kelas</b> sekaligus <b>Guru Mentor</b> untuk siswa ini.
+                                                </p>
+                                                <div className="flex gap-2">
+                                                    <button type="button" onClick={() => setDualMode('both_same')} className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${dualMode === 'both_same' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-700 border'}`}>
+                                                        Kirim Sekaligus (1 Pesan)
+                                                    </button>
+                                                    <button type="button" onClick={() => setDualMode('separate')} className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${dualMode === 'separate' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-700 border'}`}>
+                                                        Tulis Catatan Terpisah
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {dualMode === 'both_same' ? (
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-700 mb-1">Pesan Apresiasi (Otomatis tercatat sebagai Wali & Mentor):</label>
+                                                    <textarea rows="3" value={homeroomText} onChange={e => { setHomeroomText(e.target.value); setMentorText(e.target.value); }} placeholder="Tuliskan kata motivasi untuk siswa..." className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-brand-blue" required></textarea>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-brand-blue mb-1">Catatan sebagai Wali Kelas:</label>
+                                                        <textarea rows="2" value={homeroomText} onChange={e => setHomeroomText(e.target.value)} placeholder="Catatan perkembangan kelas..." className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-brand-blue"></textarea>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-emerald-600 mb-1">Catatan sebagai Guru Mentor:</label>
+                                                        <textarea rows="2" value={mentorText} onChange={e => setMentorText(e.target.value)} placeholder="Bimbingan karakter & motivasi..." className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : isStudentHomeroom(feedbackStudent) ? (
+                                        /* Guru HANYA Wali Kelas */
+                                        <div className="space-y-2">
+                                            <div>
+                                                <label className="block text-xs font-bold text-brand-blue mb-1">Apresiasi sebagai Wali Kelas ({user.name}):</label>
+                                                <textarea rows="3" value={homeroomText} onChange={e => setHomeroomText(e.target.value)} placeholder="Tuliskan pesan apresiasi atau bimbingan..." className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-brand-blue" required></textarea>
+                                            </div>
+                                            {feedbackModalJournal.mentorFeedback && (
+                                                <div className="p-2 bg-gray-50 border rounded-lg text-xs text-gray-500">
+                                                    <span className="font-bold text-gray-700 block">Catatan Guru Mentor ({feedbackModalJournal.mentorTeacherName || 'Mentor'}):</span>
+                                                    "{feedbackModalJournal.mentorFeedback}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        /* Guru HANYA Mentor */
+                                        <div className="space-y-2">
+                                            <div>
+                                                <label className="block text-xs font-bold text-emerald-600 mb-1">Apresiasi sebagai Guru Mentor ({user.name}):</label>
+                                                <textarea rows="3" value={mentorText} onChange={e => setMentorText(e.target.value)} placeholder="Tuliskan pesan motivasi pembiasaan karakter..." className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500" required></textarea>
+                                            </div>
+                                            {feedbackModalJournal.homeroomFeedback && (
+                                                <div className="p-2 bg-gray-50 border rounded-lg text-xs text-gray-500">
+                                                    <span className="font-bold text-gray-700 block">Catatan Wali Kelas ({feedbackModalJournal.homeroomTeacherName || 'Wali Kelas'}):</span>
+                                                    "{feedbackModalJournal.homeroomFeedback}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="white" onClick={() => { setFeedbackModalJournal(null); setFeedbackStudent(null); }}>Batal</Button>
                                         <Button variant="primary" type="submit">Kirim Apresiasi</Button>
                                     </div>
                                 </form>
@@ -2052,7 +2260,7 @@
                     const hashed = await hashPassword(passResult);
                     const selectedUsers = await db.users.where('id').anyOf(selectedTeacherIds).toArray();
                     const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
-                    
+
                     await db.users.bulkPut(updatedUsers);
 
                     for (let u of updatedUsers) {
@@ -2324,9 +2532,9 @@
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
                                         <tr>
                                             <th className="p-3 w-10 text-center">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isAllVisibleSelected} 
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isAllVisibleSelected}
                                                     onChange={toggleSelectAll}
                                                     className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                 />
@@ -2344,9 +2552,9 @@
                                             return (
                                                 <tr key={t.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
                                                     <td className="p-3 text-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={isSelected} 
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
                                                             onChange={() => toggleSelectOne(t.id)}
                                                             className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                         />
@@ -2382,13 +2590,13 @@
                             <Card className="w-full max-w-md">
                                 <h3 className="font-black text-lg mb-4">{editingTeacher ? 'Edit Data Guru' : 'Tambah Guru Baru'}</h3>
                                 <form onSubmit={handleSave} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="Telepon" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" placeholder="Telepon" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
-                                    <input type="text" placeholder="NIP / NIK" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
-                                    <input type="text" placeholder="Mata Pelajaran" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    <input type="text" placeholder="NIP / NIK" value={formData.nip} onChange={e => setFormData({ ...formData, nip: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    <input type="text" placeholder="Mata Pelajaran" value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
                                         <Button variant="primary" type="submit">Simpan</Button>
@@ -2504,7 +2712,7 @@
                     const hashed = await hashPassword(passResult);
                     const selectedUsers = await db.users.where('id').anyOf(selectedStudentIds).toArray();
                     const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
-                    
+
                     await db.users.bulkPut(updatedUsers);
 
                     for (let u of updatedUsers) {
@@ -2884,9 +3092,9 @@
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
                                         <tr>
                                             <th className="p-3 w-10 text-center">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isAllVisibleSelected} 
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isAllVisibleSelected}
                                                     onChange={toggleSelectAll}
                                                     className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                 />
@@ -2905,9 +3113,9 @@
                                             return (
                                                 <tr key={s.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
                                                     <td className="p-3 text-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={isSelected} 
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
                                                             onChange={() => toggleSelectOne(s.id)}
                                                             className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                         />
@@ -2967,22 +3175,22 @@
                                     triggerSync();
                                     showAlert.success('Berhasil', 'Data siswa berhasil disimpan.');
                                 }} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="NISN" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" placeholder="NISN" value={formData.nisn} onChange={e => setFormData({ ...formData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                        <select value={formData.classId} onChange={e => setFormData({ ...formData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
                                             <option value="">-- Pilih Kelas --</option>
                                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
-                                        <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                        <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                             <option value="Laki-laki">Laki-laki</option>
                                             <option value="Perempuan">Perempuan</option>
                                         </select>
                                     </div>
-                                    <select value={formData.mentorId} onChange={e => setFormData({...formData, mentorId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                    <select value={formData.mentorId} onChange={e => setFormData({ ...formData, mentorId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                         <option value="">-- Tanpa Mentor Khusus --</option>
                                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                     </select>
@@ -3343,14 +3551,14 @@
 
             const accessibleStudents = useMemo(() => {
                 if (user.role === ROLES.ADMIN) return students;
-                
+
                 const myHomeroomClassIds = new Set(classes.filter(c => c.teacherId === user.id).map(c => c.id));
                 const myHomeroomClassNames = new Set(classes.filter(c => c.teacherId === user.id).map(c => (c.name || '').toLowerCase().trim()));
 
                 return students.filter(s => {
-                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) || 
-                                       (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) || 
-                                       (user.homeroomClassId && s.classId === user.homeroomClassId);
+                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) ||
+                        (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) ||
+                        (user.homeroomClassId && s.classId === user.homeroomClassId);
                     const isMentor = s.mentorId === user.id;
                     if (selectedScope === 'homeroom') return isHomeroom;
                     if (selectedScope === 'mentor') return isMentor;
@@ -3491,11 +3699,11 @@
                     doc.text(s.mentorName || '-', rightValX, 106);
 
                     const tableBody = item.flatRows.map(r => [
-                        r.no, 
-                        r.date, 
-                        r.habitName, 
-                        r.completed ? 'Selesai' : 'Belum Selesai', 
-                        formatCleanTime(r.timeValue), 
+                        r.no,
+                        r.date,
+                        r.habitName,
+                        r.completed ? 'Selesai' : 'Belum Selesai',
+                        formatCleanTime(r.timeValue),
                         r.detailValue || '-'
                     ]);
 
@@ -3675,8 +3883,8 @@
                 if (res.length > 0) setSelectedUserId(res[0].id); else setSelectedUserId('');
             };
 
-            useEffect(() => { 
-                loadUsers(); 
+            useEffect(() => {
+                loadUsers();
                 setInputPassword('');
                 setSearchQuery('');
                 setShowPassword(false);
@@ -3693,9 +3901,9 @@
                 if (selectedRole === ROLES.ADMIN) return users;
                 const q = searchQuery.toLowerCase().trim();
                 if (!q) return users;
-                return users.filter(u => 
-                    (u.name && u.name.toLowerCase().includes(q)) || 
-                    (u.username && u.username.toLowerCase().includes(q)) || 
+                return users.filter(u =>
+                    (u.name && u.name.toLowerCase().includes(q)) ||
+                    (u.username && u.username.toLowerCase().includes(q)) ||
                     (u.nisn && u.nisn.includes(q)) ||
                     (u.nip && u.nip.includes(q))
                 );
@@ -3842,13 +4050,13 @@
                                     </button>
                                 </div>
                                 <div className="relative">
-                                    <input 
-                                        type={showPassword ? "text" : "password"} 
-                                        value={inputPassword} 
-                                        onChange={e => setInputPassword(e.target.value)} 
-                                        placeholder="Masukkan kata sandi..." 
-                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
-                                        required 
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={inputPassword}
+                                        onChange={e => setInputPassword(e.target.value)}
+                                        placeholder="Masukkan kata sandi..."
+                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none"
+                                        required
                                     />
                                     <button
                                         type="button"
@@ -3888,7 +4096,7 @@
                         const session = JSON.parse(sessionRaw);
                         session.lastActive = now;
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (err) {}
+                    } catch (err) { }
                 }
             }, []);
 
@@ -3927,7 +4135,7 @@
                         try {
                             const session = JSON.parse(sessionRaw);
                             if (Date.now() - session.lastActive >= INACTIVITY_TIMEOUT_MS) handleLogout(true);
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }, 10000);
 
@@ -3947,7 +4155,7 @@
                         session.path = path;
                         session.lastActive = Date.now();
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             };
 
@@ -4001,4 +4209,5 @@
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
+
 </html>
