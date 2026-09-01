@@ -240,7 +240,7 @@
 
         const db = new Dexie('SevenHabitsWitaDB');
         db.version(2).stores({
-            users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, status',
+            users: 'id, username, role, password, phone, classId, mentorId, nisn, nip, gender, status',
             classes: 'id, name, teacherId',
             habits: 'id, name, active',
             habitLogs: 'id, userId, habitId, date, completed, timeValue, detailValue, studentName, className, syncStatus',
@@ -370,7 +370,6 @@
                 const json = await res.json();
 
                 if (json.status === 'success') {
-                    // Amankan antrean sync lokal agar data baru/edit offline tidak terhapus tidak sengaja
                     const pendingQueue = await db.syncQueue.where('status').equals('pending').toArray();
                     const pendingIdsByTable = {
                         classes: new Set(pendingQueue.filter(q => q.tableName === 'classes').map(q => q.recordId)),
@@ -400,25 +399,29 @@
 
                     // 2. REKONSILIASI PENGGUNA (USERS - GURU & SISWA)
                     if (Array.isArray(json.users)) {
-                        const formattedUsers = json.users.map(u => ({
-                            id: String(u['User ID'] || u['id'] || '').trim(),
-                            username: String(u['Username'] || u['username'] || '').trim(),
-                            name: String(u['Nama Lengkap'] || u['name'] || '').trim(),
-                            role: String(u['Role'] || u['role'] || 'siswa').trim().toLowerCase(),
-                            password: String(u['Password'] || u['password'] || '').trim(),
-                            phone: String(u['Nomor Telepon'] || u['phone'] || '').trim(),
-                            className: String(u['Kelas'] || u['className'] || '').trim(),
-                            classId: String(u['Class ID'] || u['classId'] || '').trim(),
-                            nisn: String(u['NISN'] || u['nisn'] || '').trim(),
-                            nip: String(u['NIP'] || u['nip'] || '').trim(),
-                            subject: String(u['Mata Pelajaran'] || u['subject'] || '').trim(),
-                            homeroomClassId: String(u['Homeroom Class ID'] || u['homeroomClassId'] || '').trim(),
-                            mentorId: String(u['Mentor ID'] || u['mentorId'] || '').trim(),
-                            mentorName: String(u['Mentor Name'] || u['mentorName'] || '').trim(),
-                            createdBy: String(u['Created By'] || u['createdBy'] || 'admin').trim(),
-                            status: String(u['Status'] || u['status'] || 'Aktif').trim(),
-                            avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (String(u['gender'] || u['Jenis Kelamin'] || '').toLowerCase().includes('perempuan') ? '👧' : '👦'))
-                        })).filter(u => u.id);
+                        const formattedUsers = json.users.map(u => {
+                            const genderVal = String(u['Jenis Kelamin'] || u['gender'] || (u['Role'] === 'guru' || u['Role'] === 'admin' ? '' : 'Laki-laki')).trim();
+                            return {
+                                id: String(u['User ID'] || u['id'] || '').trim(),
+                                username: String(u['Username'] || u['username'] || '').trim(),
+                                name: String(u['Nama Lengkap'] || u['name'] || '').trim(),
+                                role: String(u['Role'] || u['role'] || 'siswa').trim().toLowerCase(),
+                                password: String(u['Password'] || u['password'] || '').trim(),
+                                phone: String(u['Nomor Telepon'] || u['phone'] || '').trim(),
+                                className: String(u['Kelas'] || u['className'] || '').trim(),
+                                classId: String(u['Class ID'] || u['classId'] || '').trim(),
+                                nisn: String(u['NISN'] || u['nisn'] || '').trim(),
+                                nip: String(u['NIP'] || u['nip'] || '').trim(),
+                                gender: genderVal,
+                                subject: String(u['Mata Pelajaran'] || u['subject'] || '').trim(),
+                                homeroomClassId: String(u['Homeroom Class ID'] || u['homeroomClassId'] || '').trim(),
+                                mentorId: String(u['Mentor ID'] || u['mentorId'] || '').trim(),
+                                mentorName: String(u['Mentor Name'] || u['mentorName'] || '').trim(),
+                                createdBy: String(u['Created By'] || u['createdBy'] || 'admin').trim(),
+                                status: String(u['Status'] || u['status'] || 'Aktif').trim(),
+                                avatar: (u['Role'] === 'guru' ? '👨‍🏫' : u['Role'] === 'admin' ? '⚙️' : (genderVal.toLowerCase().includes('perempuan') ? '👧' : '👦'))
+                            };
+                        }).filter(u => u.id);
 
                         const cloudUserIds = new Set(formattedUsers.map(u => u.id));
                         const localUsers = await db.users.toArray();
@@ -517,6 +520,21 @@
             const [syncStatus, setSyncStatus] = useState('idle');
             const isSyncingRef = useRef(false);
 
+            // Push mandiri saat ada mutasi data lokal (tanpa menimpa dengan pull instan)
+            const pushOnly = useCallback(async () => {
+                if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
+                setSyncStatus('syncing');
+                try {
+                    await pushPendingQueue();
+                    setSyncStatus('synced');
+                    setTimeout(() => setSyncStatus('idle'), 2000);
+                } catch (e) {
+                    setSyncStatus('error');
+                    setTimeout(() => setSyncStatus('idle'), 2500);
+                }
+            }, []);
+
+            // Tarik data lengkap (Pull)
             const fullSynchronize = useCallback(async (isImmediatePush = true) => {
                 if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return;
                 if (isSyncingRef.current) return;
@@ -557,7 +575,12 @@
                 };
             }, [fullSynchronize]);
 
-            return { isOnline, syncStatus, triggerSync: () => fullSynchronize(true), triggerManualPull: () => fullSynchronize(false) };
+            return { 
+                isOnline, 
+                syncStatus, 
+                triggerSync: pushOnly, 
+                triggerManualPull: () => fullSynchronize(false) 
+            };
         }
 
         // ==========================================
