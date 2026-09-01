@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -11,8 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml"
-        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
 
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -47,43 +45,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #F9FAFB;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #E5E7EB;
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #D1D5DB;
-        }
-
-        @media print {
-            body {
-                background: white;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            .print-only {
-                display: block !important;
-            }
-        }
+        body { font-family: 'Nunito', sans-serif; background-color: #F9FAFB; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
+        @media print { body { background: white; } .no-print { display: none !important; } .print-only { display: block !important; } }
     </style>
 
     <script>
@@ -130,7 +97,7 @@
             { id: 'h7', shortName: 'Tidur Cepat', name: 'Tidur Cepat', defaultTime: '21:15', defaultDetail: 'Tidur malam tepat waktu dan mematikan gawai', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
         ];
 
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxhDUCJ5B1Ke20iqnExzoJpnWo0JNv0ywX4kacfvuyDwS4Vn82WGdOasg5CvvLzKlo-/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyQ3xywqilbWJc7Ia2KVJpkqfu8LPjHqWX1Az7lGXZ505wN635_GMSCLg85dkQoY9aw/exec";
 
         const showAlert = {
             success: (title, text = '') => Swal.fire({ icon: 'success', title, text, confirmButtonColor: '#EF4444', customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' } }),
@@ -163,7 +130,7 @@
                         const mm = String(d.getMinutes()).padStart(2, '0');
                         return `${hh}:${mm}`;
                     }
-                } catch (e) { }
+                } catch(e) {}
             }
             if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
                 return str.substring(0, 5);
@@ -619,11 +586,11 @@
                 };
             }, [fullSynchronize]);
 
-            return {
-                isOnline,
-                syncStatus,
-                triggerSync: pushOnly,
-                triggerManualPull: () => fullSynchronize(false)
+            return { 
+                isOnline, 
+                syncStatus, 
+                triggerSync: pushOnly, 
+                triggerManualPull: () => fullSynchronize(false) 
             };
         }
 
@@ -748,11 +715,12 @@
                                 <button onClick={() => setShowOnboarding(true)} title="Panduan Aplikasi" className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold">
                                     <i className="fas fa-question"></i>
                                 </button>
-                                <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${!isOnline ? 'bg-orange-100 text-orange-600' :
-                                        syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
-                                            syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
-                                                'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}>
+                                <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
+                                    !isOnline ? 'bg-orange-100 text-orange-600' :
+                                    syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
+                                    syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
+                                    'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}>
                                     <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
                                     <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
                                 </button>
@@ -834,8 +802,8 @@
             const loadLogs = async () => {
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
                 const logMap = {};
-                userLogs.forEach(l => {
-                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue };
+                userLogs.forEach(l => { 
+                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue }; 
                 });
                 setLogs(logMap);
 
@@ -1157,35 +1125,18 @@
             );
         };
 
-        // ==========================================
-        // JURNAL SISWA (DENGAN SINKRONISASI AKTIF)
-        // ==========================================
-        const StudentJournalPage = ({ user, triggerSync, syncStatus, triggerManualPull }) => {
+        const StudentJournalPage = ({ user, triggerSync }) => {
             const todayStr = getTodayWitaDateString();
             const [mood, setMood] = useState('😊 Senang');
             const [content, setContent] = useState('');
             const [savedJournals, setSavedJournals] = useState([]);
-            const [isCheckingCloud, setIsCheckingCloud] = useState(false);
 
             const loadJournals = async () => {
                 const list = await db.journals.where('userId').equals(user.id).toArray();
                 setSavedJournals(list.sort((a, b) => b.date.localeCompare(a.date)));
             };
 
-            // Reaktif: Otomatis reload saat user berubah ATAU saat background sync selesai ('synced')
-            useEffect(() => {
-                loadJournals();
-            }, [user.id, syncStatus]);
-
-            const handleManualCheckUpdates = async () => {
-                setIsCheckingCloud(true);
-                if (triggerManualPull) {
-                    await triggerManualPull();
-                }
-                await loadJournals();
-                setIsCheckingCloud(false);
-                showAlert.success('Pembaruan Selesai', 'Data catatan dan balasan apresiasi telah disinkronkan.');
-            };
+            useEffect(() => { loadJournals(); }, [user.id]);
 
             const handleSave = async (e) => {
                 e.preventDefault();
@@ -1219,22 +1170,7 @@
 
             return (
                 <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
-                            <p className="text-gray-500 font-medium text-sm">Tuliskan kegiatan positif dan baca apresiasi dari bapak/ibu guru.</p>
-                        </div>
-                        <Button
-                            variant="white"
-                            onClick={handleManualCheckUpdates}
-                            disabled={isCheckingCloud || syncStatus === 'syncing'}
-                            className="text-xs py-2 px-3.5 flex items-center gap-2 text-brand-dark border-gray-200 hover:bg-gray-100"
-                        >
-                            <i className={`fas fa-sync-alt ${isCheckingCloud || syncStatus === 'syncing' ? 'fa-spin text-brand-blue' : 'text-brand-red'}`}></i>
-                            <span>{isCheckingCloud || syncStatus === 'syncing' ? 'Memeriksa...' : 'Cek Balasan Guru'}</span>
-                        </Button>
-                    </div>
-
+                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <Card className="lg:col-span-2">
                             <form onSubmit={handleSave} className="space-y-4">
@@ -1261,17 +1197,12 @@
                                 <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi Hari Ini</Button>
                             </form>
                         </Card>
-
                         <Card className="space-y-3">
-                            <div className="flex justify-between items-center border-b pb-2">
-                                <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
-                                <span className="text-[10px] text-gray-400 font-extrabold">{savedJournals.length} Entri</span>
-                            </div>
-
+                            <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
                             {savedJournals.length === 0 ? (
                                 <EmptyState icon="📝" title="Belum Ada Jurnal" description="Tulis refleksi harian pertamamu hari ini." />
                             ) : (
-                                <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
+                                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
                                     {savedJournals.map(j => {
                                         const hrFb = j.homeroomFeedback || j.teacherFeedback || '';
                                         const hrName = j.homeroomTeacherName || 'Wali Kelas';
@@ -1285,13 +1216,11 @@
                                                     <span>{formatDisplayDate(j.date)}</span>
                                                     <span>{j.mood}</span>
                                                 </div>
-                                                <p className="text-gray-700 leading-relaxed bg-white p-2.5 rounded-lg border border-gray-100">
-                                                    "{j.content}"
-                                                </p>
-
+                                                <p className="text-gray-700 leading-relaxed">"{j.content}"</p>
+                                                
                                                 {/* Kasus 1: Balasan Sama dari Guru yang Merangkap Wali & Mentor */}
                                                 {isSameDual && (
-                                                    <div className="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
+                                                    <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
                                                         <span className="font-extrabold text-brand-blue flex items-center gap-1">
                                                             <span>💬</span> Apresiasi Wali Kelas & Guru Mentor ({hrName}):
                                                         </span>
@@ -1302,29 +1231,20 @@
                                                 {/* Kasus 2: Balasan Terpisah */}
                                                 {!isSameDual && (
                                                     <div className="space-y-1.5 pt-1">
-                                                        {hrFb ? (
+                                                        {hrFb && (
                                                             <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 space-y-0.5">
                                                                 <span className="font-bold text-brand-blue block">
                                                                     👨‍🏫 Apresiasi Wali Kelas ({hrName}):
                                                                 </span>
                                                                 <p className="italic text-gray-700">{hrFb}</p>
                                                             </div>
-                                                        ) : (
-                                                            <div className="p-2 bg-gray-100/60 border border-dashed border-gray-200 rounded-lg text-gray-400 text-[11px] italic">
-                                                                ⏳ Belum ada apresiasi dari Wali Kelas
-                                                            </div>
                                                         )}
-
-                                                        {mtFb ? (
+                                                        {mtFb && (
                                                             <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-950 space-y-0.5">
                                                                 <span className="font-bold text-emerald-700 block">
                                                                     🌟 Apresiasi Guru Mentor ({mtName}):
                                                                 </span>
                                                                 <p className="italic text-gray-700">{mtFb}</p>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="p-2 bg-gray-100/60 border border-dashed border-gray-200 rounded-lg text-gray-400 text-[11px] italic">
-                                                                ⏳ Belum ada apresiasi dari Guru Mentor
                                                             </div>
                                                         )}
                                                     </div>
@@ -1464,7 +1384,7 @@
                     const isHomeroom = isStudentHomeroom(s);
                     const isMentor = isStudentMentor(s);
                     const matchesTab = selectedTab === 'homeroom' ? isHomeroom : selectedTab === 'mentor' ? isMentor : (isHomeroom || isMentor);
-
+                    
                     const query = searchQuery.toLowerCase().trim();
                     const matchesSearch = !query || s.name.toLowerCase().includes(query) || (s.nisn && s.nisn.includes(query)) || s.username.toLowerCase().includes(query);
 
@@ -1480,14 +1400,7 @@
             const allCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s) || isStudentMentor(s)).length, [allStudents, isStudentHomeroom, isStudentMentor]);
 
             const handleOpenFeedbackModal = async (student) => {
-                let journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
-
-                // Fallback: Jika belum ada di lokal dan online, coba sync pull terlebih dahulu
-                if (!journal && navigator.onLine) {
-                    await pullAllCloudData();
-                    journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
-                }
-
+                const journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
                 if (!journal) {
                     return showAlert.warning('Belum Ada Jurnal', `${student.name} belum mengisi jurnal refleksi pada tanggal ${formatDisplayDate(selectedDate)}.`);
                 }
@@ -1521,95 +1434,42 @@
 
                 const isHomeroom = isStudentHomeroom(feedbackStudent);
                 const isMentor = isStudentMentor(feedbackStudent);
+                let updatedJournal = { ...feedbackModalJournal, syncStatus: 'pending', updatedAt: new Date() };
 
-                // Ambil teks yang sudah diketik di modal
-                const hrInput = homeroomText.trim();
-                const mtInput = mentorText.trim();
-
-                let updatedJournal = {
-                    ...feedbackModalJournal,
-                    syncStatus: 'pending',
-                    updatedAt: new Date()
-                };
-
-                // LOGIKA FAIL-SAFE:
-                if (isDualRole) {
+                if (isHomeroom && isMentor) {
                     if (dualMode === 'both_same') {
-                        updatedJournal.homeroomFeedback = hrInput;
+                        const note = homeroomText.trim();
+                        updatedJournal.homeroomFeedback = note;
                         updatedJournal.homeroomTeacherName = user.name;
-                        updatedJournal.mentorFeedback = hrInput;
+                        updatedJournal.mentorFeedback = note;
                         updatedJournal.mentorTeacherName = user.name;
                     } else {
-                        if (hrInput) {
-                            updatedJournal.homeroomFeedback = hrInput;
+                        if (homeroomText.trim()) {
+                            updatedJournal.homeroomFeedback = homeroomText.trim();
                             updatedJournal.homeroomTeacherName = user.name;
                         }
-                        if (mtInput) {
-                            updatedJournal.mentorFeedback = mtInput;
+                        if (mentorText.trim()) {
+                            updatedJournal.mentorFeedback = mentorText.trim();
                             updatedJournal.mentorTeacherName = user.name;
                         }
                     }
                 } else if (isHomeroom) {
-                    updatedJournal.homeroomFeedback = hrInput;
+                    updatedJournal.homeroomFeedback = homeroomText.trim();
                     updatedJournal.homeroomTeacherName = user.name;
                 } else if (isMentor) {
-                    updatedJournal.mentorFeedback = mtInput;
+                    updatedJournal.mentorFeedback = mentorText.trim();
                     updatedJournal.mentorTeacherName = user.name;
-                } else {
-                    // FALLBACK CADANGAN (Jika ID relasi tidak match sempurna di lokal)
-                    // Jika ada input di homeroomText, simpan sebagai Wali Kelas
-                    if (hrInput) {
-                        updatedJournal.homeroomFeedback = hrInput;
-                        updatedJournal.homeroomTeacherName = user.name;
-                    }
-                    // Jika ada input di mentorText, simpan sebagai Guru Mentor
-                    if (mtInput) {
-                        updatedJournal.mentorFeedback = mtInput;
-                        updatedJournal.mentorTeacherName = user.name;
-                    }
                 }
 
-                // 1. Simpan ke IndexedDB lokal perangkat
                 await db.journals.put(updatedJournal);
+                await db.syncQueue.put({
+                    id: `sync_fb_${Date.now()}`, tableName: 'journals', recordId: feedbackModalJournal.id, action: 'upsert', status: 'pending', createdAt: new Date()
+                });
 
-                // 2. Langsung dorong (Direct Push) ke Google Apps Script tanpa menunggu antrean
-                if (navigator.onLine && GAS_API_URL && !GAS_API_URL.includes("MASUKKAN_URL")) {
-                    try {
-                        await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({ action: 'syncJournal', payload: [updatedJournal] })
-                        });
-                        updatedJournal.syncStatus = 'synced';
-                        await db.journals.put(updatedJournal);
-                    } catch (err) {
-                        console.error("Direct push journal error:", err);
-                        // Masukkan ke queue jika offline/gagal
-                        await db.syncQueue.put({
-                            id: `sync_fb_${Date.now()}`,
-                            tableName: 'journals',
-                            recordId: feedbackModalJournal.id,
-                            action: 'upsert',
-                            status: 'pending',
-                            createdAt: new Date()
-                        });
-                    }
-                } else {
-                    await db.syncQueue.put({
-                        id: `sync_fb_${Date.now()}`,
-                        tableName: 'journals',
-                        recordId: feedbackModalJournal.id,
-                        action: 'upsert',
-                        status: 'pending',
-                        createdAt: new Date()
-                    });
-                }
-
-                showAlert.success('Apresiasi Terkirim!', 'Catatan apresiasi berhasil disimpan ke server Google Sheets.');
+                showAlert.success('Apresiasi Tersimpan!', 'Catatan apresiasi Anda berhasil dikirim ke siswa.');
                 setFeedbackModalJournal(null);
                 setFeedbackStudent(null);
-                await loadData();
+                triggerSync();
             };
 
             const handleOpenAddModal = () => {
@@ -2362,7 +2222,7 @@
                     const hashed = await hashPassword(passResult);
                     const selectedUsers = await db.users.where('id').anyOf(selectedTeacherIds).toArray();
                     const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
-
+                    
                     await db.users.bulkPut(updatedUsers);
 
                     for (let u of updatedUsers) {
@@ -2634,9 +2494,9 @@
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
                                         <tr>
                                             <th className="p-3 w-10 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isAllVisibleSelected}
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isAllVisibleSelected} 
                                                     onChange={toggleSelectAll}
                                                     className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                 />
@@ -2654,9 +2514,9 @@
                                             return (
                                                 <tr key={t.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
                                                     <td className="p-3 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isSelected} 
                                                             onChange={() => toggleSelectOne(t.id)}
                                                             className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                         />
@@ -2692,13 +2552,13 @@
                             <Card className="w-full max-w-md">
                                 <h3 className="font-black text-lg mb-4">{editingTeacher ? 'Edit Data Guru' : 'Tambah Guru Baru'}</h3>
                                 <form onSubmit={handleSave} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="Telepon" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" placeholder="Telepon" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
-                                    <input type="text" placeholder="NIP / NIK" value={formData.nip} onChange={e => setFormData({ ...formData, nip: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
-                                    <input type="text" placeholder="Mata Pelajaran" value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    <input type="text" placeholder="NIP / NIK" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    <input type="text" placeholder="Mata Pelajaran" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
                                         <Button variant="primary" type="submit">Simpan</Button>
@@ -2814,7 +2674,7 @@
                     const hashed = await hashPassword(passResult);
                     const selectedUsers = await db.users.where('id').anyOf(selectedStudentIds).toArray();
                     const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
-
+                    
                     await db.users.bulkPut(updatedUsers);
 
                     for (let u of updatedUsers) {
@@ -3194,9 +3054,9 @@
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
                                         <tr>
                                             <th className="p-3 w-10 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isAllVisibleSelected}
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isAllVisibleSelected} 
                                                     onChange={toggleSelectAll}
                                                     className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                 />
@@ -3215,9 +3075,9 @@
                                             return (
                                                 <tr key={s.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
                                                     <td className="p-3 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isSelected} 
                                                             onChange={() => toggleSelectOne(s.id)}
                                                             className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                         />
@@ -3277,22 +3137,22 @@
                                     triggerSync();
                                     showAlert.success('Berhasil', 'Data siswa berhasil disimpan.');
                                 }} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="NISN" value={formData.nisn} onChange={e => setFormData({ ...formData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" placeholder="NISN" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <select value={formData.classId} onChange={e => setFormData({ ...formData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                        <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
                                             <option value="">-- Pilih Kelas --</option>
                                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
-                                        <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                        <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                             <option value="Laki-laki">Laki-laki</option>
                                             <option value="Perempuan">Perempuan</option>
                                         </select>
                                     </div>
-                                    <select value={formData.mentorId} onChange={e => setFormData({ ...formData, mentorId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                    <select value={formData.mentorId} onChange={e => setFormData({...formData, mentorId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                         <option value="">-- Tanpa Mentor Khusus --</option>
                                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                     </select>
@@ -3653,14 +3513,14 @@
 
             const accessibleStudents = useMemo(() => {
                 if (user.role === ROLES.ADMIN) return students;
-
+                
                 const myHomeroomClassIds = new Set(classes.filter(c => c.teacherId === user.id).map(c => c.id));
                 const myHomeroomClassNames = new Set(classes.filter(c => c.teacherId === user.id).map(c => (c.name || '').toLowerCase().trim()));
 
                 return students.filter(s => {
-                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) ||
-                        (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) ||
-                        (user.homeroomClassId && s.classId === user.homeroomClassId);
+                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) || 
+                                       (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) || 
+                                       (user.homeroomClassId && s.classId === user.homeroomClassId);
                     const isMentor = s.mentorId === user.id;
                     if (selectedScope === 'homeroom') return isHomeroom;
                     if (selectedScope === 'mentor') return isMentor;
@@ -3801,11 +3661,11 @@
                     doc.text(s.mentorName || '-', rightValX, 106);
 
                     const tableBody = item.flatRows.map(r => [
-                        r.no,
-                        r.date,
-                        r.habitName,
-                        r.completed ? 'Selesai' : 'Belum Selesai',
-                        formatCleanTime(r.timeValue),
+                        r.no, 
+                        r.date, 
+                        r.habitName, 
+                        r.completed ? 'Selesai' : 'Belum Selesai', 
+                        formatCleanTime(r.timeValue), 
                         r.detailValue || '-'
                     ]);
 
@@ -3985,8 +3845,8 @@
                 if (res.length > 0) setSelectedUserId(res[0].id); else setSelectedUserId('');
             };
 
-            useEffect(() => {
-                loadUsers();
+            useEffect(() => { 
+                loadUsers(); 
                 setInputPassword('');
                 setSearchQuery('');
                 setShowPassword(false);
@@ -4003,9 +3863,9 @@
                 if (selectedRole === ROLES.ADMIN) return users;
                 const q = searchQuery.toLowerCase().trim();
                 if (!q) return users;
-                return users.filter(u =>
-                    (u.name && u.name.toLowerCase().includes(q)) ||
-                    (u.username && u.username.toLowerCase().includes(q)) ||
+                return users.filter(u => 
+                    (u.name && u.name.toLowerCase().includes(q)) || 
+                    (u.username && u.username.toLowerCase().includes(q)) || 
                     (u.nisn && u.nisn.includes(q)) ||
                     (u.nip && u.nip.includes(q))
                 );
@@ -4152,13 +4012,13 @@
                                     </button>
                                 </div>
                                 <div className="relative">
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={inputPassword}
-                                        onChange={e => setInputPassword(e.target.value)}
-                                        placeholder="Masukkan kata sandi..."
-                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none"
-                                        required
+                                    <input 
+                                        type={showPassword ? "text" : "password"} 
+                                        value={inputPassword} 
+                                        onChange={e => setInputPassword(e.target.value)} 
+                                        placeholder="Masukkan kata sandi..." 
+                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
+                                        required 
                                     />
                                     <button
                                         type="button"
@@ -4198,7 +4058,7 @@
                         const session = JSON.parse(sessionRaw);
                         session.lastActive = now;
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (err) { }
+                    } catch (err) {}
                 }
             }, []);
 
@@ -4237,7 +4097,7 @@
                         try {
                             const session = JSON.parse(sessionRaw);
                             if (Date.now() - session.lastActive >= INACTIVITY_TIMEOUT_MS) handleLogout(true);
-                        } catch (e) { }
+                        } catch (e) {}
                     }
                 }, 10000);
 
@@ -4257,7 +4117,7 @@
                         session.path = path;
                         session.lastActive = Date.now();
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (e) { }
+                    } catch (e) {}
                 }
             };
 
@@ -4283,7 +4143,7 @@
             switch (currentPath) {
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} compact={compact} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
-                case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} syncStatus={syncStatus} triggerManualPull={triggerManualPull} />; break;
+                case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
                 case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
 
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
@@ -4311,5 +4171,4 @@
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
-
 </html>
