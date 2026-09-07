@@ -3031,9 +3031,13 @@
                         if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data pada berkas Excel.');
 
                         const existingUsers = await db.users.toArray();
-                        const existingUsernames = new Set(existingUsers.map(u => u.username.toLowerCase()));
-                        const newTeachers = [];
+                        // Buat Map berdasarkan username (lowercase) untuk pencarian cepat O(1)
+                        const existingUserMap = new Map(existingUsers.map(u => [(u.username || '').toLowerCase(), u]));
+                        
+                        const teachersToSave = [];
                         const seenBatchUsernames = new Set();
+                        let addedCount = 0;
+                        let updatedCount = 0;
                         let skippedCount = 0;
 
                         for (let row of data) {
@@ -3045,42 +3049,92 @@
                                 continue;
                             }
 
-                            if (existingUsernames.has(rawUsername) || seenBatchUsernames.has(rawUsername)) {
+                            // Cegah duplikasi dalam satu berkas Excel yang sama
+                            if (seenBatchUsernames.has(rawUsername)) {
                                 skippedCount++;
                                 continue;
                             }
-
                             seenBatchUsernames.add(rawUsername);
-                            const defaultPass = String(row['Password'] || 'guru123').trim();
-                            const hashedPassword = await hashPassword(defaultPass);
-                            const id = `u_guru_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
-                            const teacherObj = {
-                                id,
-                                username: rawUsername,
-                                password: hashedPassword,
-                                name,
-                                phone: String(row['Nomor Telepon'] || row['Telepon'] || '').trim(),
-                                nip: String(row['NIP'] || '').trim(),
-                                subject: String(row['Mata Pelajaran'] || row['Mapel'] || 'Umum').trim(),
-                                homeroomClassId: '',
-                                role: ROLES.GURU,
-                                avatar: '👨‍🏫',
-                                status: 'Aktif',
-                                createdAt: new Date()
-                            };
+                            const existingUser = existingUserMap.get(rawUsername);
+                            const rawPass = String(row['Password'] || '').trim();
 
-                            newTeachers.push(teacherObj);
-                            await db.syncQueue.put({ id: `sync_t_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: id, action: 'create', status: 'pending', createdAt: new Date() });
+                            if (existingUser) {
+                                // ==========================================
+                                // MEKANISME UPDATE (UPSERT)
+                                // ==========================================
+                                // Jika password di Excel diisi, gunakan pass baru. Jika kosong, pertahankan pass lama.
+                                let hashedPassword = existingUser.password;
+                                if (rawPass) {
+                                    hashedPassword = await hashPassword(rawPass);
+                                }
+
+                                const teacherObj = {
+                                    ...existingUser, // Pertahankan id internal, createdAt, homeroomClassId, dll.
+                                    name,
+                                    phone: String(row['Nomor Telepon'] || row['Telepon'] || existingUser.phone || '').trim(),
+                                    nip: String(row['NIP'] || existingUser.nip || '').trim(),
+                                    subject: String(row['Mata Pelajaran'] || row['Mapel'] || existingUser.subject || 'Umum').trim(),
+                                    password: hashedPassword,
+                                    updatedAt: new Date()
+                                };
+
+                                teachersToSave.push(teacherObj);
+                                updatedCount++;
+                                await db.syncQueue.put({
+                                    id: `sync_t_upd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                                    tableName: 'users',
+                                    recordId: existingUser.id,
+                                    action: 'update',
+                                    status: 'pending',
+                                    createdAt: new Date()
+                                });
+                            } else {
+                                // ==========================================
+                                // MEKANISME INSERT (TAMBAH BARU)
+                                // ==========================================
+                                const defaultPass = rawPass || 'guru123';
+                                const hashedPassword = await hashPassword(defaultPass);
+                                const id = `u_guru_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+
+                                const teacherObj = {
+                                    id,
+                                    username: rawUsername,
+                                    password: hashedPassword,
+                                    name,
+                                    phone: String(row['Nomor Telepon'] || row['Telepon'] || '').trim(),
+                                    nip: String(row['NIP'] || '').trim(),
+                                    subject: String(row['Mata Pelajaran'] || row['Mapel'] || 'Umum').trim(),
+                                    homeroomClassId: '',
+                                    role: ROLES.GURU,
+                                    avatar: '👨‍🏫',
+                                    status: 'Aktif',
+                                    createdAt: new Date()
+                                };
+
+                                teachersToSave.push(teacherObj);
+                                addedCount++;
+                                await db.syncQueue.put({
+                                    id: `sync_t_add_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                                    tableName: 'users',
+                                    recordId: id,
+                                    action: 'create',
+                                    status: 'pending',
+                                    createdAt: new Date()
+                                });
+                            }
                         }
 
-                        if (newTeachers.length > 0) {
-                            await db.users.bulkPut(newTeachers);
+                        if (teachersToSave.length > 0) {
+                            await db.users.bulkPut(teachersToSave);
                             await loadData();
                             triggerSync();
-                            showAlert.success('Import Berhasil', `${newTeachers.length} guru berhasil didaftarkan.${skippedCount > 0 ? ` (${skippedCount} baris dilewati karena duplikat/tidak lengkap)` : ''}`);
+                            showAlert.success(
+                                'Import Berhasil!',
+                                `${addedCount} guru baru ditambahkan, ${updatedCount} data guru diperbarui.${skippedCount > 0 ? ` (${skippedCount} baris tidak valid/duplikat dilewati)` : ''}`
+                            );
                         } else {
-                            showAlert.warning('Tidak Ada Data Diimport', 'Semua baris kosong atau username sudah terdaftar di sistem.');
+                            showAlert.warning('Tidak Ada Data Diproses', 'Semua baris kosong atau format tidak sesuai.');
                         }
                     } catch (err) {
                         showAlert.error('Gagal Membaca Excel', err.message);
@@ -3546,9 +3600,13 @@
                         if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data siswa pada berkas Excel.');
 
                         const existingUsers = await db.users.toArray();
-                        const existingUsernames = new Set(existingUsers.map(u => u.username.toLowerCase()));
-                        const newStudents = [];
+                        // Buat Map berdasarkan username (lowercase)
+                        const existingUserMap = new Map(existingUsers.map(u => [(u.username || '').toLowerCase(), u]));
+
+                        const studentsToSave = [];
                         const seenBatchUsernames = new Set();
+                        let addedCount = 0;
+                        let updatedCount = 0;
                         let skippedCount = 0;
 
                         for (let row of data) {
@@ -3560,49 +3618,103 @@
                                 continue;
                             }
 
-                            if (existingUsernames.has(rawUsername) || seenBatchUsernames.has(rawUsername)) {
+                            // Cegah duplikasi dalam berkas yang sama
+                            if (seenBatchUsernames.has(rawUsername)) {
                                 skippedCount++;
                                 continue;
                             }
-
                             seenBatchUsernames.add(rawUsername);
-                            const defaultPass = String(row['Password'] || 'siswa123').trim();
-                            const hashedPassword = await hashPassword(defaultPass);
+
+                            const existingUser = existingUserMap.get(rawUsername);
+                            const rawPass = String(row['Password'] || '').trim();
                             const classNameVal = String(row['Kelas'] || '').trim();
                             const matchingClass = classes.find(c => c.name.toLowerCase() === classNameVal.toLowerCase());
+                            const genderVal = String(row['Jenis Kelamin'] || row['Gender'] || '').trim();
 
-                            const genderVal = String(row['Jenis Kelamin'] || row['Gender'] || 'Laki-laki').trim();
-                            const id = `u_siswa_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+                            if (existingUser) {
+                                // ==========================================
+                                // MEKANISME UPDATE (UPSERT)
+                                // ==========================================
+                                // Password tetap aman jika di Excel dikosongkan
+                                let hashedPassword = existingUser.password;
+                                if (rawPass) {
+                                    hashedPassword = await hashPassword(rawPass);
+                                }
 
-                            const stdObj = {
-                                id,
-                                username: rawUsername,
-                                password: hashedPassword,
-                                name,
-                                nisn: String(row['NISN'] || '').trim(),
-                                classId: matchingClass ? matchingClass.id : '',
-                                className: matchingClass ? matchingClass.name : classNameVal,
-                                mentorId: '',
-                                mentorName: '',
-                                gender: genderVal,
-                                role: ROLES.SISWA,
-                                avatar: genderVal.toLowerCase().includes('perempuan') ? '👧' : '👦',
-                                createdBy: 'admin',
-                                status: 'Aktif',
-                                createdAt: new Date()
-                            };
+                                const finalGender = genderVal || existingUser.gender || 'Laki-laki';
 
-                            newStudents.push(stdObj);
-                            await db.syncQueue.put({ id: `sync_s_${Date.now()}_${Math.random()}`, tableName: 'users', recordId: id, action: 'create', status: 'pending', createdAt: new Date() });
+                                const stdObj = {
+                                    ...existingUser, // Mempertahankan id, mentorId, mentorName, createdBy, createdAt
+                                    name,
+                                    nisn: String(row['NISN'] || existingUser.nisn || '').trim(),
+                                    classId: matchingClass ? matchingClass.id : existingUser.classId,
+                                    className: matchingClass ? matchingClass.name : (classNameVal || existingUser.className),
+                                    gender: finalGender,
+                                    avatar: finalGender.toLowerCase().includes('perempuan') ? '👧' : '👦',
+                                    password: hashedPassword,
+                                    updatedAt: new Date()
+                                };
+
+                                studentsToSave.push(stdObj);
+                                updatedCount++;
+                                await db.syncQueue.put({
+                                    id: `sync_s_upd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                                    tableName: 'users',
+                                    recordId: existingUser.id,
+                                    action: 'update',
+                                    status: 'pending',
+                                    createdAt: new Date()
+                                });
+                            } else {
+                                // ==========================================
+                                // MEKANISME INSERT (TAMBAH BARU)
+                                // ==========================================
+                                const defaultPass = rawPass || 'siswa123';
+                                const hashedPassword = await hashPassword(defaultPass);
+                                const id = `u_siswa_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+                                const finalGender = genderVal || 'Laki-laki';
+
+                                const stdObj = {
+                                    id,
+                                    username: rawUsername,
+                                    password: hashedPassword,
+                                    name,
+                                    nisn: String(row['NISN'] || '').trim(),
+                                    classId: matchingClass ? matchingClass.id : '',
+                                    className: matchingClass ? matchingClass.name : classNameVal,
+                                    mentorId: '',
+                                    mentorName: '',
+                                    gender: finalGender,
+                                    role: ROLES.SISWA,
+                                    avatar: finalGender.toLowerCase().includes('perempuan') ? '👧' : '👦',
+                                    createdBy: 'admin',
+                                    status: 'Aktif',
+                                    createdAt: new Date()
+                                };
+
+                                studentsToSave.push(stdObj);
+                                addedCount++;
+                                await db.syncQueue.put({
+                                    id: `sync_s_add_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                                    tableName: 'users',
+                                    recordId: id,
+                                    action: 'create',
+                                    status: 'pending',
+                                    createdAt: new Date()
+                                });
+                            }
                         }
 
-                        if (newStudents.length > 0) {
-                            await db.users.bulkPut(newStudents);
+                        if (studentsToSave.length > 0) {
+                            await db.users.bulkPut(studentsToSave);
                             await loadData();
                             triggerSync();
-                            showAlert.success('Import Berhasil', `${newStudents.length} siswa berhasil didaftarkan.${skippedCount > 0 ? ` (${skippedCount} baris dilewati karena duplikat/tidak lengkap)` : ''}`);
+                            showAlert.success(
+                                'Import Berhasil!',
+                                `${addedCount} siswa baru ditambahkan, ${updatedCount} data siswa diperbarui.${skippedCount > 0 ? ` (${skippedCount} baris tidak valid/duplikat dilewati)` : ''}`
+                            );
                         } else {
-                            showAlert.warning('Tidak Ada Data Diimport', 'Semua baris kosong atau username sudah terdaftar di sistem.');
+                            showAlert.warning('Tidak Ada Data Diproses', 'Semua baris kosong atau format tidak sesuai.');
                         }
                     } catch (err) {
                         showAlert.error('Gagal Membaca Excel', err.message);
