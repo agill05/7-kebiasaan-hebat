@@ -121,16 +121,16 @@
         const ROLES = { SISWA: 'siswa', GURU: 'guru', ADMIN: 'admin' };
 
         const HABITS_CONFIG = [
-            { id: 'h1', shortName: 'Bangun Pagi', name: 'Bangun Pagi', defaultTime: '04:30', defaultDetail: 'Bangun pagi segar, wudhu/berdoa dan merapikan tempat tidur', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi (WITA)', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur' },
-            { id: 'h2', shortName: 'Beribadah', name: 'Beribadah', defaultTime: '05:00', defaultDetail: 'Melaksanakan salat/ibadah tepat waktu sesuai agama', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama (WITA)', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an' },
-            { id: 'h3', shortName: 'Berolahraga', name: 'Berolahraga', defaultTime: '06:00', defaultDetail: 'Senam pagi / jalan sehat 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga (WITA)', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit' },
-            { id: 'h4', shortName: 'Makan Sehat', name: 'Makan Sehat & Bergizi', defaultTime: '06:30', defaultDetail: 'Sarapan menu sehat seimbang dan minum air putih', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan (WITA)', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih' },
-            { id: 'h5', shortName: 'Gemar Belajar', name: 'Gemar Belajar', defaultTime: '19:00', defaultDetail: 'Membaca buku pelajaran dan literasi mandiri', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar (WITA)', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit' },
-            { id: 'h6', shortName: 'Bermasyarakat', name: 'Bermasyarakat', defaultTime: '16:00', defaultDetail: 'Membantu orang tua di rumah dan menyapa tetangga', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas (WITA)', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga' },
-            { id: 'h7', shortName: 'Tidur Cepat', name: 'Tidur Cepat', defaultTime: '21:15', defaultDetail: 'Tidur malam tepat waktu dan mematikan gawai', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
+            { id: 'h1', sortOrder: 1, active: true, shortName: 'Bangun Pagi', name: 'Bangun Pagi', defaultTime: '04:30', defaultDetail: 'Bangun pagi segar, wudhu/berdoa dan merapikan tempat tidur', icon: '🌅', color: 'bg-blue-100 text-blue-600', timeLabel: 'Jam Bangun Pagi (WITA)', detailLabel: 'Catatan Saat Bangun', detailPlaceholder: 'Contoh: Bangun jam 04.30 langsung wudhu dan merapikan tempat tidur' },
+            { id: 'h2', sortOrder: 2, active: true, shortName: 'Beribadah', name: 'Beribadah', defaultTime: '05:00', defaultDetail: 'Melaksanakan salat/ibadah tepat waktu sesuai agama', icon: '🙏', color: 'bg-indigo-100 text-indigo-600', timeLabel: 'Waktu Ibadah Utama (WITA)', detailLabel: 'Ibadah yang Dikerjakan', detailPlaceholder: 'Contoh: Salat Subuh berjamaah & tadarus Al-Qur\'an' },
+            { id: 'h3', sortOrder: 3, active: true, shortName: 'Berolahraga', name: 'Berolahraga', defaultTime: '06:00', defaultDetail: 'Senam pagi / jalan sehat 15 menit', icon: '🏃', color: 'bg-green-100 text-green-600', timeLabel: 'Waktu Berolahraga (WITA)', detailLabel: 'Jenis Olahraga & Durasi', detailPlaceholder: 'Contoh: Senam kesegaran jasmani / lari pagi 20 menit' },
+            { id: 'h4', sortOrder: 4, active: true, shortName: 'Makan Sehat', name: 'Makan Sehat & Bergizi', defaultTime: '06:30', defaultDetail: 'Sarapan menu sehat seimbang dan minum air putih', icon: '🍎', color: 'bg-red-100 text-red-600', timeLabel: 'Waktu Sarapan (WITA)', detailLabel: 'Menu Makanan & Minuman Sehat', detailPlaceholder: 'Contoh: Nasi, telur rebus, sayur bayam, dan air putih' },
+            { id: 'h5', sortOrder: 5, active: true, shortName: 'Gemar Belajar', name: 'Gemar Belajar', defaultTime: '19:00', defaultDetail: 'Membaca buku pelajaran dan literasi mandiri', icon: '📚', color: 'bg-yellow-100 text-yellow-600', timeLabel: 'Waktu Mulai Belajar (WITA)', detailLabel: 'Materi / Buku yang Dipelajari', detailPlaceholder: 'Contoh: Belajar IPA dan membaca buku pengetahuan 30 menit' },
+            { id: 'h6', sortOrder: 6, active: true, shortName: 'Bermasyarakat', name: 'Bermasyarakat', defaultTime: '16:00', defaultDetail: 'Membantu orang tua di rumah dan menyapa tetangga', icon: '🤝', color: 'bg-teal-100 text-teal-600', timeLabel: 'Waktu Beraktivitas (WITA)', detailLabel: 'Bentuk Kebaikan yang Dilakukan', detailPlaceholder: 'Contoh: Membantu orang tua membersihkan rumah dan menyapa tetangga' },
+            { id: 'h7', sortOrder: 7, active: true, shortName: 'Tidur Cepat', name: 'Tidur Cepat', defaultTime: '21:15', defaultDetail: 'Tidur malam tepat waktu dan mematikan gawai', icon: '😴', color: 'bg-purple-100 text-purple-600', timeLabel: 'Jam Tidur Malam (WITA)', detailLabel: 'Aktivitas Sebelum Tidur', detailPlaceholder: 'Contoh: Tidur jam 21.15 setelah berdoa dan mematikan gawai' }
         ];
 
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyQ3xywqilbWJc7Ia2KVJpkqfu8LPjHqWX1Az7lGXZ505wN635_GMSCLg85dkQoY9aw/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxL9bBwU_wZeaptA8DN855VxfCI2zlnkyMU0SlHN0pQfmDsGBl6PxgBxiGjGKKm8Oo/exec";
 
         const showAlert = {
             success: (title, text = '') => Swal.fire({ icon: 'success', title, text, confirmButtonColor: '#EF4444', customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl font-bold px-5 py-2.5' } }),
@@ -368,6 +368,20 @@
                     }
                 }
 
+                const habitConfigIds = pendingQueue.filter(q => q.tableName === 'habits' && q.action !== 'delete').map(q => q.recordId);
+                if (habitConfigIds.length > 0) {
+                    const habitConfigs = await db.habits.bulkGet(habitConfigIds);
+                    const validConfigs = habitConfigs.filter(Boolean);
+                    if (validConfigs.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabitConfig', payload: validConfigs })
+                        });
+                    }
+                }
+
                 const deleteItems = pendingQueue.filter(q => q.action === 'delete');
                 const deletesByTable = { habitLogs: [], users: [], classes: [], journals: [] };
                 deleteItems.forEach(d => {
@@ -527,6 +541,25 @@
 
                         if (formattedJournals.length > 0) await db.journals.bulkPut(formattedJournals);
                         if (staleJournalIds.length > 0) await db.journals.bulkDelete(staleJournalIds);
+                    }
+
+                    if (Array.isArray(json.habits)) {
+                        const formattedHabits = json.habits.map(h => ({
+                            id: String(h['Habit ID'] || h['id'] || '').trim(),
+                            shortName: String(h['Nama Singkat'] || h['shortName'] || '').trim(),
+                            name: String(h['Nama Kebiasaan'] || h['name'] || '').trim(),
+                            defaultTime: formatCleanTime(h['Jam Default'] || h['defaultTime'] || ''),
+                            defaultDetail: String(h['Detail Default'] || h['defaultDetail'] || '').trim(),
+                            icon: String(h['Ikon'] || h['icon'] || '⭐').trim(),
+                            color: String(h['Warna'] || h['color'] || 'bg-blue-100 text-blue-600').trim(),
+                            timeLabel: String(h['Label Jam'] || h['timeLabel'] || 'Waktu').trim(),
+                            detailLabel: String(h['Label Detail'] || h['detailLabel'] || 'Detail').trim(),
+                            detailPlaceholder: String(h['Placeholder Detail'] || h['detailPlaceholder'] || '').trim(),
+                            sortOrder: Number(h['Urutan'] || h['sortOrder'] || 0),
+                            active: String(h['Status Aktif'] || h['active']).trim() === 'Aktif' || h['active'] === true
+                        })).filter(h => h.id);
+
+                        if (formattedHabits.length > 0) await db.habits.bulkPut(formattedHabits);
                     }
 
                     return true;
@@ -690,6 +723,7 @@
                 ],
                 [ROLES.ADMIN]: [
                     { path: '/admin/dashboard', label: 'Ringkasan Sistem', icon: 'fas fa-home' },
+                    { path: '/admin/habits', label: 'Pengaturan Kebiasaan', icon: 'fas fa-sliders-h' },
                     { path: '/admin/classes', label: 'Data Kelas', icon: 'fas fa-door-open' },
                     { path: '/admin/teachers', label: 'Data Guru', icon: 'fas fa-chalkboard-teacher' },
                     { path: '/admin/students', label: 'Data Siswa', icon: 'fas fa-user-graduate' },
@@ -1427,9 +1461,13 @@
         // ==========================================
         // MODUL GURU
         // ==========================================
+        // ==========================================
+        // MODUL GURU (TAHAP 2: BULK STAMP, ANALYTICS & WA SHARE)
+        // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
+            const [habitsList, setHabitsList] = useState([]);
             const [selectedTab, setSelectedTab] = useState('all');
             const [filterAlphaOnly, setFilterAlphaOnly] = useState(false);
             const [searchQuery, setSearchQuery] = useState('');
@@ -1438,6 +1476,7 @@
             const [addMode, setAddMode] = useState('select');
             const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
 
+            // State Modal Apresiasi Individu
             const [feedbackModalJournal, setFeedbackModalJournal] = useState(null);
             const [feedbackStudent, setFeedbackStudent] = useState(null);
             const [isDualRole, setIsDualRole] = useState(false);
@@ -1445,11 +1484,19 @@
             const [homeroomText, setHomeroomText] = useState('');
             const [mentorText, setMentorText] = useState('');
 
+            // State Modal Edit / Tambah Siswa
             const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
             const [editingStudent, setEditingStudent] = useState(null);
             const [studentFormData, setStudentFormData] = useState({
                 name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: ''
             });
+
+            // --- FITUR BARU TAHAP 2: STATE MULTI-SELECT & BULK STAMP ---
+            const [selectedBulkStudentIds, setSelectedBulkStudentIds] = useState([]);
+            const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+            const [bulkStampPreset, setBulkStampPreset] = useState('🌟 Luar biasa, pertahankan kebiasaan baikmu!');
+            const [customBulkText, setCustomBulkText] = useState('');
+            const [showAnalytics, setShowAnalytics] = useState(true);
 
             const unassignedStudents = useMemo(() => {
                 return allStudents.filter(s => s.mentorId !== user.id);
@@ -1459,9 +1506,11 @@
                 const cls = await db.classes.toArray();
                 const stds = await db.users.where('role').equals(ROLES.SISWA).toArray();
                 const logs = await db.habitLogs.where('date').equals(selectedDate).toArray();
+                const habs = await db.habits.toArray();
                 setClasses(cls);
                 setAllStudents(stds);
                 setClassLogs(logs);
+                setHabitsList(habs.length > 0 ? habs.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)) : HABITS_CONFIG);
             };
 
             useEffect(() => { loadData(); }, [selectedDate]);
@@ -1509,6 +1558,118 @@
             const homeroomCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s)).length, [allStudents, isStudentHomeroom]);
             const mentorCount = useMemo(() => allStudents.filter(s => isStudentMentor(s)).length, [allStudents, isStudentMentor]);
             const allCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s) || isStudentMentor(s)).length, [allStudents, isStudentHomeroom, isStudentMentor]);
+
+            // --- FITUR BARU TAHAP 2: KALKULASI ANALITIK KEBIASAAN KELAS ---
+            const habitAnalytics = useMemo(() => {
+                if (filteredStudents.length === 0) return [];
+                const activeHabits = habitsList.filter(h => h.active !== false);
+                return activeHabits.map(h => {
+                    const completedStudentsCount = filteredStudents.filter(s => {
+                        return classLogs.some(l => l.userId === s.id && l.habitId === h.id && l.completed);
+                    }).length;
+                    const percentage = Math.round((completedStudentsCount / filteredStudents.length) * 100);
+                    return { ...h, completedStudentsCount, totalStudents: filteredStudents.length, percentage };
+                });
+            }, [filteredStudents, classLogs, habitsList]);
+
+            // --- FITUR BARU TAHAP 2: KONTROL SELEKSI BULK ---
+            const isAllVisibleSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedBulkStudentIds.includes(s.id));
+
+            const toggleSelectAll = () => {
+                if (isAllVisibleSelected) {
+                    const visibleIds = new Set(filteredStudents.map(s => s.id));
+                    setSelectedBulkStudentIds(prev => prev.filter(id => !visibleIds.has(id)));
+                } else {
+                    const newIds = new Set([...selectedBulkStudentIds, ...filteredStudents.map(s => s.id)]);
+                    setSelectedBulkStudentIds(Array.from(newIds));
+                }
+            };
+
+            const toggleSelectOne = (id) => {
+                setSelectedBulkStudentIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+            };
+
+            // --- FITUR BARU TAHAP 2: EKSEKUSI STEMPEL MASSSAL ---
+            const handleApplyBulkStamp = async (e) => {
+                e.preventDefault();
+                if (selectedBulkStudentIds.length === 0) return;
+
+                const finalNote = (bulkStampPreset === 'custom' ? customBulkText : bulkStampPreset).trim();
+                if (!finalNote) return showAlert.warning('Peringatan', 'Catatan apresiasi tidak boleh kosong.');
+
+                const selectedStudentsList = allStudents.filter(s => selectedBulkStudentIds.includes(s.id));
+                let updatedCount = 0;
+
+                for (let student of selectedStudentsList) {
+                    const jId = `j_${student.id}_${selectedDate}`;
+                    const existingJournal = await db.journals.get(jId);
+
+                    const isHomeroom = isStudentHomeroom(student);
+                    const isMentor = isStudentMentor(student);
+
+                    const updatedJournal = {
+                        id: jId,
+                        userId: student.id,
+                        studentName: student.name,
+                        className: student.className || '',
+                        date: selectedDate,
+                        mood: existingJournal?.mood || '😊 Senang',
+                        content: existingJournal?.content || '(Apresiasi Bimbingan Guru)',
+                        homeroomFeedback: isHomeroom ? finalNote : (existingJournal?.homeroomFeedback || ''),
+                        homeroomTeacherName: isHomeroom ? user.name : (existingJournal?.homeroomTeacherName || ''),
+                        mentorFeedback: isMentor ? finalNote : (existingJournal?.mentorFeedback || ''),
+                        mentorTeacherName: isMentor ? user.name : (existingJournal?.mentorTeacherName || ''),
+                        syncStatus: 'pending',
+                        updatedAt: new Date()
+                    };
+
+                    await db.journals.put(updatedJournal);
+                    await db.syncQueue.put({
+                        id: `sync_jbulk_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                        tableName: 'journals',
+                        recordId: jId,
+                        action: 'upsert',
+                        status: 'pending',
+                        createdAt: new Date()
+                    });
+                    updatedCount++;
+                }
+
+                setIsBulkModalOpen(false);
+                setSelectedBulkStudentIds([]);
+                await loadData();
+                triggerSync();
+                showAlert.success('Apresiasi Massal Terkirim!', `${updatedCount} siswa berhasil diberikan stempel apresiasi.`);
+            };
+
+            // --- FITUR BARU TAHAP 2: GENERATOR SHARE WA ORANG TUA ---
+            const handleShareWhatsApp = async (student) => {
+                const studentLogs = classLogs.filter(l => l.userId === student.id && l.completed);
+                const completedCount = studentLogs.length;
+                const journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
+
+                let text = `*LAPORAN PEMBIASAAN KARAKTER SISWA*\n`;
+                text += `*${SCHOOL_IDENTITY.name}*\n\n`;
+                text += `Yth. Bapak/Ibu Orang Tua dari:\n`;
+                text += `👤 Nama Siswa: *${student.name}*\n`;
+                text += `🏫 Kelas: *${student.className || '-'}*\n`;
+                text += `📅 Tanggal: *${formatDisplayDate(selectedDate)} (WITA)*\n\n`;
+                text += `📊 *Capaian 7 Kebiasaan:* ${completedCount}/7 Kebiasaan Selesai\n`;
+
+                if (journal && journal.content) {
+                    text += `📝 *Refleksi Anak:* _"${journal.content}"_\n`;
+                }
+
+                const feedback = journal ? (journal.homeroomFeedback || journal.mentorFeedback || '') : '';
+                if (feedback) {
+                    text += `💬 *Apresiasi Guru:* _"${feedback}"_\n`;
+                }
+
+                text += `\n_Mari bersama mendampingi putra/putri kita membiasakan karakter positif di rumah. Terima kasih atas bimbingannya!_ 🙏`;
+
+                const encodedText = encodeURIComponent(text);
+                window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+            };
 
             const handleOpenFeedbackModal = async (student) => {
                 const journal = await db.journals.where('userId').equals(student.id).and(j => j.date === selectedDate).first();
@@ -1689,8 +1850,8 @@
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Siswa Binaan</h1>
-                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, tracking siswa pasif, edit data siswa, dan apresiasi jurnal.</p>
+                            <h1 className="text-2xl font-black text-brand-dark">Dashboard Guru & Pembimbing</h1>
+                            <p className="text-gray-500 font-medium text-sm">Monitoring pembiasaan harian, analitik kelas, stempel apresiasi massal, dan kirim resume ke WhatsApp orang tua.</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Button variant="primary" onClick={handleOpenAddModal} className="text-xs py-2 px-3">
@@ -1703,6 +1864,41 @@
                         </div>
                     </div>
 
+                    {/* --- FITUR BARU TAHAP 2: WIDGET GRAFIK ANALITIK KEBIASAAN KELAS --- */}
+                    <Card className="space-y-3">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <h3 className="font-black text-sm text-brand-dark flex items-center gap-2">
+                                <i className="fas fa-chart-bar text-brand-blue"></i> Analitik Ketercapaian Kebiasaan Kelas Hari Ini
+                            </h3>
+                            <button onClick={() => setShowAnalytics(!showAnalytics)} className="text-xs font-bold text-brand-blue hover:underline">
+                                {showAnalytics ? 'Sembunyikan Grafik' : 'Tampilkan Grafik'}
+                            </button>
+                        </div>
+
+                        {showAnalytics && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                                {habitAnalytics.map(h => (
+                                    <div key={h.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
+                                        <div className="flex justify-between items-center text-xs font-extrabold text-brand-dark">
+                                            <span className="flex items-center gap-1.5"><span>{h.icon}</span> {h.shortName || h.name}</span>
+                                            <span className="text-brand-red font-black">{h.percentage}%</span>
+                                        </div>
+                                        <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full transition-all duration-500 ${h.percentage >= 80 ? 'bg-green-500' : h.percentage >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                style={{ width: `${h.percentage}%` }}
+                                            ></div>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 font-bold text-right">
+                                            {h.completedStudentsCount} dari {h.totalStudents} siswa
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+
+                    {/* BAR KONTROL SELEKSI & FILTER */}
                     <Card className="space-y-3 p-4">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
                             <div className="relative w-full md:w-80">
@@ -1712,21 +1908,42 @@
                             <div className="flex items-center gap-2 w-full md:w-auto">
                                 <button onClick={() => setFilterAlphaOnly(!filterAlphaOnly)} className={`text-xs px-3.5 py-2 rounded-xl font-extrabold transition-all flex items-center gap-1.5 ${filterAlphaOnly ? 'bg-red-500 text-white shadow-md' : 'bg-red-50 text-brand-red hover:bg-red-100'}`}>
                                     <i className="fas fa-user-clock"></i>
-                                    <span>{filterAlphaOnly ? 'Menampilkan: Belum Mengisi Saja' : 'Tampilkan yang Belum Mengisi'}</span>
+                                    <span>{filterAlphaOnly ? 'Menampilkan: Belum Mengisi' : 'Tampilkan yang Belum Mengisi'}</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex gap-2 border-t pt-3 overflow-x-auto text-xs font-bold">
-                            <button onClick={() => setSelectedTab('all')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'all' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
-                                Semua Binaan ({allCount})
-                            </button>
-                            <button onClick={() => setSelectedTab('homeroom')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'homeroom' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
-                                Kelas Binaan (Wali Kelas) ({homeroomCount})
-                            </button>
-                            <button onClick={() => setSelectedTab('mentor')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'mentor' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
-                                Kelompok Mentoring ({mentorCount})
-                            </button>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-t pt-3">
+                            <div className="flex gap-2 overflow-x-auto text-xs font-bold w-full md:w-auto">
+                                <button onClick={() => setSelectedTab('all')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'all' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
+                                    Semua Binaan ({allCount})
+                                </button>
+                                <button onClick={() => setSelectedTab('homeroom')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'homeroom' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
+                                    Kelas Binaan ({homeroomCount})
+                                </button>
+                                <button onClick={() => setSelectedTab('mentor')} className={`px-4 py-2 rounded-xl transition-all ${selectedTab === 'mentor' ? 'bg-brand-red text-white' : 'bg-gray-50 text-gray-600'}`}>
+                                    Mentoring ({mentorCount})
+                                </button>
+                            </div>
+
+                            {/* --- FITUR BARU TAHAP 2: OPSI CENTANG SEMUA & TOMBOL STEMPEL MASSAL --- */}
+                            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0">
+                                <label className="flex items-center gap-2 text-xs font-extrabold text-gray-600 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAllVisibleSelected}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
+                                    />
+                                    <span>Pilih Semua ({filteredStudents.length})</span>
+                                </label>
+
+                                {selectedBulkStudentIds.length > 0 && (
+                                    <Button variant="green" onClick={() => setIsBulkModalOpen(true)} className="text-xs py-2 px-3 flex items-center gap-1.5 shadow-md">
+                                        <i className="fas fa-stamp"></i> Stempel Massal ({selectedBulkStudentIds.length})
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </Card>
 
@@ -1737,12 +1954,19 @@
                             {filteredStudents.map(student => {
                                 const studentLogs = classLogs.filter(l => l.userId === student.id && l.completed);
                                 const count = studentLogs.length;
+                                const isSelected = selectedBulkStudentIds.includes(student.id);
 
                                 return (
-                                    <Card key={student.id} className="space-y-3">
+                                    <Card key={student.id} className={`space-y-3 border-2 transition-all ${isSelected ? 'border-brand-red bg-red-50/20 shadow-md' : 'border-gray-100'}`}>
                                         <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-2">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-brand-yellow/20 text-brand-dark flex items-center justify-center font-black text-lg">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleSelectOne(student.id)}
+                                                    className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer shrink-0"
+                                                />
+                                                <div className="w-10 h-10 rounded-full bg-brand-yellow/20 text-brand-dark flex items-center justify-center font-black text-lg shrink-0">
                                                     {student.avatar || '👦'}
                                                 </div>
                                                 <div>
@@ -1750,10 +1974,16 @@
                                                     <p className="text-xs text-gray-400 font-bold">@{student.username} • NISN: {student.nisn || '-'} • Kelas: {student.className || '-'}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 flex-wrap">
+                                            <div className="flex items-center gap-2 flex-wrap pl-7 md:pl-0">
                                                 <span className={`text-xs px-3 py-1 rounded-full font-black ${count === 7 ? 'bg-green-100 text-green-700' : count > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                                                     {count === 0 ? '🔴 Belum Mengisi' : `${count} / 7 Selesai`}
                                                 </span>
+
+                                                {/* --- FITUR BARU TAHAP 2: TOMBOL KIRIM WA ORANG TUA --- */}
+                                                <button onClick={() => handleShareWhatsApp(student)} className="px-2.5 py-1 text-xs font-bold bg-green-50 text-green-700 rounded-lg hover:bg-green-100 flex items-center gap-1 transition-all" title="Kirim Laporan WA ke Orang Tua">
+                                                    <i className="fab fa-whatsapp text-sm text-green-600"></i> Resume WA
+                                                </button>
+
                                                 <button onClick={() => {
                                                     setEditingStudent(student);
                                                     setStudentFormData({
@@ -1778,20 +2008,20 @@
                                                     <i className="fas fa-key text-[10px]"></i> Reset Sandi
                                                 </button>
                                                 <button onClick={() => handleOpenFeedbackModal(student)} className="px-2.5 py-1 text-xs font-bold bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center gap-1">
-                                                    <i className="fas fa-comment-dots"></i> Apresiasi Jurnal
+                                                    <i className="fas fa-comment-dots"></i> Apresiasi
                                                 </button>
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
-                                            {HABITS_CONFIG.map(h => {
+                                            {habitsList.filter(h => h.active !== false).map(h => {
                                                 const log = studentLogs.find(l => l.habitId === h.id);
                                                 const isDone = !!log;
                                                 return (
                                                     <div key={h.id} className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between ${isDone ? 'bg-green-50/50 border-green-200' : 'bg-gray-50/60 border-gray-100 opacity-60'}`}>
                                                         <div className="flex items-center justify-between font-bold mb-1">
                                                             <span className="flex items-center gap-1.5 text-gray-800">
-                                                                <span>{h.icon}</span> {h.name}
+                                                                <span>{h.icon}</span> {h.shortName || h.name}
                                                             </span>
                                                             <span className={isDone ? 'text-green-600 font-extrabold' : 'text-gray-400 font-normal'}>
                                                                 {isDone ? `Pkl ${formatCleanTime(log.timeValue)} WITA` : 'Belum'}
@@ -1810,6 +2040,67 @@
                         </div>
                     )}
 
+                    {/* --- FITUR BARU TAHAP 2: MODAL STEMPEL APRESIASI MASSAL --- */}
+                    {isBulkModalOpen && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-lg shadow-2xl space-y-4">
+                                <div className="flex justify-between items-center border-b pb-2">
+                                    <h3 className="font-black text-base md:text-lg text-brand-dark flex items-center gap-2">
+                                        <i className="fas fa-stamp text-brand-green"></i> Stempel Apresiasi Massal
+                                    </h3>
+                                    <button onClick={() => setIsBulkModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                        <i className="fas fa-times"></i>
+                                    </button>
+                                </div>
+
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs space-y-1">
+                                    <p className="font-bold text-green-900">
+                                        Apresiasi akan terkirim ke <b>{selectedBulkStudentIds.length} Siswa</b> terpilih untuk tanggal <b>{formatDisplayDate(selectedDate)}</b>.
+                                    </p>
+                                </div>
+
+                                <form onSubmit={handleApplyBulkStamp} className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">Pilih Pesan Stempel Cepat:</label>
+                                        <select
+                                            value={bulkStampPreset}
+                                            onChange={e => setBulkStampPreset(e.target.value)}
+                                            className="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green outline-none"
+                                        >
+                                            <option value="🌟 Luar biasa, pertahankan kebiasaan baikmu!">🌟 Luar biasa, pertahankan kebiasaan baikmu!</option>
+                                            <option value="👍 Bagus sekali, tingkatkan terus ibadah dan belajarmu!">👍 Bagus sekali, tingkatkan terus ibadah dan belajarmu!</option>
+                                            <option value="💪 Semangat terus, kamu anak Indonesia yang hebat!">💪 Semangat terus, kamu anak Indonesia yang hebat!</option>
+                                            <option value="❤️ Hebat! Terima kasih sudah konsisten jujur dan disiplin.">❤️ Hebat! Terima kasih sudah konsisten jujur dan disiplin.</option>
+                                            <option value="custom">✏️ Tulis Pesan Kustom Sendiri...</option>
+                                        </select>
+                                    </div>
+
+                                    {bulkStampPreset === 'custom' && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-700 mb-1">Ketik Pesan Apresiasi Kustom:</label>
+                                            <textarea
+                                                rows="3"
+                                                value={customBulkText}
+                                                onChange={e => setCustomBulkText(e.target.value)}
+                                                placeholder="Tuliskan kata-kata motivasi untuk siswa..."
+                                                className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-brand-green"
+                                                required
+                                            ></textarea>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end gap-2 pt-2 border-t">
+                                        <Button variant="white" onClick={() => setIsBulkModalOpen(false)}>Batal</Button>
+                                        <Button variant="green" type="submit">
+                                            <i className="fas fa-check-circle mr-1"></i> Terapkan Stempel Massal
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* MODAL APRESIASI INDIVIDU */}
                     {feedbackModalJournal && feedbackStudent && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-lg shadow-2xl space-y-3">
@@ -1900,12 +2191,12 @@
                         </div>
                     )}
 
+                    {/* MODAL EDIT / TAMBAH SISWA BINAAN */}
                     {isStudentModalOpen && (
                         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                             <Card className="w-full max-w-md shadow-2xl">
                                 <h3 className="font-black text-lg mb-4 text-brand-dark">{editingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Binaan'}</h3>
                                 <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
-                                    {/* Tab Switcher: Hanya tampil jika TAMBAH BARU (Bukan mode Edit) */}
                                     {!editingStudent && (
                                         <div className="flex bg-gray-100 p-1 rounded-xl mb-4 text-xs font-bold">
                                             <button
@@ -1925,9 +2216,7 @@
                                         </div>
                                     )}
 
-                                    {/* Tampilan Kondisional berdasarkan Tab */}
                                     {!editingStudent && addMode === 'select' ? (
-                                        /* MODE 1: Pilih dari daftar siswa master */
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-xs font-bold text-gray-600 mb-1">
@@ -1958,7 +2247,6 @@
                                             </div>
                                         </div>
                                     ) : (
-                                        /* MODE 2: Form Input Manual (Sama persis seperti kode lama Anda) */
                                         <div className="space-y-3">
                                             <input
                                                 type="text"
@@ -2007,7 +2295,6 @@
                                         </div>
                                     )}
 
-                                    {/* Tombol Aksi */}
                                     <div className="flex justify-end gap-2 pt-3 border-t">
                                         <Button variant="white" onClick={() => setIsStudentModalOpen(false)}>Batal</Button>
                                         <Button
@@ -2181,15 +2468,35 @@
         // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
+            const [queueItems, setQueueItems] = useState([]);
+            const [isSyncing, setIsSyncing] = useState(false);
 
-            const loadStats = async () => {
+            const loadDashboardData = async () => {
                 const t = await db.users.where('role').equals(ROLES.GURU).count();
                 const s = await db.users.where('role').equals(ROLES.SISWA).count();
                 const c = await db.classes.count();
+                const q = await db.syncQueue.toArray();
                 setStats({ teachers: t, students: s, classes: c });
+                setQueueItems(q);
             };
 
-            useEffect(() => { loadStats(); }, []);
+            useEffect(() => { loadDashboardData(); }, []);
+
+            const handleForcePushQueue = async () => {
+                setIsSyncing(true);
+                await pushPendingQueue();
+                await loadDashboardData();
+                setIsSyncing(false);
+                showAlert.success('Sinkronisasi Selesai', 'Seluruh antrean data lokal berhasil dikirim ke cloud.');
+            };
+
+            const queueByTable = useMemo(() => {
+                const map = { users: 0, classes: 0, habitLogs: 0, journals: 0, habits: 0 };
+                queueItems.forEach(item => {
+                    if (map[item.tableName] !== undefined) map[item.tableName] += 1;
+                });
+                return map;
+            }, [queueItems]);
 
             const handleForcePushAllToCloud = async () => {
                 const confirmRes = await showAlert.confirm(
@@ -2207,52 +2514,48 @@
                         didOpen: () => Swal.showLoading()
                     });
 
-                    const [allUsers, allClasses, allLogs, allJournals] = await Promise.all([
+                    const [allUsers, allClasses, allLogs, allJournals, allHabits] = await Promise.all([
                         db.users.toArray(),
                         db.classes.toArray(),
                         db.habitLogs.toArray(),
-                        db.journals.toArray()
+                        db.journals.toArray(),
+                        db.habits.toArray()
                     ]);
 
                     if (allClasses.length > 0) {
                         await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ action: 'syncClass', payload: allClasses })
                         });
                     }
-
                     if (allUsers.length > 0) {
                         await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ action: 'syncUser', payload: allUsers })
                         });
                     }
-
+                    if (allHabits.length > 0) {
+                        await fetch(GAS_API_URL, {
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify({ action: 'syncHabitConfig', payload: allHabits })
+                        });
+                    }
                     if (allLogs.length > 0) {
                         await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ action: 'syncHabits', payload: allLogs })
                         });
                     }
-
                     if (allJournals.length > 0) {
                         await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify({ action: 'syncJournal', payload: allJournals })
                         });
                     }
 
                     Swal.close();
                     showAlert.success('Berhasil!', 'Semua data lokal telah terunggah ke Google Sheets.');
-                    await loadStats();
+                    await loadDashboardData();
                 } catch (e) {
                     Swal.close();
                     showAlert.error('Gagal', 'Terjadi kesalahan jaringan: ' + e.message);
@@ -2269,15 +2572,13 @@
 
                 try {
                     await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({ action: 'archiveSemester', payload: { academicYear: SCHOOL_IDENTITY.academicYear } })
                     });
                     await db.habitLogs.clear();
                     showAlert.success('Berhasil Diarsipkan', 'Database habit log aktif telah diarsipkan dan dibersihkan.');
                     await triggerManualPull();
-                    await loadStats();
+                    await loadDashboardData();
                 } catch (e) {
                     showAlert.error('Gagal', 'Terjadi kesalahan saat mengarsipkan data.');
                 }
@@ -2294,8 +2595,8 @@
                             <Button variant="green" onClick={handleForcePushAllToCloud} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-cloud-upload-alt"></i> Unggah Semua ke Cloud
                             </Button>
-                            <Button variant="secondary" onClick={() => navigate('/admin/archives')} className="text-xs py-2 px-3 flex items-center gap-1.5">
-                                <i className="fas fa-folder-open"></i> Buka Arsip Semester
+                            <Button variant="secondary" onClick={() => navigate('/admin/habits')} className="text-xs py-2 px-3 flex items-center gap-1.5">
+                                <i className="fas fa-sliders-h"></i> Kebiasaan Dinamis
                             </Button>
                             <Button variant="amber" onClick={handleArchiveSemester} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-archive"></i> Arsipkan Semester Ini
@@ -2323,6 +2624,54 @@
                             <div className="text-xs text-gray-400 font-bold uppercase">Total Kelas</div>
                         </Card>
                     </div>
+
+                    {/* WIDGET PANEL AUDIT LOG & SINKRONISASI */}
+                    <Card className="space-y-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
+                            <div>
+                                <h3 className="font-black text-base text-brand-dark flex items-center gap-2">
+                                    <i className="fas fa-list-check text-brand-red"></i> Status Antrean Sinkronisasi (Audit Log)
+                                </h3>
+                                <p className="text-xs text-gray-400 font-medium">Memantau transaksi perubahan lokal yang belum terunggah ke Google Sheets.</p>
+                            </div>
+                            <Button
+                                variant="primary"
+                                onClick={handleForcePushQueue}
+                                disabled={queueItems.length === 0 || isSyncing}
+                                className="text-xs py-2 px-3.5"
+                            >
+                                <i className={`fas ${isSyncing ? 'fa-spinner fa-spin' : 'fa-paper-plane'} mr-1.5`}></i>
+                                {isSyncing ? 'Mengirim...' : 'Paksa Sinkronkan Antrean'}
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                            <div className="p-3 bg-gray-50 rounded-xl border">
+                                <div className="text-xl font-black text-brand-dark">{queueByTable.users}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase">Users</div>
+                            </div>
+                            <div className="p-3 bg-gray-50 rounded-xl border">
+                                <div className="text-xl font-black text-brand-dark">{queueByTable.classes}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase">Kelas</div>
+                            </div>
+                            <div className="p-3 bg-gray-50 rounded-xl border">
+                                <div className="text-xl font-black text-brand-dark">{queueByTable.habits}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase">Kebiasaan</div>
+                            </div>
+                            <div className="p-3 bg-gray-50 rounded-xl border">
+                                <div className="text-xl font-black text-brand-dark">{queueByTable.habitLogs}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase">Habit Logs</div>
+                            </div>
+                            <div className="p-3 bg-gray-50 rounded-xl border">
+                                <div className="text-xl font-black text-brand-dark">{queueByTable.journals}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase">Jurnal</div>
+                            </div>
+                        </div>
+
+                        <div className="text-xs font-bold text-gray-500 text-right">
+                            Total Item Tertahan: <span className="text-brand-red font-black">{queueItems.length}</span> transaksi
+                        </div>
+                    </Card>
                 </div>
             );
         };
@@ -3493,6 +3842,184 @@
             );
         };
 
+        const AdminHabitsPage = ({ triggerSync, triggerManualPull }) => {
+            const [habitsList, setHabitsList] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingHabit, setEditingHabit] = useState(null);
+            const [formData, setFormData] = useState({
+                name: '', shortName: '', defaultTime: '', defaultDetail: '',
+                icon: '⭐', color: 'bg-blue-100 text-blue-600',
+                timeLabel: '', detailLabel: '', detailPlaceholder: '', sortOrder: 1, active: true
+            });
+
+            const loadHabits = async () => {
+                const list = await db.habits.toArray();
+                setHabitsList(list.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
+            };
+
+            useEffect(() => { loadHabits(); }, []);
+
+            const handleToggleActive = async (habit) => {
+                const updated = { ...habit, active: !habit.active, updatedAt: new Date() };
+                await db.habits.put(updated);
+                await db.syncQueue.put({
+                    id: `sync_hcfg_${Date.now()}`, tableName: 'habits', recordId: habit.id, action: 'update', status: 'pending', createdAt: new Date()
+                });
+                await loadHabits();
+                triggerSync();
+            };
+
+            const handleOpenEdit = (habit) => {
+                setEditingHabit(habit);
+                setFormData({
+                    name: habit.name || '',
+                    shortName: habit.shortName || '',
+                    defaultTime: habit.defaultTime || '07:00',
+                    defaultDetail: habit.defaultDetail || '',
+                    icon: habit.icon || '⭐',
+                    color: habit.color || 'bg-blue-100 text-blue-600',
+                    timeLabel: habit.timeLabel || '',
+                    detailLabel: habit.detailLabel || '',
+                    detailPlaceholder: habit.detailPlaceholder || '',
+                    sortOrder: habit.sortOrder || 1,
+                    active: habit.active !== false
+                });
+                setIsModalOpen(true);
+            };
+
+            const handleSaveHabit = async (e) => {
+                e.preventDefault();
+                if (!editingHabit) return;
+
+                const updated = {
+                    ...editingHabit,
+                    ...formData,
+                    sortOrder: Number(formData.sortOrder),
+                    updatedAt: new Date()
+                };
+
+                await db.habits.put(updated);
+                await db.syncQueue.put({
+                    id: `sync_hcfg_${Date.now()}`, tableName: 'habits', recordId: editingHabit.id, action: 'update', status: 'pending', createdAt: new Date()
+                });
+
+                setIsModalOpen(false);
+                await loadHabits();
+                triggerSync();
+                showAlert.success('Berhasil Disimpan', `Pengaturan kebiasaan "${updated.name}" diperbarui.`);
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-black text-brand-dark">⚙️ Pengaturan Kebiasaan Dinamis</h1>
+                            <p className="text-gray-500 font-medium text-sm">Sesuaikan jam target, panduan, ikon, urutan, dan status aktif/nonaktif pilar kebiasaan.</p>
+                        </div>
+                        <Button variant="white" onClick={triggerManualPull} className="text-xs py-2 px-3">
+                            <i className="fas fa-sync-alt mr-1"></i> Tarik Cloud
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {habitsList.map(h => (
+                            <Card key={h.id} className={`space-y-3 border-2 ${h.active !== false ? 'border-gray-100' : 'border-dashed border-gray-300 opacity-60 bg-gray-50'}`}>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0 ${h.color}`}>{h.icon}</div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-black px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">Urutan #{h.sortOrder}</span>
+                                                <h3 className="font-extrabold text-brand-dark text-base">{h.name}</h3>
+                                            </div>
+                                            <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{h.defaultDetail}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleToggleActive(h)}
+                                        className={`px-3 py-1 rounded-full text-xs font-black transition-all ${h.active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
+                                    >
+                                        {h.active !== false ? 'Aktif' : 'Nonaktif'}
+                                    </button>
+                                </div>
+
+                                <div className="p-2.5 bg-gray-50 rounded-xl text-xs space-y-1 font-medium text-gray-600">
+                                    <div><b>Jam Target:</b> {h.defaultTime} WITA</div>
+                                    <div><b>Label Input:</b> {h.detailLabel || '-'}</div>
+                                </div>
+
+                                <div className="flex justify-end pt-1">
+                                    <Button variant="white" onClick={() => handleOpenEdit(h)} className="text-xs py-1.5 px-3">
+                                        <i className="fas fa-pen mr-1 text-brand-blue"></i> Edit Konfigurasi
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4">
+                                <h3 className="font-black text-lg text-brand-dark border-b pb-2">Edit Kebiasaan: {editingHabit?.name}</h3>
+                                <form onSubmit={handleSaveHabit} className="space-y-3 text-xs">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block font-bold text-gray-600 mb-1">Nama Kebiasaan</label>
+                                            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl font-bold" required />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-gray-600 mb-1">Nama Singkat (Tabel)</label>
+                                            <input type="text" value={formData.shortName} onChange={e => setFormData({ ...formData, shortName: e.target.value })} className="w-full p-2.5 border rounded-xl font-bold" required />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label className="block font-bold text-gray-600 mb-1">Ikon (Emoji)</label>
+                                            <input type="text" value={formData.icon} onChange={e => setFormData({ ...formData, icon: e.target.value })} className="w-full p-2.5 border rounded-xl text-center text-lg font-bold" required />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-gray-600 mb-1">Jam Target</label>
+                                            <input type="time" value={formData.defaultTime} onChange={e => setFormData({ ...formData, defaultTime: e.target.value })} className="w-full p-2.5 border rounded-xl font-bold" required />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-gray-600 mb-1">Urutan</label>
+                                            <input type="number" value={formData.sortOrder} onChange={e => setFormData({ ...formData, sortOrder: e.target.value })} className="w-full p-2.5 border rounded-xl font-bold" min="1" required />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-bold text-gray-600 mb-1">Panduan / Deskripsi Target Bawaan</label>
+                                        <textarea rows="2" value={formData.defaultDetail} onChange={e => setFormData({ ...formData, defaultDetail: e.target.value })} className="w-full p-2.5 border rounded-xl font-medium" required></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-bold text-gray-600 mb-1">Label Jam Form Siswa</label>
+                                        <input type="text" value={formData.timeLabel} onChange={e => setFormData({ ...formData, timeLabel: e.target.value })} className="w-full p-2.5 border rounded-xl font-medium" />
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-bold text-gray-600 mb-1">Label Catatan Form Siswa</label>
+                                        <input type="text" value={formData.detailLabel} onChange={e => setFormData({ ...formData, detailLabel: e.target.value })} className="w-full p-2.5 border rounded-xl font-medium" />
+                                    </div>
+
+                                    <div>
+                                        <label className="block font-bold text-gray-600 mb-1">Contoh Isian (Placeholder Form Siswa)</label>
+                                        <input type="text" value={formData.detailPlaceholder} onChange={e => setFormData({ ...formData, detailPlaceholder: e.target.value })} className="w-full p-2.5 border rounded-xl font-medium" />
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-3 border-t">
+                                        <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                                        <Button variant="primary" type="submit">Simpan Perubahan</Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         // ==========================================
         // MODUL ARSIP SEMESTER
         // ==========================================
@@ -4497,6 +5024,7 @@
                 case '/teacher/profile': content = <TeacherProfilePage user={user} onUpdateUser={setUser} triggerSync={triggerSync} />; break;
 
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} navigate={navigate} />; break;
+                case '/admin/habits': content = <AdminHabitsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/teachers': content = <AdminTeachersPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/admin/students': content = <AdminStudentsPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
