@@ -749,9 +749,9 @@
                                     <i className="fas fa-question"></i>
                                 </button>
                                 <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${!isOnline ? 'bg-orange-100 text-orange-600' :
-                                        syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
-                                            syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
-                                                'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
+                                        syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
+                                            'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}>
                                     <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
                                     <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
@@ -1435,6 +1435,8 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [selectedDate, setSelectedDate] = useState(getTodayWitaDateString());
             const [classLogs, setClassLogs] = useState([]);
+            const [addMode, setAddMode] = useState('select');
+            const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
 
             const [feedbackModalJournal, setFeedbackModalJournal] = useState(null);
             const [feedbackStudent, setFeedbackStudent] = useState(null);
@@ -1448,6 +1450,10 @@
             const [studentFormData, setStudentFormData] = useState({
                 name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: ''
             });
+
+            const unassignedStudents = useMemo(() => {
+                return allStudents.filter(s => s.mentorId !== user.id);
+            }, [allStudents, user.id]);
 
             const loadData = async () => {
                 const cls = await db.classes.toArray();
@@ -1579,6 +1585,9 @@
 
             const handleOpenAddModal = () => {
                 setEditingStudent(null);
+                setAddMode('select');
+                setSelectedExistingStudentId('');
+
                 const defaultClassId = myHomeroomClasses[0]?.id || user.homeroomClassId || (classes[0]?.id || '');
                 setStudentFormData({
                     name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: defaultClassId
@@ -1593,6 +1602,37 @@
                 const targetNisn = studentFormData.nisn.trim();
                 const currentId = editingStudent ? editingStudent.id : null;
                 const allUsers = await db.users.toArray();
+
+                if (!editingStudent && addMode === 'select') {
+                    if (!selectedExistingStudentId) {
+                        return showAlert.warning('Peringatan', 'Silakan pilih siswa dari daftar terlebih dahulu!');
+                    }
+
+                    const targetStudent = allStudents.find(s => s.id === selectedExistingStudentId);
+                    if (!targetStudent) return;
+
+                    const updated = {
+                        ...targetStudent,
+                        mentorId: user.id,
+                        mentorName: user.name,
+                        updatedAt: new Date()
+                    };
+
+                    await db.users.put(updated);
+                    await db.syncQueue.put({
+                        id: `sync_${Date.now()}`,
+                        tableName: 'users',
+                        recordId: targetStudent.id,
+                        action: 'update',
+                        status: 'pending',
+                        createdAt: new Date()
+                    });
+
+                    setIsStudentModalOpen(false);
+                    await loadData();
+                    triggerSync();
+                    return showAlert.success('Berhasil', `${targetStudent.name} berhasil ditambahkan ke daftar siswa binaan Anda.`);
+                }
 
                 if (allUsers.some(u => u.id !== currentId && u.username.toLowerCase() === targetUsername.toLowerCase())) {
                     return showAlert.warning('Peringatan', `Username "@${targetUsername}" sudah digunakan.`);
@@ -1865,24 +1905,118 @@
                             <Card className="w-full max-w-md shadow-2xl">
                                 <h3 className="font-black text-lg mb-4 text-brand-dark">{editingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Binaan'}</h3>
                                 <form onSubmit={handleTeacherSaveStudent} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={studentFormData.name} onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={studentFormData.username} onChange={e => setStudentFormData({ ...studentFormData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="NISN" value={studentFormData.nisn} onChange={e => setStudentFormData({ ...studentFormData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <select value={studentFormData.classId} onChange={e => setStudentFormData({ ...studentFormData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
-                                            <option value="">-- Pilih Kelas --</option>
-                                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                        <select value={studentFormData.gender} onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
-                                            <option value="Laki-laki">Laki-laki</option>
-                                            <option value="Perempuan">Perempuan</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex justify-end gap-2 pt-2">
+                                    {/* Tab Switcher: Hanya tampil jika TAMBAH BARU (Bukan mode Edit) */}
+                                    {!editingStudent && (
+                                        <div className="flex bg-gray-100 p-1 rounded-xl mb-4 text-xs font-bold">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddMode('select')}
+                                                className={`flex-1 py-2 rounded-lg transition-all ${addMode === 'select' ? 'bg-white text-brand-red shadow-sm' : 'text-gray-500'}`}
+                                            >
+                                                <i className="fas fa-list-ul mr-1"></i> Pilih dari Terdaftar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddMode('manual')}
+                                                className={`flex-1 py-2 rounded-lg transition-all ${addMode === 'manual' ? 'bg-white text-brand-red shadow-sm' : 'text-gray-500'}`}
+                                            >
+                                                <i className="fas fa-user-plus mr-1"></i> Input Manual Baru
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Tampilan Kondisional berdasarkan Tab */}
+                                    {!editingStudent && addMode === 'select' ? (
+                                        /* MODE 1: Pilih dari daftar siswa master */
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1">
+                                                    Pilih Siswa Terdaftar (Master Admin):
+                                                </label>
+                                                {unassignedStudents.length === 0 ? (
+                                                    <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-medium">
+                                                        Semua siswa yang terdaftar di sistem sudah masuk ke dalam daftar binaan Anda.
+                                                    </div>
+                                                ) : (
+                                                    <select
+                                                        value={selectedExistingStudentId}
+                                                        onChange={e => setSelectedExistingStudentId(e.target.value)}
+                                                        className="w-full p-2.5 bg-gray-50 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-red outline-none"
+                                                        required
+                                                    >
+                                                        <option value="">-- Pilih Nama Siswa --</option>
+                                                        {unassignedStudents.map(s => (
+                                                            <option key={s.id} value={s.id}>
+                                                                {s.name} (@{s.username}) {s.className ? `- Kelas ${s.className}` : ''}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                                <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                                                    Siswa yang dipilih akan otomatis dihubungkan ke akun guru Anda sebagai siswa binaan.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* MODE 2: Form Input Manual (Sama persis seperti kode lama Anda) */
+                                        <div className="space-y-3">
+                                            <input
+                                                type="text"
+                                                placeholder="Nama Lengkap Siswa"
+                                                value={studentFormData.name}
+                                                onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })}
+                                                className="w-full p-2.5 border rounded-xl text-sm font-medium"
+                                                required
+                                            />
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Username"
+                                                    value={studentFormData.username}
+                                                    onChange={e => setStudentFormData({ ...studentFormData, username: e.target.value })}
+                                                    className="w-full p-2.5 border rounded-xl text-sm font-medium"
+                                                    required
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="NISN (Opsional)"
+                                                    value={studentFormData.nisn}
+                                                    onChange={e => setStudentFormData({ ...studentFormData, nisn: e.target.value })}
+                                                    className="w-full p-2.5 border rounded-xl text-sm font-medium"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <select
+                                                    value={studentFormData.classId}
+                                                    onChange={e => setStudentFormData({ ...studentFormData, classId: e.target.value })}
+                                                    className="w-full p-2.5 border rounded-xl text-sm font-semibold"
+                                                    required
+                                                >
+                                                    <option value="">-- Pilih Kelas --</option>
+                                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                </select>
+                                                <select
+                                                    value={studentFormData.gender}
+                                                    onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value })}
+                                                    className="w-full p-2.5 border rounded-xl text-sm font-semibold"
+                                                >
+                                                    <option value="Laki-laki">Laki-laki</option>
+                                                    <option value="Perempuan">Perempuan</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Tombol Aksi */}
+                                    <div className="flex justify-end gap-2 pt-3 border-t">
                                         <Button variant="white" onClick={() => setIsStudentModalOpen(false)}>Batal</Button>
-                                        <Button variant="primary" type="submit">Simpan</Button>
+                                        <Button
+                                            variant="primary"
+                                            type="submit"
+                                            disabled={!editingStudent && addMode === 'select' && unassignedStudents.length === 0}
+                                        >
+                                            Simpan Siswa
+                                        </Button>
                                     </div>
                                 </form>
                             </Card>
