@@ -853,9 +853,6 @@
             );
         };
 
-        // ==========================================
-        // MODUL SISWA
-        // ==========================================
         const StudentHabitsPage = ({ user, triggerSync, compact }) => {
             const todayStr = getTodayWitaDateString();
             const [logs, setLogs] = useState({});
@@ -864,6 +861,38 @@
             const [activeHabitModal, setActiveHabitModal] = useState(null);
             const [modalTime, setModalTime] = useState('');
             const [modalDetail, setModalDetail] = useState('');
+            const [streakCount, setStreakCount] = useState(0);
+
+            // State Notifikasi PWA
+            const [notifPermission, setNotifPermission] = useState(
+                typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+            );
+
+            // Hitung Habit Streak Berturut-turut
+            const calculateStreak = async () => {
+                let currentStreak = 0;
+                let checkDate = new Date();
+
+                for (let i = 0; i < 60; i++) {
+                    const dateStr = checkDate.toISOString().split('T')[0];
+                    const userLogs = await db.habitLogs
+                        .where('userId').equals(user.id)
+                        .and(l => l.date === dateStr && l.completed === true)
+                        .toArray();
+
+                    if (userLogs.length > 0) {
+                        currentStreak++;
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    } else {
+                        if (i === 0 && dateStr === todayStr) {
+                            checkDate.setDate(checkDate.getDate() - 1);
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                setStreakCount(currentStreak);
+            };
 
             const loadLogs = async () => {
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
@@ -878,9 +907,33 @@
 
                 const p = await db.points.where('userId').equals(user.id).first();
                 setPoints(p ? p.totalPoints : 0);
+
+                await calculateStreak();
             };
 
             useEffect(() => { loadLogs(); }, [user.id]);
+
+            // Aktivasi Notifikasi Pengingat PWA
+            const handleEnableNotifications = async () => {
+                if (typeof Notification === 'undefined') {
+                    return showAlert.warning('Tidak Didukung', 'Peramban ini tidak mendukung notifikasi.');
+                }
+
+                const permission = await Notification.requestPermission();
+                setNotifPermission(permission);
+
+                if (permission === 'granted') {
+                    showAlert.success('Notifikasi Aktif!', 'Kamu akan menerima pengingat harian mengisi kebiasaan.');
+                    try {
+                        new Notification("7 Kebiasaan Anak Indonesia 🇮🇩", {
+                            body: "Pengingat berhasil diaktifkan! Mari capai target kebiasaan harimu.",
+                            icon: "/favicon.ico"
+                        });
+                    } catch (e) { console.log(e); }
+                } else if (permission === 'denied') {
+                    showAlert.error('Izin Ditolak', 'Notifikasi diblokir di setelan peramban.');
+                }
+            };
 
             const handleQuickFillMorning = async () => {
                 const confirmRes = await showAlert.confirm(
@@ -936,6 +989,7 @@
                 }
 
                 setLogs(newLogs);
+                await calculateStreak();
                 showAlert.success('Rutinitas Pagi Tercatat!', `${addedCount} kebiasaan berhasil ditambahkan.`);
                 triggerSync();
             };
@@ -989,6 +1043,7 @@
                     setPoints(newTotal);
                 }
 
+                await calculateStreak();
                 setActiveHabitModal(null);
                 showAlert.success('Kebiasaan Tercatat!', `${habit.name} berhasil disimpan.`);
 
@@ -1008,12 +1063,42 @@
 
             return (
                 <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    {/* WELCOME HEADER & STREAK WIDGET */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-red-600 to-brand-red p-6 rounded-3xl text-white shadow-xl">
                         <div>
-                            <h1 className="text-2xl font-black text-brand-dark">Halo, {user.name}! 🌟</h1>
-                            <p className="text-gray-500 font-medium text-sm">Amalkan 7 kebiasaan anak hebat hari ini.</p>
+                            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black mb-1">
+                                <span>🇮🇩</span> Pembiasaan Karakter Siswa
+                            </div>
+                            <h1 className="text-2xl md:text-3xl font-black">Halo, {user.name}! 🌟</h1>
+                            <p className="text-white/80 font-medium text-xs md:text-sm">Amalkan 7 kebiasaan anak hebat hari ini.</p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+
+                        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                            {/* WIDGET STREAK */}
+                            <div className="bg-white/15 backdrop-blur-md border border-white/20 p-2.5 px-4 rounded-2xl flex items-center gap-3">
+                                <span className="text-3xl animate-bounce">🔥</span>
+                                <div>
+                                    <div className="text-[10px] uppercase font-black text-white/70 tracking-wider">Hitung Beruntun</div>
+                                    <div className="text-lg font-black text-amber-300">{streakCount} Hari Berturut</div>
+                                </div>
+                            </div>
+
+                            {/* TOMBOL PWA NOTIF */}
+                            {notifPermission !== 'granted' && (
+                                <button
+                                    onClick={handleEnableNotifications}
+                                    className="p-3 bg-amber-400 text-brand-dark hover:bg-amber-300 rounded-2xl font-extrabold text-xs flex items-center gap-1.5 shadow-lg transition-all"
+                                    title="Aktifkan Notifikasi Pengingat"
+                                >
+                                    <i className="fas fa-bell"></i>
+                                    <span className="hidden sm:inline">Ingatkan Saya</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-2 w-full justify-between md:justify-end">
                             <Button variant="amber" onClick={handleQuickFillMorning} className="text-xs py-2 px-3 flex items-center gap-1.5">
                                 <i className="fas fa-bolt"></i> Tandai Rutinitas Pagi
                             </Button>
@@ -1206,6 +1291,8 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
+                if (!content.trim()) return showAlert.warning('Jurnal Kosong', 'Silakan tuliskan refleksi harianmu.');
+
                 const jId = `j_${user.id}_${todayStr}`;
                 const existing = await db.journals.get(jId);
 
@@ -1216,7 +1303,7 @@
                     className: user.className || '',
                     date: todayStr,
                     mood,
-                    content,
+                    content: content.trim(),
                     homeroomFeedback: existing?.homeroomFeedback || existing?.teacherFeedback || '',
                     homeroomTeacherName: existing?.homeroomTeacherName || '',
                     mentorFeedback: existing?.mentorFeedback || '',
@@ -1224,11 +1311,12 @@
                     syncStatus: 'pending',
                     updatedAt: new Date()
                 });
+
                 await db.syncQueue.put({
                     id: `sync_j_${Date.now()}`, tableName: 'journals', recordId: jId, action: 'upsert', status: 'pending', createdAt: new Date()
                 });
 
-                showAlert.success('Jurnal Tersimpan!', 'Catatan refleksi harianmu berhasil disimpan.');
+                showAlert.success('Jurnal Tersimpan!', 'Catatan refleksi harianmu berhasil dikirimkan ke guru.');
                 setContent('');
                 loadJournals();
                 triggerSync();
@@ -1236,39 +1324,62 @@
 
             return (
                 <div className="space-y-6">
-                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian</h1>
+                    <h1 className="text-2xl font-black text-brand-dark">📖 Refleksi & Jurnal Harian Siswa</h1>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <Card className="lg:col-span-2">
                             <form onSubmit={handleSave} className="space-y-4">
-                                <div className="flex justify-between items-center">
+                                <div className="flex justify-between items-center border-b pb-3">
                                     <label className="text-xs font-bold text-gray-600">Tanggal Refleksi:</label>
                                     <span className="px-3 py-1.5 bg-red-50 border border-red-200 text-brand-red rounded-xl text-xs font-black">
                                         {formatDisplayDate(todayStr)} (WITA)
                                     </span>
                                 </div>
+
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Perasaan / Suasana Hati Hari Ini:</label>
-                                    <select value={mood} onChange={e => setMood(e.target.value)} className="w-full p-2.5 bg-gray-50 border rounded-xl font-bold text-sm">
-                                        <option value="😀 Sangat Senang">😀 Sangat Senang</option>
-                                        <option value="😊 Senang">😊 Senang</option>
-                                        <option value="💪 Semangat">💪 Semangat</option>
-                                        <option value="😐 Biasa Saja">😐 Biasa Saja</option>
-                                        <option value="😔 Butuh Semangat">😔 Butuh Semangat</option>
-                                    </select>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Bagaimana perasaanmu hari ini?</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['😊 Senang', '🌟 Semangat', '😐 Biasa Saja', '😔 Sedih', '😴 Lelah'].map(m => (
+                                            <button
+                                                key={m}
+                                                type="button"
+                                                onClick={() => setMood(m)}
+                                                className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all border ${
+                                                    mood === m
+                                                        ? 'bg-amber-400 text-brand-dark border-amber-500 shadow-sm scale-105'
+                                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {m}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
+
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 mb-1">Kebaikan & Pembelajaran Hari Ini:</label>
-                                    <textarea rows="5" value={content} onChange={e => setContent(e.target.value)} placeholder="Tuliskan pengalaman atau kebaikan yang kamu lakukan hari ini..." className="w-full p-3 bg-gray-50 border rounded-xl text-sm" required></textarea>
+                                    <label className="block text-xs font-bold text-gray-600 mb-1">Kebaikan & Pengalaman Positif Hari Ini:</label>
+                                    <textarea
+                                        rows="5"
+                                        value={content}
+                                        onChange={e => setContent(e.target.value)}
+                                        placeholder="Tuliskan cerita pengalaman atau kebaikan yang kamu lakukan hari ini..."
+                                        className="w-full p-3 bg-gray-50 border rounded-xl text-xs font-medium focus:ring-2 focus:ring-brand-red outline-none"
+                                        required
+                                    ></textarea>
                                 </div>
-                                <Button type="submit" fullWidth variant="primary">💾 Simpan Refleksi Hari Ini</Button>
+
+                                <Button type="submit" fullWidth variant="primary" className="py-2.5">
+                                    <i className="fas fa-paper-plane mr-1.5"></i> Simpan & Kirim Refleksi
+                                </Button>
                             </form>
                         </Card>
+
+                        {/* DISPLAY RIWAYAT & BALASAN GURU DUAL */}
                         <Card className="space-y-3">
                             <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
                             {savedJournals.length === 0 ? (
                                 <EmptyState icon="📝" title="Belum Ada Jurnal" description="Tulis refleksi harian pertamamu hari ini." />
                             ) : (
-                                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                                <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
                                     {savedJournals.map(j => {
                                         const hrFb = j.homeroomFeedback || j.teacherFeedback || '';
                                         const hrName = j.homeroomTeacherName || 'Wali Kelas';
@@ -1277,38 +1388,38 @@
                                         const isSameDual = hrFb && mtFb && (hrFb === mtFb) && (hrName === mtName);
 
                                         return (
-                                            <div key={j.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-2">
-                                                <div className="flex justify-between font-bold text-brand-red">
+                                            <div key={j.id} className="p-3 bg-gray-50 rounded-2xl border border-gray-100 text-xs space-y-2">
+                                                <div className="flex justify-between font-extrabold text-brand-red">
                                                     <span>{formatDisplayDate(j.date)}</span>
                                                     <span>{j.mood}</span>
                                                 </div>
-                                                <p className="text-gray-700 leading-relaxed">"{j.content}"</p>
+                                                <p className="text-gray-700 leading-relaxed italic">"{j.content}"</p>
 
-                                                {/* Kasus 1: Balasan Sama dari Guru yang Merangkap Wali & Mentor */}
+                                                {/* Tampilan Apresiasi jika Guru Merangkap Wali & Mentor */}
                                                 {isSameDual && (
-                                                    <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
+                                                    <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-gray-800 space-y-0.5">
                                                         <span className="font-extrabold text-brand-blue flex items-center gap-1">
-                                                            <span>💬</span> Apresiasi Wali Kelas & Guru Mentor ({hrName}):
+                                                            <span>💬</span> Apresiasi Wali Kelas & Mentor ({hrName}):
                                                         </span>
                                                         <p className="italic text-gray-700">{hrFb}</p>
                                                     </div>
                                                 )}
 
-                                                {/* Kasus 2: Balasan Terpisah */}
+                                                {/* Tampilan Apresiasi Terpisah */}
                                                 {!isSameDual && (
-                                                    <div className="space-y-1.5 pt-1">
+                                                    <div className="space-y-2 pt-1">
                                                         {hrFb && (
-                                                            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 space-y-0.5">
-                                                                <span className="font-bold text-brand-blue block">
-                                                                    👨‍🏫 Apresiasi Wali Kelas ({hrName}):
+                                                            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl space-y-0.5">
+                                                                <span className="font-extrabold text-brand-blue block">
+                                                                    👨‍🏫 Wali Kelas ({hrName}):
                                                                 </span>
                                                                 <p className="italic text-gray-700">{hrFb}</p>
                                                             </div>
                                                         )}
                                                         {mtFb && (
-                                                            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-950 space-y-0.5">
-                                                                <span className="font-bold text-emerald-700 block">
-                                                                    🌟 Apresiasi Guru Mentor ({mtName}):
+                                                            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-0.5">
+                                                                <span className="font-extrabold text-emerald-700 block">
+                                                                    🌟 Guru Mentor ({mtName}):
                                                                 </span>
                                                                 <p className="italic text-gray-700">{mtFb}</p>
                                                             </div>
@@ -1458,12 +1569,6 @@
             );
         };
 
-        // ==========================================
-        // MODUL GURU
-        // ==========================================
-        // ==========================================
-        // MODUL GURU (TAHAP 2: BULK STAMP, ANALYTICS & WA SHARE)
-        // ==========================================
         const TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
             const [classes, setClasses] = useState([]);
             const [allStudents, setAllStudents] = useState([]);
