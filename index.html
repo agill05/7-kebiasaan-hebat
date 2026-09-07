@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,7 +11,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇮🇩</text></svg>">
 
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -45,12 +47,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Nunito', sans-serif; background-color: #F9FAFB; -webkit-tap-highlight-color: transparent; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
-        @media print { body { background: white; } .no-print { display: none !important; } .print-only { display: block !important; } }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #F9FAFB;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #E5E7EB;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D1D5DB;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+        }
     </style>
 
     <script>
@@ -130,7 +163,7 @@
                         const mm = String(d.getMinutes()).padStart(2, '0');
                         return `${hh}:${mm}`;
                     }
-                } catch(e) {}
+                } catch (e) { }
             }
             if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
                 return str.substring(0, 5);
@@ -586,11 +619,11 @@
                 };
             }, [fullSynchronize]);
 
-            return { 
-                isOnline, 
-                syncStatus, 
-                triggerSync: pushOnly, 
-                triggerManualPull: () => fullSynchronize(false) 
+            return {
+                isOnline,
+                syncStatus,
+                triggerSync: pushOnly,
+                triggerManualPull: () => fullSynchronize(false)
             };
         }
 
@@ -715,12 +748,11 @@
                                 <button onClick={() => setShowOnboarding(true)} title="Panduan Aplikasi" className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold">
                                     <i className="fas fa-question"></i>
                                 </button>
-                                <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${
-                                    !isOnline ? 'bg-orange-100 text-orange-600' :
-                                    syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
-                                    syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
-                                    'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}>
+                                <button onClick={triggerManualPull} title="Tarik Cloud" className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all ${!isOnline ? 'bg-orange-100 text-orange-600' :
+                                        syncStatus === 'syncing' ? 'bg-blue-100 text-blue-600 animate-pulse' :
+                                            syncStatus === 'synced' ? 'bg-green-100 text-brand-green' :
+                                                'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}>
                                     <i className={`fas ${!isOnline ? 'fa-wifi-slash' : syncStatus === 'syncing' ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'}`}></i>
                                     <span>{!isOnline ? 'Offline' : syncStatus === 'syncing' ? 'Menyinkronkan...' : syncStatus === 'synced' ? 'Tersinkron' : 'Tarik Cloud'}</span>
                                 </button>
@@ -802,8 +834,8 @@
             const loadLogs = async () => {
                 const userLogs = await db.habitLogs.where('userId').equals(user.id).and(l => l.date === todayStr).toArray();
                 const logMap = {};
-                userLogs.forEach(l => { 
-                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue }; 
+                userLogs.forEach(l => {
+                    logMap[l.habitId] = { completed: l.completed, timeValue: formatCleanTime(l.timeValue), detailValue: l.detailValue };
                 });
                 setLogs(logMap);
 
@@ -1217,7 +1249,7 @@
                                                     <span>{j.mood}</span>
                                                 </div>
                                                 <p className="text-gray-700 leading-relaxed">"{j.content}"</p>
-                                                
+
                                                 {/* Kasus 1: Balasan Sama dari Guru yang Merangkap Wali & Mentor */}
                                                 {isSameDual && (
                                                     <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-gray-800 space-y-1">
@@ -1260,10 +1292,55 @@
             );
         };
 
-        const StudentProfilePage = ({ user, triggerSync }) => {
+        const StudentProfilePage = ({ user, onUpdateUser, triggerSync }) => {
+            const [username, setUsername] = useState(user.username || '');
             const [oldPass, setOldPass] = useState('');
             const [newPass, setNewPass] = useState('');
             const [confirmPass, setConfirmPass] = useState('');
+
+            useEffect(() => {
+                setUsername(user.username || '');
+            }, [user.username]);
+
+            const handleUpdateUsername = async (e) => {
+                e.preventDefault();
+                const cleanUsername = username.trim().toLowerCase();
+
+                if (!/^[a-z0-9._]{3,20}$/.test(cleanUsername)) {
+                    return showAlert.warning('Format Tidak Valid', 'Username hanya boleh berisi huruf kecil, angka, titik (.), dan garis bawah (_) antara 3–20 karakter.');
+                }
+
+                if (cleanUsername === (user.username || '').toLowerCase()) {
+                    return showAlert.warning('Perhatian', 'Username baru sama dengan username saat ini.');
+                }
+
+                const allUsers = await db.users.toArray();
+                const existingUser = allUsers.find(u => u.id !== user.id && (u.username || '').toLowerCase() === cleanUsername);
+
+                if (existingUser) {
+                    return showAlert.warning('Username Sudah Digunakan', `Username "@${cleanUsername}" sudah dipakai oleh pengguna lain. Silakan pilih username lain.`);
+                }
+
+                const updated = { ...user, username: cleanUsername, updatedAt: new Date() };
+                await db.users.put(updated);
+
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.user = updated;
+                        session.lastActive = Date.now();
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (err) { }
+                }
+
+                if (onUpdateUser) onUpdateUser(updated);
+
+                await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+
+                showAlert.success('Berhasil!', `Username Anda berhasil diperbarui menjadi @${cleanUsername}`);
+                triggerSync();
+            };
 
             const handleChangePassword = async (e) => {
                 e.preventDefault();
@@ -1276,6 +1353,19 @@
                 const newHashed = await hashPassword(newPass);
                 const updated = { ...user, password: newHashed };
                 await db.users.put(updated);
+
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.user = updated;
+                        session.lastActive = Date.now();
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (err) { }
+                }
+
+                if (onUpdateUser) onUpdateUser(updated);
+
                 await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
 
                 showAlert.success('Berhasil!', 'Password akun Anda berhasil diubah.');
@@ -1295,6 +1385,21 @@
                                 {user.mentorName && <span className="px-3 py-1 bg-blue-100 text-brand-blue rounded-full text-xs font-bold">Guru Mentor: {user.mentorName}</span>}
                             </div>
                         </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-at text-brand-blue mr-1.5"></i> Ubah Username Siswa</h3>
+                        <form onSubmit={handleUpdateUsername} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Username Baru</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-gray-400 font-bold">@</span>
+                                    <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="username_baru" className="w-full pl-7 p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark" required />
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-1">Huruf kecil, angka, titik, atau underscore (3-20 karakter).</p>
+                            </div>
+                            <Button type="submit" fullWidth variant="secondary" className="py-2.5 text-xs">Simpan Username Baru</Button>
+                        </form>
                     </Card>
 
                     <Card>
@@ -1384,7 +1489,7 @@
                     const isHomeroom = isStudentHomeroom(s);
                     const isMentor = isStudentMentor(s);
                     const matchesTab = selectedTab === 'homeroom' ? isHomeroom : selectedTab === 'mentor' ? isMentor : (isHomeroom || isMentor);
-                    
+
                     const query = searchQuery.toLowerCase().trim();
                     const matchesSearch = !query || s.name.toLowerCase().includes(query) || (s.nisn && s.nisn.includes(query)) || s.username.toLowerCase().includes(query);
 
@@ -1787,16 +1892,74 @@
             );
         };
 
-        const TeacherProfilePage = ({ user, triggerSync }) => {
+        const TeacherProfilePage = ({ user, onUpdateUser, triggerSync }) => {
+            const [username, setUsername] = useState(user.username || '');
             const [phone, setPhone] = useState(user.phone || '');
             const [oldPass, setOldPass] = useState('');
             const [newPass, setNewPass] = useState('');
             const [confirmPass, setConfirmPass] = useState('');
 
+            useEffect(() => {
+                setUsername(user.username || '');
+            }, [user.username]);
+
+            const handleUpdateUsername = async (e) => {
+                e.preventDefault();
+                const cleanUsername = username.trim().toLowerCase();
+
+                if (!/^[a-z0-9._]{3,20}$/.test(cleanUsername)) {
+                    return showAlert.warning('Format Tidak Valid', 'Username hanya boleh berisi huruf kecil, angka, titik (.), dan garis bawah (_) antara 3–20 karakter.');
+                }
+
+                if (cleanUsername === (user.username || '').toLowerCase()) {
+                    return showAlert.warning('Perhatian', 'Username baru sama dengan username saat ini.');
+                }
+
+                const allUsers = await db.users.toArray();
+                const existingUser = allUsers.find(u => u.id !== user.id && (u.username || '').toLowerCase() === cleanUsername);
+
+                if (existingUser) {
+                    return showAlert.warning('Username Sudah Digunakan', `Username "@${cleanUsername}" sudah dipakai oleh pengguna lain. Silakan pilih username lain.`);
+                }
+
+                const updated = { ...user, username: cleanUsername, updatedAt: new Date() };
+                await db.users.put(updated);
+
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.user = updated;
+                        session.lastActive = Date.now();
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (err) { }
+                }
+
+                if (onUpdateUser) onUpdateUser(updated);
+
+                await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
+
+                showAlert.success('Berhasil!', `Username Anda berhasil diperbarui menjadi @${cleanUsername}`);
+                triggerSync();
+            };
+
             const handleUpdatePhone = async (e) => {
                 e.preventDefault();
                 const updated = { ...user, phone: phone.trim() };
                 await db.users.put(updated);
+
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.user = updated;
+                        session.lastActive = Date.now();
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (err) { }
+                }
+
+                if (onUpdateUser) onUpdateUser(updated);
+
                 await db.syncQueue.put({ id: `sync_u_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
                 showAlert.success('Berhasil!', 'Nomor telepon berhasil diperbarui.');
                 triggerSync();
@@ -1813,6 +1976,19 @@
                 const newHashed = await hashPassword(newPass);
                 const updated = { ...user, password: newHashed };
                 await db.users.put(updated);
+
+                const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (sessionRaw) {
+                    try {
+                        const session = JSON.parse(sessionRaw);
+                        session.user = updated;
+                        session.lastActive = Date.now();
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                    } catch (err) { }
+                }
+
+                if (onUpdateUser) onUpdateUser(updated);
+
                 await db.syncQueue.put({ id: `sync_p_${Date.now()}`, tableName: 'users', recordId: user.id, action: 'update', status: 'pending', createdAt: new Date() });
 
                 showAlert.success('Berhasil!', 'Password akun Guru Anda berhasil diubah.');
@@ -1826,8 +2002,23 @@
                         <div className="w-20 h-20 rounded-full bg-brand-red text-white text-3xl flex items-center justify-center mx-auto">{user.avatar || '👨‍🏫'}</div>
                         <div>
                             <h2 className="text-xl font-black text-brand-dark">{user.name}</h2>
-                            <p className="text-xs font-bold text-gray-400">NIP: {user.nip || '-'} • Mapel: {user.subject || 'Umum'}</p>
+                            <p className="text-xs font-bold text-gray-400">Username: @{user.username} • NIP: {user.nip || '-'} • Mapel: {user.subject || 'Umum'}</p>
                         </div>
+                    </Card>
+
+                    <Card>
+                        <h3 className="font-black text-base text-brand-dark mb-3"><i className="fas fa-at text-brand-blue mr-1.5"></i> Ubah Username Guru</h3>
+                        <form onSubmit={handleUpdateUsername} className="space-y-3 text-xs">
+                            <div>
+                                <label className="block font-bold text-gray-600 mb-1">Username Baru</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-gray-400 font-bold">@</span>
+                                    <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="username_baru" className="w-full pl-7 p-2.5 bg-gray-50 border rounded-xl font-bold text-brand-dark" required />
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-1">Huruf kecil, angka, titik, atau underscore (3-20 karakter).</p>
+                            </div>
+                            <Button type="submit" fullWidth variant="secondary" className="py-2.5 text-xs">Simpan Username Baru</Button>
+                        </form>
                     </Card>
 
                     <Card>
@@ -2222,7 +2413,7 @@
                     const hashed = await hashPassword(passResult);
                     const selectedUsers = await db.users.where('id').anyOf(selectedTeacherIds).toArray();
                     const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
-                    
+
                     await db.users.bulkPut(updatedUsers);
 
                     for (let u of updatedUsers) {
@@ -2494,9 +2685,9 @@
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
                                         <tr>
                                             <th className="p-3 w-10 text-center">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isAllVisibleSelected} 
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isAllVisibleSelected}
                                                     onChange={toggleSelectAll}
                                                     className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                 />
@@ -2514,9 +2705,9 @@
                                             return (
                                                 <tr key={t.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
                                                     <td className="p-3 text-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={isSelected} 
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
                                                             onChange={() => toggleSelectOne(t.id)}
                                                             className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                         />
@@ -2552,13 +2743,13 @@
                             <Card className="w-full max-w-md">
                                 <h3 className="font-black text-lg mb-4">{editingTeacher ? 'Edit Data Guru' : 'Tambah Guru Baru'}</h3>
                                 <form onSubmit={handleSave} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="Telepon" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" placeholder="Telepon" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
-                                    <input type="text" placeholder="NIP / NIK" value={formData.nip} onChange={e => setFormData({...formData, nip: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
-                                    <input type="text" placeholder="Mata Pelajaran" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    <input type="text" placeholder="NIP / NIK" value={formData.nip} onChange={e => setFormData({ ...formData, nip: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
+                                    <input type="text" placeholder="Mata Pelajaran" value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="white" onClick={() => setIsModalOpen(false)}>Batal</Button>
                                         <Button variant="primary" type="submit">Simpan</Button>
@@ -2674,7 +2865,7 @@
                     const hashed = await hashPassword(passResult);
                     const selectedUsers = await db.users.where('id').anyOf(selectedStudentIds).toArray();
                     const updatedUsers = selectedUsers.map(u => ({ ...u, password: hashed, updatedAt: new Date() }));
-                    
+
                     await db.users.bulkPut(updatedUsers);
 
                     for (let u of updatedUsers) {
@@ -3054,9 +3245,9 @@
                                     <thead className="bg-gray-50 text-gray-500 font-bold">
                                         <tr>
                                             <th className="p-3 w-10 text-center">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isAllVisibleSelected} 
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isAllVisibleSelected}
                                                     onChange={toggleSelectAll}
                                                     className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                 />
@@ -3075,9 +3266,9 @@
                                             return (
                                                 <tr key={s.id} className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-red-50/60' : 'hover:bg-gray-50/50'}`}>
                                                     <td className="p-3 text-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={isSelected} 
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
                                                             onChange={() => toggleSelectOne(s.id)}
                                                             className="w-4 h-4 text-brand-red rounded border-gray-300 focus:ring-brand-red cursor-pointer"
                                                         />
@@ -3137,22 +3328,22 @@
                                     triggerSync();
                                     showAlert.success('Berhasil', 'Data siswa berhasil disimpan.');
                                 }} className="space-y-3">
-                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                    <input type="text" placeholder="Nama Lengkap" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" required />
-                                        <input type="text" placeholder="NISN" value={formData.nisn} onChange={e => setFormData({...formData, nisn: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm" />
+                                        <input type="text" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" required />
+                                        <input type="text" placeholder="NISN" value={formData.nisn} onChange={e => setFormData({ ...formData, nisn: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
-                                        <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
+                                        <select value={formData.classId} onChange={e => setFormData({ ...formData, classId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold" required>
                                             <option value="">-- Pilih Kelas --</option>
                                             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
-                                        <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                        <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                             <option value="Laki-laki">Laki-laki</option>
                                             <option value="Perempuan">Perempuan</option>
                                         </select>
                                     </div>
-                                    <select value={formData.mentorId} onChange={e => setFormData({...formData, mentorId: e.target.value})} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                                    <select value={formData.mentorId} onChange={e => setFormData({ ...formData, mentorId: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold">
                                         <option value="">-- Tanpa Mentor Khusus --</option>
                                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                     </select>
@@ -3513,14 +3704,14 @@
 
             const accessibleStudents = useMemo(() => {
                 if (user.role === ROLES.ADMIN) return students;
-                
+
                 const myHomeroomClassIds = new Set(classes.filter(c => c.teacherId === user.id).map(c => c.id));
                 const myHomeroomClassNames = new Set(classes.filter(c => c.teacherId === user.id).map(c => (c.name || '').toLowerCase().trim()));
 
                 return students.filter(s => {
-                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) || 
-                                       (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) || 
-                                       (user.homeroomClassId && s.classId === user.homeroomClassId);
+                    const isHomeroom = (s.classId && myHomeroomClassIds.has(s.classId)) ||
+                        (s.className && myHomeroomClassNames.has(String(s.className).toLowerCase().trim())) ||
+                        (user.homeroomClassId && s.classId === user.homeroomClassId);
                     const isMentor = s.mentorId === user.id;
                     if (selectedScope === 'homeroom') return isHomeroom;
                     if (selectedScope === 'mentor') return isMentor;
@@ -3661,11 +3852,11 @@
                     doc.text(s.mentorName || '-', rightValX, 106);
 
                     const tableBody = item.flatRows.map(r => [
-                        r.no, 
-                        r.date, 
-                        r.habitName, 
-                        r.completed ? 'Selesai' : 'Belum Selesai', 
-                        formatCleanTime(r.timeValue), 
+                        r.no,
+                        r.date,
+                        r.habitName,
+                        r.completed ? 'Selesai' : 'Belum Selesai',
+                        formatCleanTime(r.timeValue),
                         r.detailValue || '-'
                     ]);
 
@@ -3845,8 +4036,8 @@
                 if (res.length > 0) setSelectedUserId(res[0].id); else setSelectedUserId('');
             };
 
-            useEffect(() => { 
-                loadUsers(); 
+            useEffect(() => {
+                loadUsers();
                 setInputPassword('');
                 setSearchQuery('');
                 setShowPassword(false);
@@ -3863,9 +4054,9 @@
                 if (selectedRole === ROLES.ADMIN) return users;
                 const q = searchQuery.toLowerCase().trim();
                 if (!q) return users;
-                return users.filter(u => 
-                    (u.name && u.name.toLowerCase().includes(q)) || 
-                    (u.username && u.username.toLowerCase().includes(q)) || 
+                return users.filter(u =>
+                    (u.name && u.name.toLowerCase().includes(q)) ||
+                    (u.username && u.username.toLowerCase().includes(q)) ||
                     (u.nisn && u.nisn.includes(q)) ||
                     (u.nip && u.nip.includes(q))
                 );
@@ -4012,13 +4203,13 @@
                                     </button>
                                 </div>
                                 <div className="relative">
-                                    <input 
-                                        type={showPassword ? "text" : "password"} 
-                                        value={inputPassword} 
-                                        onChange={e => setInputPassword(e.target.value)} 
-                                        placeholder="Masukkan kata sandi..." 
-                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none" 
-                                        required 
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={inputPassword}
+                                        onChange={e => setInputPassword(e.target.value)}
+                                        placeholder="Masukkan kata sandi..."
+                                        className="w-full p-3 pr-11 bg-gray-50 border rounded-xl text-sm font-semibold focus:ring-2 focus:ring-brand-red outline-none"
+                                        required
                                     />
                                     <button
                                         type="button"
@@ -4058,7 +4249,7 @@
                         const session = JSON.parse(sessionRaw);
                         session.lastActive = now;
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (err) {}
+                    } catch (err) { }
                 }
             }, []);
 
@@ -4097,7 +4288,7 @@
                         try {
                             const session = JSON.parse(sessionRaw);
                             if (Date.now() - session.lastActive >= INACTIVITY_TIMEOUT_MS) handleLogout(true);
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }, 10000);
 
@@ -4117,7 +4308,7 @@
                         session.path = path;
                         session.lastActive = Date.now();
                         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             };
 
@@ -4144,11 +4335,11 @@
                 case '/student/habits': content = <StudentHabitsPage user={user} triggerSync={triggerSync} compact={compact} />; break;
                 case '/student/calendar': content = <StudentCalendarPage user={user} />; break;
                 case '/student/journal': content = <StudentJournalPage user={user} triggerSync={triggerSync} />; break;
-                case '/student/profile': content = <StudentProfilePage user={user} triggerSync={triggerSync} />; break;
+                case '/student/profile': content = <StudentProfilePage user={user} onUpdateUser={setUser} triggerSync={triggerSync} />; break;
 
                 case '/teacher/dashboard': content = <TeacherDashboard user={user} triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
                 case '/teacher/reports': content = <ReportsModule user={user} />; break;
-                case '/teacher/profile': content = <TeacherProfilePage user={user} triggerSync={triggerSync} />; break;
+                case '/teacher/profile': content = <TeacherProfilePage user={user} onUpdateUser={setUser} triggerSync={triggerSync} />; break;
 
                 case '/admin/dashboard': content = <AdminDashboard triggerManualPull={triggerManualPull} navigate={navigate} />; break;
                 case '/admin/classes': content = <AdminClassesPage triggerSync={triggerSync} triggerManualPull={triggerManualPull} />; break;
@@ -4171,4 +4362,5 @@
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
+
 </html>
