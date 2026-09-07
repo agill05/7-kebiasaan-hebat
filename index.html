@@ -4163,14 +4163,25 @@
             const [inputPassword, setInputPassword] = useState('');
             const [searchQuery, setSearchQuery] = useState('');
             const [showPassword, setShowPassword] = useState(false);
+            const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+            const selectedRoleRef = useRef(selectedRole);
+
+            useEffect(() => {
+                selectedRoleRef.current = selectedRole;
+            }, [selectedRole]);
 
             const loadUsers = async () => {
-                const res = await db.users.where('role').equals(selectedRole).toArray();
-                setUsers(res);
-                if (res.length > 0) setSelectedUserId(res[0].id); else setSelectedUserId('');
+                const activeRole = selectedRoleRef.current;
+                const res = await db.users.where('role').equals(activeRole).toArray();
+                
+                // Hanya set data jika role target masih sesuai dengan pilihan di layar
+                if (activeRole === selectedRoleRef.current) {
+                    setUsers(res);
+                }
             };
 
             useEffect(() => {
+                selectedRoleRef.current = selectedRole;
                 loadUsers();
                 setInputPassword('');
                 setSearchQuery('');
@@ -4180,7 +4191,10 @@
             useEffect(() => {
                 loadUsers();
                 if (navigator.onLine) {
-                    pullAllCloudData().then(() => loadUsers());
+                    setIsSyncingCloud(true);
+                    pullAllCloudData()
+                        .then(() => loadUsers())
+                        .finally(() => setIsSyncingCloud(false));
                 }
             }, []);
 
@@ -4282,6 +4296,12 @@
                             <h2 className="text-lg font-black text-brand-dark">{SCHOOL_IDENTITY.name}</h2>
                             <p className="text-xs text-gray-400 font-bold">Masuk Sistem Pembiasaan Karakter</p>
                         </div>
+                        {isSyncingCloud && (
+                            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-xs font-bold flex items-center justify-center gap-2 animate-pulse">
+                                <i className="fas fa-spinner fa-spin text-brand-blue"></i>
+                                <span>Menyinkronkan data akun dari cloud...</span>
+                            </div>
+                        )}
                         <div className="grid grid-cols-3 gap-2">
                             {[
                                 { role: ROLES.SISWA, label: 'Siswa', icon: '👦' },
