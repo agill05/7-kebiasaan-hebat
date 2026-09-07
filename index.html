@@ -2568,40 +2568,17 @@
             );
         };
 
-        // ==========================================
-        // MODUL ADMIN
-        // ==========================================
         const AdminDashboard = ({ triggerManualPull, navigate }) => {
             const [stats, setStats] = useState({ teachers: 0, students: 0, classes: 0 });
-            const [queueItems, setQueueItems] = useState([]);
-            const [isSyncing, setIsSyncing] = useState(false);
 
             const loadDashboardData = async () => {
                 const t = await db.users.where('role').equals(ROLES.GURU).count();
                 const s = await db.users.where('role').equals(ROLES.SISWA).count();
                 const c = await db.classes.count();
-                const q = await db.syncQueue.toArray();
                 setStats({ teachers: t, students: s, classes: c });
-                setQueueItems(q);
             };
 
             useEffect(() => { loadDashboardData(); }, []);
-
-            const handleForcePushQueue = async () => {
-                setIsSyncing(true);
-                await pushPendingQueue();
-                await loadDashboardData();
-                setIsSyncing(false);
-                showAlert.success('Sinkronisasi Selesai', 'Seluruh antrean data lokal berhasil dikirim ke cloud.');
-            };
-
-            const queueByTable = useMemo(() => {
-                const map = { users: 0, classes: 0, habitLogs: 0, journals: 0, habits: 0 };
-                queueItems.forEach(item => {
-                    if (map[item.tableName] !== undefined) map[item.tableName] += 1;
-                });
-                return map;
-            }, [queueItems]);
 
             const handleForcePushAllToCloud = async () => {
                 const confirmRes = await showAlert.confirm(
@@ -2729,54 +2706,6 @@
                             <div className="text-xs text-gray-400 font-bold uppercase">Total Kelas</div>
                         </Card>
                     </div>
-
-                    {/* WIDGET PANEL AUDIT LOG & SINKRONISASI */}
-                    <Card className="space-y-4">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
-                            <div>
-                                <h3 className="font-black text-base text-brand-dark flex items-center gap-2">
-                                    <i className="fas fa-list-check text-brand-red"></i> Status Antrean Sinkronisasi (Audit Log)
-                                </h3>
-                                <p className="text-xs text-gray-400 font-medium">Memantau transaksi perubahan lokal yang belum terunggah ke Google Sheets.</p>
-                            </div>
-                            <Button
-                                variant="primary"
-                                onClick={handleForcePushQueue}
-                                disabled={queueItems.length === 0 || isSyncing}
-                                className="text-xs py-2 px-3.5"
-                            >
-                                <i className={`fas ${isSyncing ? 'fa-spinner fa-spin' : 'fa-paper-plane'} mr-1.5`}></i>
-                                {isSyncing ? 'Mengirim...' : 'Paksa Sinkronkan Antrean'}
-                            </Button>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                            <div className="p-3 bg-gray-50 rounded-xl border">
-                                <div className="text-xl font-black text-brand-dark">{queueByTable.users}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">Users</div>
-                            </div>
-                            <div className="p-3 bg-gray-50 rounded-xl border">
-                                <div className="text-xl font-black text-brand-dark">{queueByTable.classes}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">Kelas</div>
-                            </div>
-                            <div className="p-3 bg-gray-50 rounded-xl border">
-                                <div className="text-xl font-black text-brand-dark">{queueByTable.habits}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">Kebiasaan</div>
-                            </div>
-                            <div className="p-3 bg-gray-50 rounded-xl border">
-                                <div className="text-xl font-black text-brand-dark">{queueByTable.habitLogs}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">Habit Logs</div>
-                            </div>
-                            <div className="p-3 bg-gray-50 rounded-xl border">
-                                <div className="text-xl font-black text-brand-dark">{queueByTable.journals}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase">Jurnal</div>
-                            </div>
-                        </div>
-
-                        <div className="text-xs font-bold text-gray-500 text-right">
-                            Total Item Tertahan: <span className="text-brand-red font-black">{queueItems.length}</span> transaksi
-                        </div>
-                    </Card>
                 </div>
             );
         };
