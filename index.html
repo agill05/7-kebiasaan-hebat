@@ -805,11 +805,11 @@
                         <div className={`mx-auto ${compact ? 'p-2 md:p-4 max-w-7xl' : 'p-4 md:p-8 max-w-6xl'}`}>{children}</div>
                     </main>
 
-                    <nav className="md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 flex justify-around items-center px-2 py-2 no-print">
+                    <nav className="md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 flex items-center px-2 py-2 no-print overflow-x-auto justify-start space-x-1">
                         {navItems.map(item => (
-                            <button key={item.path} onClick={() => navigate(item.path)} className={`flex flex-col items-center p-1.5 min-w-[60px] ${currentPath === item.path ? 'text-brand-red' : 'text-gray-400'}`}>
+                            <button key={item.path} onClick={() => navigate(item.path)} className={`flex flex-col items-center p-1.5 min-w-[68px] shrink-0 ${currentPath === item.path ? 'text-brand-red' : 'text-gray-400'}`}>
                                 <i className={`${item.icon} text-lg mb-1`}></i>
-                                <span className="text-[10px] font-bold">{item.label}</span>
+                                <span className="text-[10px] font-bold whitespace-nowrap">{item.label}</span>
                             </button>
                         ))}
                     </nav>
