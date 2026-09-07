@@ -4296,12 +4296,6 @@
                             <h2 className="text-lg font-black text-brand-dark">{SCHOOL_IDENTITY.name}</h2>
                             <p className="text-xs text-gray-400 font-bold">Masuk Sistem Pembiasaan Karakter</p>
                         </div>
-                        {isSyncingCloud && (
-                            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-xs font-bold flex items-center justify-center gap-2 animate-pulse">
-                                <i className="fas fa-spinner fa-spin text-brand-blue"></i>
-                                <span>Menyinkronkan data akun dari cloud...</span>
-                            </div>
-                        )}
                         <div className="grid grid-cols-3 gap-2">
                             {[
                                 { role: ROLES.SISWA, label: 'Siswa', icon: '👦' },
@@ -4317,7 +4311,14 @@
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 mb-1">Pilih Nama Pengguna:</label>
+                                <label className="block text-xs font-bold text-gray-600 mb-1 flex items-center justify-between">
+                                    <span>Pilih Nama Pengguna:</span>
+                                    {isSyncingCloud && (
+                                        <span className="text-[10px] text-brand-blue font-semibold flex items-center gap-1 animate-pulse">
+                                            <i className="fas fa-spinner fa-spin"></i> Menyinkronkan...
+                                        </span>
+                                    )}
+                                </label>
                                 {selectedRole !== ROLES.ADMIN && users.length > 0 && (
                                     <div className="relative mb-2">
                                         <i className="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
