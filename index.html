@@ -88,6 +88,7 @@
 
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -109,6 +110,7 @@
         const SESSION_STORAGE_KEY = 'seven_habits_session_v1';
         const COMPACT_STORAGE_KEY = 'seven_habits_compact_view';
         const ONBOARDING_STORAGE_KEY = 'seven_habits_onboarding_seen';
+        const DARK_MODE_STORAGE_KEY = 'seven_habits_dark_mode';
         const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
         const SCHOOL_IDENTITY = {
@@ -694,7 +696,7 @@
         // ==========================================
         // LAYOUT UTAMA
         // ==========================================
-        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, compact, setCompact, children }) => {
+        const AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, compact, setCompact, darkMode, setDarkMode, children }) => {
             const [showOnboarding, setShowOnboarding] = useState(false);
 
             useEffect(() => {
@@ -756,6 +758,12 @@
                                     <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${compact ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                 </button>
                             </div>
+                            <div className="flex items-center justify-between px-2 text-xs font-bold text-gray-500">
+                                <span>Mode Gelap</span>
+                                <button onClick={() => setDarkMode(!darkMode)} className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${darkMode ? 'bg-brand-red' : 'bg-gray-300'}`}>
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                </button>
+                            </div>
                             <div className="flex items-center gap-3 px-2">
                                 <div className="w-10 h-10 rounded-full bg-brand-yellow flex items-center justify-center text-white font-bold">{user.avatar || '👤'}</div>
                                 <div className="overflow-hidden">
@@ -779,6 +787,9 @@
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
+                                <button onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Mode Terang" : "Mode Gelap"} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold">
+                                    <i className={`fas ${darkMode ? 'fa-sun text-amber-500' : 'fa-moon'}`}></i>
+                                </button>
                                 <button onClick={() => setShowOnboarding(true)} title="Panduan Aplikasi" className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold">
                                     <i className="fas fa-question"></i>
                                 </button>
@@ -5197,6 +5208,22 @@
             const [currentPath, setCurrentPath] = useState('/');
             const [user, setUser] = useState(null);
             const [compact, setCompact] = useState(localStorage.getItem(COMPACT_STORAGE_KEY) === 'true');
+
+            const [darkMode, setDarkMode] = useState(localStorage.getItem(DARK_MODE_STORAGE_KEY) === 'true');
+
+            const handleSetDarkMode = (val) => {
+                setDarkMode(val);
+                localStorage.setItem(DARK_MODE_STORAGE_KEY, String(val));
+            };
+
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }, [darkMode]);
+
             const [isDefaultPass, setIsDefaultPass] = useState(false); // State untuk mendeteksi kata sandi bawaan
             const { isOnline, syncStatus, triggerSync, triggerManualPull } = useOnlineSyncEngine();
             const lastActivityRef = useRef(Date.now());
@@ -5358,7 +5385,7 @@
             }
 
             return (
-                <AppLayout user={user} currentPath={currentPath} navigate={navigate} onLogout={handleLogout} isOnline={isOnline} syncStatus={syncStatus} triggerManualPull={triggerManualPull} compact={compact} setCompact={handleSetCompact}>
+                <AppLayout user={user} currentPath={currentPath} navigate={navigate} onLogout={handleLogout} isOnline={isOnline} syncStatus={syncStatus} triggerManualPull={triggerManualPull} compact={compact} setCompact={handleSetCompact} darkMode={darkMode} setDarkMode={handleSetDarkMode}>
                     {content}
                 </AppLayout>
             );
