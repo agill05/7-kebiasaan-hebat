@@ -58,6 +58,83 @@
             color: #F3F4F6;
         }
 
+        /* 1. Form Input, Select, & Textarea */
+        html.dark input:not([type="checkbox"]):not([type="radio"]),
+        html.dark select,
+        html.dark textarea {
+            background-color: #374151 !important; /* bg-gray-700 */
+            color: #F3F4F6 !important; /* text-gray-100 */
+            border-color: #4B5563 !important; /* border-gray-600 */
+        }
+
+        html.dark input::placeholder,
+        html.dark textarea::placeholder {
+            color: #9CA3AF !important; /* text-gray-400 */
+        }
+
+        html.dark option {
+            background-color: #1F2937;
+            color: #F3F4F6;
+        }
+
+        /* 2. Tabel Data & Header Tabel */
+        html.dark table thead {
+            background-color: #1F2937 !important;
+            color: #9CA3AF !important;
+        }
+
+        html.dark table tbody tr {
+            border-color: #374151 !important;
+        }
+
+        html.dark table tbody tr:hover {
+            background-color: #1F2937/50 !important;
+        }
+
+        /* 3. Popup SweetAlert2 */
+        html.dark .swal2-popup {
+            background-color: #1F2937 !important; /* bg-gray-800 */
+            color: #F3F4F6 !important;
+            border: 1px solid #374151;
+        }
+
+        html.dark .swal2-title,
+        html.dark .swal2-html-container,
+        html.dark .swal2-content {
+            color: #F3F4F6 !important;
+        }
+
+        html.dark .swal2-validation-message {
+            background-color: #374151 !important;
+            color: #EF4444 !important;
+        }
+
+        /* 4. Sub-kontainer & Teks Muted pada Modal / Card */
+        html.dark .bg-gray-50 {
+            background-color: #374151/40 !important;
+            color: #E5E7EB;
+        }
+
+        html.dark .bg-gray-100 {
+            background-color: #374151 !important;
+            color: #E5E7EB;
+        }
+
+        html.dark .text-brand-dark {
+            color: #F9FAFB !important;
+        }
+
+        html.dark .text-gray-800,
+        html.dark .text-gray-700,
+        html.dark .text-gray-600 {
+            color: #D1D5DB !important;
+        }
+
+        html.dark .border-gray-100,
+        html.dark .border-gray-200 {
+            border-color: #374151 !important;
+        }
+
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
