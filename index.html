@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <title>7 Kebiasaan Anak Indonesia Hebat — SMP Negeri 1 Talaga Jaya</title>
 
     <!-- PWA Settings -->
@@ -805,21 +808,19 @@
                         <div className={`mx-auto ${compact ? 'p-2 md:p-4 max-w-7xl' : 'p-4 md:p-8 max-w-6xl'}`}>{children}</div>
                     </main>
 
-                    <nav className={`md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 no-print ${
-                        user.role === ROLES.ADMIN
+                    <nav className={`md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 no-print ${user.role === ROLES.ADMIN
                             ? 'flex items-center px-2 py-2 overflow-x-auto justify-start space-x-1'
                             : 'grid px-2 py-2 text-center'
-                    }`}
-                    style={{
-                        gridTemplateColumns: user.role === ROLES.ADMIN ? 'none' : `repeat(${navItems.length}, minmax(0, 1fr))`
-                    }}>
+                        }`}
+                        style={{
+                            gridTemplateColumns: user.role === ROLES.ADMIN ? 'none' : `repeat(${navItems.length}, minmax(0, 1fr))`
+                        }}>
                         {navItems.map(item => (
                             <button
                                 key={item.path}
                                 onClick={() => navigate(item.path)}
-                                className={`flex flex-col items-center justify-center p-1.5 transition-colors ${
-                                    user.role === ROLES.ADMIN ? 'min-w-[72px] shrink-0' : 'w-full'
-                                } ${currentPath === item.path ? 'text-brand-red font-bold' : 'text-gray-400'}`}
+                                className={`flex flex-col items-center justify-center p-1.5 transition-colors ${user.role === ROLES.ADMIN ? 'min-w-[72px] shrink-0' : 'w-full'
+                                    } ${currentPath === item.path ? 'text-brand-red font-bold' : 'text-gray-400'}`}
                             >
                                 <i className={`${item.icon} text-lg mb-1`}></i>
                                 <span className="text-[10px] font-bold whitespace-nowrap">{item.label}</span>
@@ -1356,11 +1357,10 @@
                                                 key={m}
                                                 type="button"
                                                 onClick={() => setMood(m)}
-                                                className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all border ${
-                                                    mood === m
+                                                className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all border ${mood === m
                                                         ? 'bg-amber-400 text-brand-dark border-amber-500 shadow-sm scale-105'
                                                         : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                             >
                                                 {m}
                                             </button>
@@ -3011,7 +3011,7 @@
                         const existingUsers = await db.users.toArray();
                         // Buat Map berdasarkan username (lowercase) untuk pencarian cepat O(1)
                         const existingUserMap = new Map(existingUsers.map(u => [(u.username || '').toLowerCase(), u]));
-                        
+
                         const teachersToSave = [];
                         const seenBatchUsernames = new Set();
                         let addedCount = 0;
@@ -4824,7 +4824,7 @@
             const loadUsers = async () => {
                 const activeRole = selectedRoleRef.current;
                 const res = await db.users.where('role').equals(activeRole).toArray();
-                
+
                 // Hanya set data jika role target masih sesuai dengan pilihan di layar
                 if (activeRole === selectedRoleRef.current) {
                     setUsers(res);
@@ -5098,7 +5098,7 @@
                             session.user = updatedUser;
                             session.lastActive = Date.now();
                             localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-                        } catch (err) {}
+                        } catch (err) { }
                     }
 
                     showAlert.success('Kata Sandi Diperbarui!', 'Kata sandi akun Anda berhasil diubah. Selamat melanjutkan!');
