@@ -8,12 +8,10 @@ var StudentHabitsPage = ({ user, triggerSync, compact }) => {
     const [modalDetail, setModalDetail] = useState('');
     const [streakCount, setStreakCount] = useState(0);
 
-    // State Notifikasi PWA
     const [notifPermission, setNotifPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
     );
 
-    // Hitung Habit Streak Berturut-turut
     const calculateStreak = async () => {
         let currentStreak = 0;
         let checkDate = new Date();
@@ -58,7 +56,6 @@ var StudentHabitsPage = ({ user, triggerSync, compact }) => {
 
     useEffect(() => { loadLogs(); }, [user.id]);
 
-    // Aktivasi Notifikasi Pengingat PWA
     const handleEnableNotifications = async () => {
         if (typeof Notification === 'undefined') {
             return showAlert.warning('Tidak Didukung', 'Peramban ini tidak mendukung notifikasi.');
@@ -208,7 +205,6 @@ var StudentHabitsPage = ({ user, triggerSync, compact }) => {
 
     return (
         <div className="space-y-6">
-            {/* WELCOME HEADER & STREAK WIDGET */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-red-600 to-brand-red p-6 rounded-3xl text-white shadow-xl">
                 <div>
                     <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black mb-1">
@@ -219,7 +215,6 @@ var StudentHabitsPage = ({ user, triggerSync, compact }) => {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                    {/* WIDGET STREAK */}
                     <div className="bg-white/15 backdrop-blur-md border border-white/20 p-2.5 px-4 rounded-2xl flex items-center gap-3">
                         <span className="text-3xl animate-bounce">🔥</span>
                         <div>
@@ -228,7 +223,6 @@ var StudentHabitsPage = ({ user, triggerSync, compact }) => {
                         </div>
                     </div>
 
-                    {/* TOMBOL PWA NOTIF */}
                     {notifPermission !== 'granted' && (
                         <button
                             onClick={handleEnableNotifications}

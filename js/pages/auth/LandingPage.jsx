@@ -1,6 +1,3 @@
-// ==========================================
-// LOGIN & CONTROLLER UTAMA
-// ==========================================
 var LandingPage = ({ onStart }) => (
     <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 text-center">
         <div className="text-6xl mb-3">🇮🇩</div>

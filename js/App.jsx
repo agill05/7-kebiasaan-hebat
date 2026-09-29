@@ -2,11 +2,10 @@ var App = () => {
     const [currentPath, setCurrentPath] = useState('/');
     const [user, setUser] = useState(null);
     const [compact, setCompact] = useState(localStorage.getItem(COMPACT_STORAGE_KEY) === 'true');
-    const [isDefaultPass, setIsDefaultPass] = useState(false); // State untuk mendeteksi kata sandi bawaan
+    const [isDefaultPass, setIsDefaultPass] = useState(false);
     const { isOnline, syncStatus, triggerSync, triggerManualPull } = useOnlineSyncEngine();
     const lastActivityRef = useRef(Date.now());
 
-    // Fungsi pengecekan kata sandi default
     const checkIsDefaultPassword = useCallback(async (userData) => {
         if (!userData || userData.role === ROLES.ADMIN) {
             setIsDefaultPass(false);
@@ -17,7 +16,6 @@ var App = () => {
         const defaultHash = await hashPassword(defaultPassText);
         const userPass = String(userData.password || '').trim();
 
-        // Cek jika kata sandi tersimpan cocok dengan teks polos bawaan atau hash SHA-256 bawaan
         if (userPass === defaultPassText || userPass === defaultHash || userPass === '') {
             setIsDefaultPass(true);
         } else {
@@ -123,8 +121,6 @@ var App = () => {
     if (currentPath === '/login') return <LoginPage onLogin={handleLogin} triggerManualPull={triggerManualPull} />;
     if (!user) { navigate('/login'); return null; }
 
-    // INTEGRASI PAKSA GANTI PASSWORD
-    // Jika kata sandi masih default, blokir total dan tampilkan layar wajib ganti sandi
     if (isDefaultPass) {
         return (
             <ForceChangePasswordScreen

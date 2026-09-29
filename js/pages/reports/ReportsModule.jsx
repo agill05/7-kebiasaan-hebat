@@ -1,6 +1,3 @@
-// ==========================================
-// MODUL LAPORAN
-// ==========================================
 var ReportsModule = ({ user }) => {
     const today = getTodayWitaDateString();
     const [reportType, setReportType] = useState('habits');

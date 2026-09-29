@@ -265,7 +265,6 @@ var AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
                 if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data siswa pada berkas Excel.');
 
                 const existingUsers = await db.users.toArray();
-                // Buat Map berdasarkan username (lowercase)
                 const existingUserMap = new Map(existingUsers.map(u => [(u.username || '').toLowerCase(), u]));
 
                 const studentsToSave = [];
@@ -283,7 +282,6 @@ var AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
                         continue;
                     }
 
-                    // Cegah duplikasi dalam berkas yang sama
                     if (seenBatchUsernames.has(rawUsername)) {
                         skippedCount++;
                         continue;
@@ -297,10 +295,6 @@ var AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
                     const genderVal = String(row['Jenis Kelamin'] || row['Gender'] || '').trim();
 
                     if (existingUser) {
-                        // ==========================================
-                        // MEKANISME UPDATE (UPSERT)
-                        // ==========================================
-                        // Password tetap aman jika di Excel dikosongkan
                         let hashedPassword = existingUser.password;
                         if (rawPass) {
                             hashedPassword = await hashPassword(rawPass);
@@ -309,7 +303,7 @@ var AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
                         const finalGender = genderVal || existingUser.gender || 'Laki-laki';
 
                         const stdObj = {
-                            ...existingUser, // Mempertahankan id, mentorId, mentorName, createdBy, createdAt
+                            ...existingUser,
                             name,
                             nisn: String(row['NISN'] || existingUser.nisn || '').trim(),
                             classId: matchingClass ? matchingClass.id : existingUser.classId,
@@ -331,9 +325,6 @@ var AdminStudentsPage = ({ triggerSync, triggerManualPull }) => {
                             createdAt: new Date()
                         });
                     } else {
-                        // ==========================================
-                        // MEKANISME INSERT (TAMBAH BARU)
-                        // ==========================================
                         const defaultPass = rawPass || 'siswa123';
                         const hashedPassword = await hashPassword(defaultPass);
                         const id = `u_siswa_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;

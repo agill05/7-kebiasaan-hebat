@@ -1,6 +1,3 @@
-// ==========================================
-// LAYOUT UTAMA
-// ==========================================
 var AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, triggerManualPull, compact, setCompact, children }) => {
     const [showOnboarding, setShowOnboarding] = useState(false);
 

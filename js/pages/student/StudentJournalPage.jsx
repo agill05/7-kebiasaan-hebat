@@ -94,7 +94,6 @@ var StudentJournalPage = ({ user, triggerSync }) => {
                     </form>
                 </Card>
 
-                {/* DISPLAY RIWAYAT & BALASAN GURU DUAL */}
                 <Card className="space-y-3">
                     <h3 className="font-bold text-sm text-gray-700">Riwayat Jurnal & Apresiasi Guru</h3>
                     {savedJournals.length === 0 ? (
@@ -116,7 +115,6 @@ var StudentJournalPage = ({ user, triggerSync }) => {
                                         </div>
                                         <p className="text-gray-700 leading-relaxed italic">"{j.content}"</p>
 
-                                        {/* Tampilan Apresiasi jika Guru Merangkap Wali & Mentor */}
                                         {isSameDual && (
                                             <div className="mt-2 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-gray-800 space-y-0.5">
                                                 <span className="font-extrabold text-brand-blue flex items-center gap-1">
@@ -126,7 +124,6 @@ var StudentJournalPage = ({ user, triggerSync }) => {
                                             </div>
                                         )}
 
-                                        {/* Tampilan Apresiasi Terpisah */}
                                         {!isSameDual && (
                                             <div className="space-y-2 pt-1">
                                                 {hrFb && (

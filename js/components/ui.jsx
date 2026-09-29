@@ -1,6 +1,3 @@
-// ==========================================
-// UI ATOMS
-// ==========================================
 var Card = ({ children, className = '', compact = false }) => (
     <div className={`bg-white rounded-2xl shadow-soft border border-gray-100 ${compact ? 'p-3 md:p-4' : 'p-5'} ${className}`}>{children}</div>
 );

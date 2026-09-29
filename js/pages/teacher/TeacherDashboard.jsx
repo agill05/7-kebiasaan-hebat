@@ -10,7 +10,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
     const [addMode, setAddMode] = useState('select');
     const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
 
-    // State Modal Apresiasi Individu
     const [feedbackModalJournal, setFeedbackModalJournal] = useState(null);
     const [feedbackStudent, setFeedbackStudent] = useState(null);
     const [isDualRole, setIsDualRole] = useState(false);
@@ -18,14 +17,12 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
     const [homeroomText, setHomeroomText] = useState('');
     const [mentorText, setMentorText] = useState('');
 
-    // State Modal Edit / Tambah Siswa
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
     const [studentFormData, setStudentFormData] = useState({
         name: '', username: '', password: '', nisn: '', gender: 'Laki-laki', classId: ''
     });
 
-    // State Multi-Select & Bulk Stamp
     const [selectedBulkStudentIds, setSelectedBulkStudentIds] = useState([]);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [bulkStampPreset, setBulkStampPreset] = useState('🌟 Luar biasa, pertahankan kebiasaan baikmu!');
@@ -93,7 +90,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
     const mentorCount = useMemo(() => allStudents.filter(s => isStudentMentor(s)).length, [allStudents, isStudentMentor]);
     const allCount = useMemo(() => allStudents.filter(s => isStudentHomeroom(s) || isStudentMentor(s)).length, [allStudents, isStudentHomeroom, isStudentMentor]);
 
-    // Kalkulasi Analitik Kebiasaan Kelas
     const habitAnalytics = useMemo(() => {
         if (filteredStudents.length === 0) return [];
         const activeHabits = habitsList.filter(h => h.active !== false);
@@ -106,7 +102,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
         });
     }, [filteredStudents, classLogs, habitsList]);
 
-    // Kontrol Seleksi Bulk
     const isAllVisibleSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedBulkStudentIds.includes(s.id));
 
     const toggleSelectAll = () => {
@@ -123,7 +118,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
         setSelectedBulkStudentIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
     };
 
-    // Eksekusi Stempel Massal
     const handleApplyBulkStamp = async (e) => {
         e.preventDefault();
         if (selectedBulkStudentIds.length === 0) return;
@@ -369,7 +363,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
                 </div>
             </div>
 
-            {/* WIDGET GRAFIK ANALITIK KEBIASAAN KELAS */}
             <Card className="space-y-3">
                 <div className="flex justify-between items-center border-b pb-2">
                     <h3 className="font-black text-sm text-brand-dark flex items-center gap-2">
@@ -403,7 +396,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
                 )}
             </Card>
 
-            {/* BAR KONTROL SELEKSI & FILTER */}
             <Card className="space-y-3 p-4">
                 <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
                     <div className="relative w-full md:w-80">
@@ -539,7 +531,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
                 </div>
             )}
 
-            {/* MODAL STEMPEL APRESIASI MASSAL */}
             {isBulkModalOpen && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-lg shadow-2xl space-y-4">
@@ -599,7 +590,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
                 </div>
             )}
 
-            {/* MODAL APRESIASI INDIVIDU */}
             {feedbackModalJournal && feedbackStudent && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-lg shadow-2xl space-y-3">
@@ -690,7 +680,6 @@ var TeacherDashboard = ({ user, triggerSync, triggerManualPull }) => {
                 </div>
             )}
 
-            {/* MODAL EDIT / TAMBAH SISWA BINAAN */}
             {isStudentModalOpen && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-md shadow-2xl">

@@ -1,6 +1,3 @@
-// ==========================================
-// PULL DARI CLOUD
-// ==========================================
 async function pullAllCloudData() {
     if (!navigator.onLine || !GAS_API_URL || GAS_API_URL.includes("MASUKKAN_URL")) return false;
     try {

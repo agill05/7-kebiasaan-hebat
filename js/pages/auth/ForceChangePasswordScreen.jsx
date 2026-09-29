@@ -14,19 +14,16 @@ var ForceChangePasswordScreen = ({ user, onPasswordChanged, onLogout }) => {
         const cleanPass = newPass.trim();
         const cleanConfirm = confirmPass.trim();
 
-        // Validasi 1: Minimal 8 Karakter
         if (cleanPass.length < 8) {
             setErrorMsg('Kata sandi baru minimal harus 8 karakter!');
             return;
         }
 
-        // Validasi 2: Tidak Boleh Sama dengan Kata Sandi Default
         if (cleanPass === defaultPassText) {
             setErrorMsg(`Kata sandi baru tidak boleh sama dengan kata sandi bawaan ("${defaultPassText}")!`);
             return;
         }
 
-        // Validasi 3: Konfirmasi Kata Sandi Cocok
         if (cleanPass !== cleanConfirm) {
             setErrorMsg('Konfirmasi kata sandi baru tidak cocok!');
             return;
@@ -41,10 +38,8 @@ var ForceChangePasswordScreen = ({ user, onPasswordChanged, onLogout }) => {
                 updatedAt: new Date()
             };
 
-            // 1. Update ke Dexie IndexedDB
             await db.users.put(updatedUser);
 
-            // 2. Antrekan Sinkronisasi ke Cloud Sheets
             await db.syncQueue.put({
                 id: `sync_force_pass_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                 tableName: 'users',
@@ -54,7 +49,6 @@ var ForceChangePasswordScreen = ({ user, onPasswordChanged, onLogout }) => {
                 createdAt: new Date()
             });
 
-            // 3. Update Session Storage lokal
             const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
             if (sessionRaw) {
                 try {

@@ -57,8 +57,8 @@ const CDN = [
 self.addEventListener("install", (e) => {
     e.waitUntil((async () => {
         const cache = await caches.open(CACHE_NAME);
-        await cache.addAll(CORE);                       // wajib
-        await Promise.allSettled(CDN.map((u) => cache.add(u))); // gagal 1 tidak batalkan install
+        await cache.addAll(CORE);
+        await Promise.allSettled(CDN.map((u) => cache.add(u)));
     })());
     self.skipWaiting();
 });
@@ -76,12 +76,10 @@ self.addEventListener("fetch", (e) => {
     const req = e.request;
     if (req.method !== "GET" || req.url.includes("script.google.com")) return;
 
-    // Halaman: network-first, fallback cache
     if (req.mode === "navigate") {
         e.respondWith(fetch(req).catch(() => caches.match("/index.html")));
         return;
     }
-    // Aset: cache-first
     e.respondWith(
         caches.match(req).then((hit) => hit || fetch(req).then((res) => {
             const copy = res.clone();

@@ -1,6 +1,3 @@
-// ==========================================
-// MODUL ARSIP SEMESTER
-// ==========================================
 var AdminArchivesPage = () => {
     const [archiveList, setArchiveList] = useState([]);
     const [selectedSheetName, setSelectedSheetName] = useState('');

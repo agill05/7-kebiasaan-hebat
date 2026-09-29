@@ -16,7 +16,6 @@ var LoginPage = ({ onLogin, triggerManualPull }) => {
         const activeRole = selectedRoleRef.current;
         const res = await db.users.where('role').equals(activeRole).toArray();
 
-        // Hanya set data jika role target masih sesuai dengan pilihan di layar
         if (activeRole === selectedRoleRef.current) {
             setUsers(res);
         }

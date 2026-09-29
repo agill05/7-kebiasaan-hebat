@@ -192,7 +192,6 @@ var AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
                 if (data.length === 0) return showAlert.warning('File Kosong', 'Tidak ada baris data pada berkas Excel.');
 
                 const existingUsers = await db.users.toArray();
-                // Buat Map berdasarkan username (lowercase) untuk pencarian cepat O(1)
                 const existingUserMap = new Map(existingUsers.map(u => [(u.username || '').toLowerCase(), u]));
 
                 const teachersToSave = [];
@@ -210,7 +209,6 @@ var AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
                         continue;
                     }
 
-                    // Cegah duplikasi dalam satu berkas Excel yang sama
                     if (seenBatchUsernames.has(rawUsername)) {
                         skippedCount++;
                         continue;
@@ -221,17 +219,13 @@ var AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
                     const rawPass = String(row['Password'] || '').trim();
 
                     if (existingUser) {
-                        // ==========================================
-                        // MEKANISME UPDATE (UPSERT)
-                        // ==========================================
-                        // Jika password di Excel diisi, gunakan pass baru. Jika kosong, pertahankan pass lama.
                         let hashedPassword = existingUser.password;
                         if (rawPass) {
                             hashedPassword = await hashPassword(rawPass);
                         }
 
                         const teacherObj = {
-                            ...existingUser, // Pertahankan id internal, createdAt, homeroomClassId, dll.
+                            ...existingUser,
                             name,
                             phone: String(row['Nomor Telepon'] || row['Telepon'] || existingUser.phone || '').trim(),
                             nip: String(row['NIP'] || existingUser.nip || '').trim(),
@@ -251,9 +245,6 @@ var AdminTeachersPage = ({ triggerSync, triggerManualPull }) => {
                             createdAt: new Date()
                         });
                     } else {
-                        // ==========================================
-                        // MEKANISME INSERT (TAMBAH BARU)
-                        // ==========================================
                         const defaultPass = rawPass || 'guru123';
                         const hashedPassword = await hashPassword(defaultPass);
                         const id = `u_guru_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
