@@ -38,7 +38,7 @@ var AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, 
     }[user.role] || [];
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="app-shell flex bg-gray-50 overflow-hidden">
             <aside className="hidden md:flex flex-col w-64 bg-white shadow-xl z-20 no-print">
                 <div className="p-6 text-center border-b border-gray-100">
                     <div className="text-3xl mb-1">🇮🇩</div>
@@ -73,8 +73,8 @@ var AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, 
                 </div>
             </aside>
 
-            <main className="flex-1 relative overflow-y-auto pb-20 md:pb-0">
-                <header className="bg-white shadow-sm p-4 sticky top-0 z-10 flex justify-between items-center no-print">
+            <main className="app-main flex-1 relative overflow-y-auto">
+                <header className="app-header bg-white shadow-sm p-4 sticky top-0 z-10 flex justify-between items-center no-print">
                     <div className="flex items-center gap-2">
                         <span className="text-2xl md:hidden">🇮🇩</span>
                         <div>
@@ -109,7 +109,7 @@ var AppLayout = ({ user, currentPath, navigate, onLogout, isOnline, syncStatus, 
                 <div className={`mx-auto ${compact ? 'p-2 md:p-4 max-w-7xl' : 'p-4 md:p-8 max-w-6xl'}`}>{children}</div>
             </main>
 
-            <nav className={`md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 no-print ${user.role === ROLES.ADMIN
+            <nav className={`app-nav md:hidden fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-100 z-50 no-print ${user.role === ROLES.ADMIN
                     ? 'flex items-center px-2 py-2 overflow-x-auto justify-start space-x-1'
                     : 'grid px-2 py-2 text-center'
                 }`}

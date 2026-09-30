@@ -1,4 +1,4 @@
-const CACHE_NAME = "7kebiasaan-cache-v3";
+const CACHE_NAME = "7kebiasaan-cache-v4";
 const CORE = [
     "/",
     "/index.html",
@@ -75,16 +75,33 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
     const req = e.request;
     if (req.method !== "GET" || req.url.includes("script.google.com")) return;
+    if (!req.url.startsWith("http")) return;
 
     if (req.mode === "navigate") {
         e.respondWith(fetch(req).catch(() => caches.match("/index.html")));
         return;
     }
-    e.respondWith(
-        caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+
+    const sameOrigin = new URL(req.url).origin === self.location.origin;
+    const store = (res) => {
+        if (res && (res.ok || res.type === "opaque")) {
             const copy = res.clone();
             caches.open(CACHE_NAME).then((c) => c.put(req, copy));
-            return res;
-        }))
-    );
+        }
+        return res;
+    };
+
+    if (sameOrigin) {
+        // Stale-while-revalidate: buka cepat dari cache, perbarui di latar belakang.
+        e.respondWith(
+            caches.match(req).then((hit) => {
+                const net = fetch(req).then(store).catch(() => hit);
+                return hit || net;
+            })
+        );
+        return;
+    }
+
+    // CDN: cache-first.
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then(store)));
 });

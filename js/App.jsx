@@ -5,6 +5,11 @@ var App = () => {
     const [isDefaultPass, setIsDefaultPass] = useState(false);
     const { isOnline, syncStatus, triggerSync, triggerManualPull } = useOnlineSyncEngine();
     const lastActivityRef = useRef(Date.now());
+    const userRef = useRef(null);
+
+    useEffect(() => { userRef.current = user; }, [user]);
+
+    const defaultPathFor = (role) => role === ROLES.SISWA ? '/student/habits' : role === ROLES.GURU ? '/teacher/dashboard' : '/admin/dashboard';
 
     const checkIsDefaultPassword = useCallback(async (userData) => {
         if (!userData || userData.role === ROLES.ADMIN) {
@@ -55,12 +60,17 @@ var App = () => {
                     if (session.user && (now - session.lastActive < INACTIVITY_TIMEOUT_MS)) {
                         setUser(session.user);
                         await checkIsDefaultPassword(session.user);
-                        setCurrentPath(session.path || (session.user.role === ROLES.SISWA ? '/student/habits' : session.user.role === ROLES.GURU ? '/teacher/dashboard' : '/admin/dashboard'));
+                        const startPath = session.path || defaultPathFor(session.user.role);
+                        setCurrentPath(startPath);
+                        history.replaceState({ path: startPath }, '');
                         recordUserActivity();
                     } else {
                         localStorage.removeItem(SESSION_STORAGE_KEY);
+                        history.replaceState({ path: '/' }, '');
                     }
-                } catch (e) { localStorage.removeItem(SESSION_STORAGE_KEY); }
+                } catch (e) { localStorage.removeItem(SESSION_STORAGE_KEY); history.replaceState({ path: '/' }, ''); }
+            } else {
+                history.replaceState({ path: '/' }, '');
             }
         }
         init();
@@ -87,9 +97,36 @@ var App = () => {
         };
     }, [recordUserActivity]);
 
-    const navigate = (path) => {
+    useEffect(() => {
+        const onPopState = (e) => {
+            let path = (e.state && e.state.path) || '/';
+            const u = userRef.current;
+            if (u && (path === '/' || path === '/login')) {
+                path = defaultPathFor(u.role);
+                history.replaceState({ path }, '');
+            }
+            setCurrentPath(path);
+            window.scrollTo(0, 0);
+            const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+            if (sessionRaw) {
+                try {
+                    const session = JSON.parse(sessionRaw);
+                    session.path = path;
+                    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+                } catch (err) { }
+            }
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, []);
+
+    const navigate = (path, { replace = false } = {}) => {
         setCurrentPath(path);
         window.scrollTo(0, 0);
+        if (!(history.state && history.state.path === path)) {
+            if (replace) history.replaceState({ path }, '');
+            else history.pushState({ path }, '');
+        }
         const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
         if (sessionRaw) {
             try {
@@ -104,22 +141,22 @@ var App = () => {
     const handleLogin = async (u) => {
         setUser(u);
         await checkIsDefaultPassword(u);
-        let defaultPath = u.role === ROLES.SISWA ? '/student/habits' : u.role === ROLES.GURU ? '/teacher/dashboard' : '/admin/dashboard';
+        const defaultPath = defaultPathFor(u.role);
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ user: u, lastActive: Date.now(), path: defaultPath }));
-        navigate(defaultPath);
+        navigate(defaultPath, { replace: true });
     };
 
     const handleLogout = (isTimeout = false) => {
         localStorage.removeItem(SESSION_STORAGE_KEY);
         setUser(null);
         setIsDefaultPass(false);
-        navigate('/');
+        navigate('/', { replace: true });
         if (isTimeout) showAlert.warning('Sesi Berakhir', 'Anda telah otomatis keluar karena tidak ada aktivitas selama 15 menit.');
     };
 
     if (currentPath === '/') return <LandingPage onStart={() => navigate('/login')} />;
     if (currentPath === '/login') return <LoginPage onLogin={handleLogin} triggerManualPull={triggerManualPull} />;
-    if (!user) { navigate('/login'); return null; }
+    if (!user) { navigate('/login', { replace: true }); return null; }
 
     if (isDefaultPass) {
         return (
