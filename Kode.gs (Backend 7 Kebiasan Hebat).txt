@@ -1,0 +1,748 @@
+/**
+
+ * Backend API - 7 Kebiasaan Anak Indonesia Hebat
+
+ * SMP Negeri 1 Talaga Jaya
+
+ */
+
+
+
+const SPREADSHEET_ID = "1wP2Ru6nD9qYXl63NQmkeSe1ucEUqpFkvHBK3-ipBN9w";
+
+
+
+function doPost(e) {
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(30000);
+
+
+
+    if (!e || !e.postData || !e.postData.contents) {
+
+      return responseJSON({ status: 'error', message: 'Payload kosong.' });
+
+    }
+
+
+
+    const request = JSON.parse(e.postData.contents);
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    const action = request.action;
+
+    const payload = request.payload;
+
+    const nowStr = new Date().toISOString();
+
+
+
+    // 1. SYNC HABIT LOGS
+
+    if (action === 'syncHabits') {
+
+      const items = Array.isArray(payload) ? payload : [payload];
+
+      const headers = ['ID Log', 'User ID', 'Nama Siswa', 'Kelas', 'Habit ID', 'Nama Kebiasaan', 'Tanggal', 'Status Selesai', 'Jam / Waktu', 'Detail / Keterangan', 'Waktu Sinkron'];
+
+      const sheet = getOrCreateSheet(ss, 'HabitLogs', headers);
+
+      upsertRecords(sheet, 0, items, item => [
+
+        String(item.id || '').trim(),
+
+        String(item.userId || '').trim(),
+
+        String(item.studentName || '').trim(),
+
+        String(item.className || '').trim(),
+
+        String(item.habitId || '').trim(),
+
+        String(item.habitName || '').trim(),
+
+        String(item.date || '').trim(),
+
+        (item.completed === true || item.completed === 'true' || item.completed === 'Selesai') ? 'Selesai' : 'Belum Selesai',
+
+        String(item.timeValue || '-').trim(),
+
+        String(item.detailValue || '-').trim(),
+
+        nowStr
+
+      ], headers);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Habit logs tersimpan.' });
+
+    }
+
+
+
+    // 2. SYNC USERS
+
+    if (action === 'syncUser') {
+
+      const items = Array.isArray(payload) ? payload : [payload];
+
+      const headers = [
+
+        'User ID', 'Username', 'Nama Lengkap', 'Role', 'Password', 'Nomor Telepon', 'Kelas', 'Class ID', 'NISN', 'NIP', 
+
+        'Jenis Kelamin', 'Mata Pelajaran', 'Homeroom Class ID', 'Mentor ID', 'Mentor Name', 'Created By', 'Status', 'Waktu Update'
+
+      ];
+
+      const sheet = getOrCreateSheet(ss, 'Users', headers);
+
+      upsertRecords(sheet, 0, items, u => [
+
+        String(u.id || '').trim(),
+
+        String(u.username || '').trim(),
+
+        String(u.name || '').trim(),
+
+        String(u.role || '').trim(),
+
+        String(u.password || '').trim(),
+
+        String(u.phone || '').trim(),
+
+        String(u.className || '').trim(),
+
+        String(u.classId || '').trim(),
+
+        String(u.nisn || '').trim(),
+
+        String(u.nip || '').trim(),
+
+        String(u.gender || u['Jenis Kelamin'] || 'Laki-laki').trim(),
+
+        String(u.subject || '').trim(),
+
+        String(u.homeroomClassId || '').trim(),
+
+        String(u.mentorId || '').trim(),
+
+        String(u.mentorName || '').trim(),
+
+        String(u.createdBy || 'admin').trim(),
+
+        String(u.status || 'Aktif').trim(),
+
+        nowStr
+
+      ], headers);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Users tersimpan.' });
+
+    }
+
+
+
+    // 3. SYNC CLASSES
+
+    if (action === 'syncClass') {
+
+      const items = Array.isArray(payload) ? payload : [payload];
+
+      const headers = ['Class ID', 'Nama Kelas', 'Teacher ID (Wali)', 'Nama Wali Kelas', 'Waktu Update'];
+
+      const sheet = getOrCreateSheet(ss, 'Classes', headers);
+
+      upsertRecords(sheet, 0, items, c => [
+
+        String(c.id || '').trim(),
+
+        String(c.name || '').trim(),
+
+        String(c.teacherId || '').trim(),
+
+        String(c.teacherName || '').trim(),
+
+        nowStr
+
+      ], headers);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Classes tersimpan.' });
+
+    }
+
+    // 3.5 SYNC HABIT CONFIG (Pengaturan Kebiasaan Dinamis)
+    if (action === 'syncHabitConfig') {
+      const items = Array.isArray(payload) ? payload : [payload];
+      const headers = [
+        'Habit ID', 'Nama Singkat', 'Nama Kebiasaan', 'Jam Default', 'Detail Default', 
+        'Ikon', 'Warna', 'Label Jam', 'Label Detail', 'Placeholder Detail', 'Urutan', 'Status Aktif', 'Waktu Update'
+      ];
+      const sheet = getOrCreateSheet(ss, 'Habits', headers);
+      upsertRecords(sheet, 0, items, h => [
+        String(h.id || '').trim(),
+        String(h.shortName || '').trim(),
+        String(h.name || '').trim(),
+        String(h.defaultTime || '').trim(),
+        String(h.defaultDetail || '').trim(),
+        String(h.icon || '').trim(),
+        String(h.color || '').trim(),
+        String(h.timeLabel || '').trim(),
+        String(h.detailLabel || '').trim(),
+        String(h.detailPlaceholder || '').trim(),
+        Number(h.sortOrder || 0),
+        (h.active === true || h.active === 'true' || h.active === 'Aktif') ? 'Aktif' : 'Nonaktif',
+        nowStr
+      ], headers);
+      SpreadsheetApp.flush();
+      return responseJSON({ status: 'success', message: 'Konfigurasi kebiasaan tersimpan.' });
+    }
+
+
+
+    // 4. SYNC JOURNALS (Mendukung Catatan Wali Kelas & Guru Mentor Terpisah)
+
+    if (action === 'syncJournal') {
+
+      const items = Array.isArray(payload) ? payload : [payload];
+
+      const headers = [
+
+        'ID Jurnal', 'User ID', 'Nama Siswa', 'Kelas', 'Tanggal', 'Mood', 'Isi Jurnal',
+
+        'Catatan Wali Kelas', 'Nama Wali Kelas', 'Catatan Guru Mentor', 'Nama Guru Mentor', 'Waktu Simpan'
+
+      ];
+
+      const sheet = getOrCreateSheet(ss, 'Journals', headers);
+
+      upsertRecords(sheet, 0, items, j => [
+
+        String(j.id || '').trim(),
+
+        String(j.userId || '').trim(),
+
+        String(j.studentName || '').trim(),
+
+        String(j.className || '').trim(),
+
+        String(j.date || '').trim(),
+
+        String(j.mood || '').trim(),
+
+        String(j.content || '').trim(),
+
+        String(j.homeroomFeedback || j.teacherFeedback || '').trim(),
+
+        String(j.homeroomTeacherName || '').trim(),
+
+        String(j.mentorFeedback || '').trim(),
+
+        String(j.mentorTeacherName || '').trim(),
+
+        nowStr
+
+      ], headers);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Journals tersimpan.' });
+
+    }
+
+
+
+    // 5. DELETES
+
+    if (action === 'deleteHabitLogs' || action === 'deleteHabitLog') {
+
+      const ids = Array.isArray(payload) ? payload : (payload.ids || [payload.id]);
+
+      deleteRecordsByIds(ss.getSheetByName('HabitLogs'), 0, ids);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Habit log terhapus.' });
+
+    }
+
+
+
+    if (action === 'deleteUsers' || action === 'deleteUser') {
+
+      const ids = Array.isArray(payload) ? payload : (payload.ids || [payload.id]);
+
+      deleteRecordsByIds(ss.getSheetByName('Users'), 0, ids);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'User terhapus.' });
+
+    }
+
+
+
+    if (action === 'deleteClasses' || action === 'deleteClass') {
+
+      const ids = Array.isArray(payload) ? payload : (payload.ids || [payload.id]);
+
+      deleteRecordsByIds(ss.getSheetByName('Classes'), 0, ids);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Class terhapus.' });
+
+    }
+
+
+
+    if (action === 'deleteJournals' || action === 'deleteJournal') {
+
+      const ids = Array.isArray(payload) ? payload : (payload.ids || [payload.id]);
+
+      deleteRecordsByIds(ss.getSheetByName('Journals'), 0, ids);
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: 'Journal terhapus.' });
+
+    }
+
+
+
+    // 6. ARSIP SEMESTER
+
+    if (action === 'archiveSemester') {
+
+      const safeYear = String(payload.academicYear || 'Semester').replace(/[\/\\?*[\]:]/g, '-');
+
+      const archiveName = `Archive_${safeYear}_${Date.now()}`;
+
+      const habitSheet = ss.getSheetByName('HabitLogs');
+
+      let count = 0;
+
+      if (habitSheet && habitSheet.getLastRow() > 1) {
+
+        const archiveSheet = ss.insertSheet(archiveName);
+
+        const data = habitSheet.getDataRange().getValues();
+
+        count = data.length - 1;
+
+        archiveSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+
+        formatHeader(archiveSheet);
+
+        habitSheet.deleteRows(2, habitSheet.getLastRow() - 1);
+
+      }
+
+      SpreadsheetApp.flush();
+
+      return responseJSON({ status: 'success', message: `Arsip dibuat (${count} baris log): ${archiveName}` });
+
+    }
+
+
+
+    return responseJSON({ status: 'error', message: 'Aksi tidak dikenal: ' + action });
+
+  } catch (err) {
+
+    return responseJSON({ status: 'error', message: err.toString() });
+
+  } finally {
+
+    try { lock.releaseLock(); } catch (e) {}
+
+  }
+
+}
+
+
+
+function doGet(e) {
+
+  try {
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    const action = e.parameter ? e.parameter.action : null;
+
+
+
+    if (action === 'getAllData') {
+      return responseJSON({
+        status: 'success',
+        users: sheetToObjects(ss.getSheetByName('Users')),
+        classes: sheetToObjects(ss.getSheetByName('Classes')),
+        habits: sheetToObjects(ss.getSheetByName('Habits')),
+        habitLogs: sheetToObjects(ss.getSheetByName('HabitLogs')),
+        journals: sheetToObjects(ss.getSheetByName('Journals')),
+        serverTime: new Date().toISOString()
+      });
+    }
+
+
+
+    if (action === 'getArchiveList') {
+
+      const sheets = ss.getSheets();
+
+      const archives = [];
+
+      sheets.forEach(s => {
+
+        const name = s.getName();
+
+        if (name.startsWith('Archive_')) {
+
+          archives.push({
+
+            sheetName: name,
+
+            rowCount: Math.max(0, s.getLastRow() - 1),
+
+            createdAt: s.getLastRow() > 1 ? s.getRange(2, 11).getValue() || '' : ''
+
+          });
+
+        }
+
+      });
+
+      return responseJSON({ status: 'success', archives: archives.reverse() });
+
+    }
+
+
+
+    if (action === 'getArchiveData') {
+
+      const targetSheetName = e.parameter ? e.parameter.sheetName : '';
+
+      const archiveSheet = ss.getSheetByName(targetSheetName);
+
+      if (!archiveSheet) return responseJSON({ status: 'error', message: 'Sheet arsip tidak ditemukan.' });
+
+
+
+      return responseJSON({
+
+        status: 'success',
+
+        sheetName: targetSheetName,
+
+        data: sheetToObjects(archiveSheet)
+
+      });
+
+    }
+
+
+
+    return responseJSON({ status: 'ready', serverTime: new Date().toISOString() });
+
+  } catch (err) {
+
+    return responseJSON({ status: 'error', message: err.toString() });
+
+  }
+
+}
+
+
+
+// ==========================================
+
+// HELPER FUNCTIONS
+
+// ==========================================
+
+
+
+function upsertRecords(sheet, keyColIndex, items, transformRowFn, defaultHeaders) {
+
+  if (!items || items.length === 0) return;
+
+  const numCols = defaultHeaders.length;
+
+
+
+  if (numCols > sheet.getMaxColumns()) {
+
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), numCols - sheet.getMaxColumns());
+
+  }
+
+
+
+  const lastRow = sheet.getLastRow();
+
+  let data = [];
+
+  if (lastRow > 0) {
+
+    data = sheet.getRange(1, 1, lastRow, numCols).getValues();
+
+  } else {
+
+    data = [defaultHeaders];
+
+    sheet.appendRow(defaultHeaders);
+
+    sheet.setFrozenRows(1);
+
+    formatHeader(sheet);
+
+  }
+
+
+
+  const idMap = new Map();
+
+  for (let i = 1; i < data.length; i++) {
+
+    const key = String(data[i][keyColIndex] || '').trim();
+
+    if (key) idMap.set(key, i);
+
+  }
+
+
+
+  items.forEach(item => {
+
+    const row = transformRowFn(item);
+
+    while (row.length < numCols) row.push('');
+
+    const key = String(row[keyColIndex] || '').trim();
+
+    if (!key) return;
+
+
+
+    if (idMap.has(key)) {
+
+      data[idMap.get(key)] = row;
+
+    } else {
+
+      data.push(row);
+
+      idMap.set(key, data.length - 1);
+
+    }
+
+  });
+
+
+
+  if (data.length > sheet.getMaxRows()) {
+
+    sheet.insertRowsAfter(sheet.getMaxRows(), data.length - sheet.getMaxRows() + 10);
+
+  }
+
+
+
+  sheet.getRange(1, 1, data.length, numCols).setValues(data);
+
+}
+
+
+
+function deleteRecordsByIds(sheet, keyColIndex, targetIds) {
+
+  if (!sheet || sheet.getLastRow() <= 1 || !targetIds || targetIds.length === 0) return;
+
+  const idSet = new Set(targetIds.map(id => String(id || '').trim()));
+
+  const data = sheet.getDataRange().getValues();
+
+  const filtered = [data[0]];
+
+
+
+  for (let i = 1; i < data.length; i++) {
+
+    const key = String(data[i][keyColIndex] || '').trim();
+
+    if (!idSet.has(key)) {
+
+      filtered.push(data[i]);
+
+    }
+
+  }
+
+
+
+  if (filtered.length !== data.length) {
+
+    sheet.clearContents();
+
+    sheet.getRange(1, 1, filtered.length, filtered[0].length).setValues(filtered);
+
+  }
+
+}
+
+
+
+function sheetToObjects(sheet) {
+
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+
+  const values = sheet.getDataRange().getValues();
+
+  const headers = values[0].map(h => String(h || '').trim());
+
+  const headersLower = headers.map(h => h.toLowerCase());
+
+  const result = [];
+
+
+
+  for (let r = 1; r < values.length; r++) {
+
+    const row = values[r];
+
+    const obj = {};
+
+    let hasData = false;
+
+
+
+    for (let c = 0; c < headers.length; c++) {
+
+      const header = headers[c];
+
+      const headerLower = headersLower[c];
+
+      if (!header) continue;
+
+      let val = row[c];
+
+
+
+      if (val instanceof Date) {
+
+        if (headerLower.includes('tanggal') || headerLower.includes('date')) {
+
+          const yr = val.getFullYear();
+
+          const mo = String(val.getMonth() + 1).padStart(2, '0');
+
+          const da = String(val.getDate()).padStart(2, '0');
+
+          val = `${yr}-${mo}-${da}`;
+
+        } else if (headerLower.includes('jam') || headerLower.includes('waktu') || headerLower.includes('time')) {
+
+          const hh = String(val.getHours()).padStart(2, '0');
+
+          const mm = String(val.getMinutes()).padStart(2, '0');
+
+          val = `${hh}:${mm}`;
+
+        } else {
+
+          val = val.toISOString();
+
+        }
+
+      } else {
+
+        val = val !== undefined && val !== null ? String(val).trim() : '';
+
+      }
+
+
+
+      if (val !== '') hasData = true;
+
+      obj[header] = val;
+
+    }
+
+    if (hasData) result.push(obj);
+
+  }
+
+  return result;
+
+}
+
+
+
+function getOrCreateSheet(ss, name, headers) {
+
+  let sheet = ss.getSheetByName(name);
+
+  if (!sheet) {
+
+    sheet = ss.insertSheet(name);
+
+    sheet.appendRow(headers);
+
+    sheet.setFrozenRows(1);
+
+    formatHeader(sheet);
+
+  }
+
+  return sheet;
+
+}
+
+
+
+function formatHeader(sheet) {
+
+  if (!sheet) return;
+
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+
+  const headerRange = sheet.getRange(1, 1, 1, lastCol);
+
+  headerRange
+
+    .setBackground('#EF4444')
+
+    .setFontColor('#FFFFFF')
+
+    .setFontWeight('bold')
+
+    .setFontSize(10)
+
+    .setHorizontalAlignment('center')
+
+    .setVerticalAlignment('middle');
+
+  sheet.setRowHeight(1, 35);
+
+  sheet.setFrozenRows(1);
+
+}
+
+
+
+function responseJSON(data) {
+
+  return ContentService.createTextOutput(JSON.stringify(data))
+
+    .setMimeType(ContentService.MimeType.JSON);
+
+}
